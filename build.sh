@@ -1,0 +1,1 @@
+clang++ -shared -O3 -Wall -std=c++11 -stdlib=libc++ -fexceptions -I$1/include -L$1/lib/osx -undefined dynamic_lookup project.cpp -o project.dylib

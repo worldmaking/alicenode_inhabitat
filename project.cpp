@@ -68,7 +68,7 @@ extern "C" {
     	
     	shader_test = Shader::fromFiles("test.vert.glsl", "test.frag.glsl");
     	console.log("ok");
-		console.log("shader loaded %p", shader_test);
+		console.log("shader loaded %p = %d", shader_test, (int)shader_test->program);
 		if (!shader_test) return 0;
 		{
 			
@@ -103,12 +103,29 @@ extern "C" {
 		
 		// register event handlers 
 		alice.onFrame.connect(onFrame);
+		
+		console.log("helloo!oooo\n");
     
         return 0;
     }
     
     AL_EXPORT int onunload() {
     
+    	// free resources:
+    	delete shader_test;
+    	shader_test = 0;
+    	
+    	
+    	glDeleteVertexArrays(1, &VAO);
+    	VAO = 0;
+    	
+    	glDeleteBuffers(1, &VBO);
+    	VBO = 0;
+    	
+    	glDeleteBuffers(1, &instanceVBO);
+    	instanceVBO = 0;
+    	
+    	
     	// unregister handlers
     	Alice::Instance().onFrame.disconnect(onFrame);
     	

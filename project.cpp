@@ -24,13 +24,21 @@ State * state1;
 Mmap<State> statemap1;
 
 void onFrame() {
-	int i = rnd::integer(NUM_TRIS);
-	float y = state1->translations[i].y;
-	y = y + 0.002f;
+  {
+    int i = rnd::integer(NUM_TRIS);
+    float y = state1->translations[i].y;
+	y = y + 0.1f;
 	if (y > 1.) y -= 2.;
 	if (y < -1.) y += 2.;
 	state1->translations[i].y = y;
-	
+  }
+  for (int i=0; i<NUM_TRIS; i++) {
+	float y = state1->translations[i].y;
+	y = y * 0.99f;
+	if (y > 1.) y -= 2.;
+	if (y < -1.) y += 2.;
+	state1->translations[i].y = y;
+  }
 	// update GPU;
 	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * NUM_TRIS, &state->translations[0], GL_STATIC_DRAW);

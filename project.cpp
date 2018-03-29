@@ -106,14 +106,18 @@ void onFrame() {
 		state->translations[i].y = y;
 	}
 	
-	// update GPU;
+	// upload GPU;
 	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * NUM_TRIS, &state->translations[0], GL_STATIC_DRAW);
+	
+	// update nav
+	glm::mat4 modelMat, viewMat, projMat;
+	
 	
 	// start rendering:
 	
 	landShader->use();
-	quadMesh.draw();
+	//quadMesh.draw();
 	
 	shader_test->use();
     shader_test->uniform("time", Alice::Instance().t);

@@ -24,7 +24,7 @@ void onFrame() {
 	{
 		int i = rnd::integer(NUM_TRIS);
 		float y = state->translations[i].y;
-		y = y + 0.1f;
+		y = y - 0.1f;
 		if (y > 1.) y -= 2.;
 		if (y < -1.) y += 2.;
 		state->translations[i].y = y;

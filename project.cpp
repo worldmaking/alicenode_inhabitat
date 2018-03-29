@@ -120,7 +120,7 @@ void onFrame() {
 	
 	landShader->use();
     landShader->uniform("uViewProjectionMatrixInverse", projMatInverse * viewMatInverse);
-	//quadMesh.draw();
+	quadMesh.draw();
 	
 	shader_test->use();
     shader_test->uniform("time", Alice::Instance().t);

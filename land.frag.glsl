@@ -104,8 +104,8 @@ float fScene(vec3 p) {
 	pR(pc.yx, h*0.2*sin(c.y+time*1.3));
 	pR(pc.yz, h*0.2*sin(c.x+time*3.7));
 	
-	float s = fSphere(pc, h); //
-	float b = fBox(pc, vec3(0.3, h, 0.3));
+	//float s = fSphere(pc, h); //
+	//float b = fBox(pc, vec3(0.3, h, 0.3));
 	float z = fCapsule(pc, 0.1, h);
 	return z;
 }

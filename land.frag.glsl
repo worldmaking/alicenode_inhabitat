@@ -160,4 +160,7 @@ void main() {
 		// too many ray steps
 		FragColor = vec4(0.);
 	}
+	
+	// also write to depth buffer, so that landscape occludes other creatures:
+	gl_FragDepth = computeDepth(p);
 }

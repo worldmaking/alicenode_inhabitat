@@ -160,9 +160,10 @@ void main() {
     	if (abs(rd.y) > 1e-6) { 
 			t = -ro.y / rd.y; 
 			p = ro+rd*t;
+			d = fScene(p);
 		} 
     	
-    	//FragColor += vec4(0.2, 0., 0., 1.);
+    	FragColor = vec4(d);
     	//discard;
 	} else {
 		// too many ray steps

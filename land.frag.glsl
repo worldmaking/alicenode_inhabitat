@@ -154,7 +154,17 @@ void main() {
 		FragColor = vec4(color, 1.);
 		//gl_FragColor.rb += n.xz;
 	} else if (t >= maxd) {
-    	// shot through to background:
+    	// shot through to background
+    	// locate on floor plane instead 
+    	
+    	
+    	float denom = dot(vec3(0.,1.,0.), rd);  // == rd.y
+    	if (abs(denom) > 1e-6) { 
+			vec3 p0l0 = vec3(0.) - ro; 
+			float t = dot(p0l0, vec3(0.,1.,0.)) / denom; 
+			p = ro+rd*t;
+		} 
+    	
     	//FragColor += vec4(0.2, 0., 0., 1.);
     	//discard;
 	} else {

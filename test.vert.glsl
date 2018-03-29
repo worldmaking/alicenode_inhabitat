@@ -10,7 +10,7 @@ uniform float time;
 
 void main()
 {
-    vec3 vPos = aPos * 0.1;
+    vec3 vPos = aPos;
     vPos.xy += aOffset*10. + (vec2(sin(time), cos(time)) * 0.001);
     
     gl_Position = uProjectionMatrix * uViewMatrix * vec4(vPos, 1.0);

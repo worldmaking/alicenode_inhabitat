@@ -112,7 +112,7 @@ void onFrame() {
 	
 	// update nav
 	glm::mat4 modelMat, viewMat, projMat;
-	viewMat = glm::lookat(glm::vec3(0., 20., 24.), glm::vec3(0., 0., 0.), glm::vec3(0., 1., 0.));
+	viewMat = glm::lookAt(glm::vec3(0., 20., 24.), glm::vec3(0., 0., 0.), glm::vec3(0., 1., 0.));
 	projMat = glm::perspective(45.0f, 4.f/3.f, 0.1f, 100.0f);
 	
 	// start rendering:

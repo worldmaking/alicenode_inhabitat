@@ -146,7 +146,7 @@ void main() {
 		color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
-		FragColor += vec4(color, 1.);
+		//FragColor = vec4(color, 1.);
 		
 	} else if (t >= maxd) {
     	// shot through to background

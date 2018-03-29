@@ -99,7 +99,7 @@ float fScene(vec3 p) {
 	vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));
 	
 	pR(pc.yx, 0.2*sin(c.y+time*3.));
-	pR(pc.yz, 0.2*sin(c.z+time*7.));
+	pR(pc.yz, 0.2*sin(c.x+time*7.));
 	
 	float h = abs(sin(c.y*0.2)*sin(c.x*0.2 + time));
 	float s = fSphere(pc, h); //

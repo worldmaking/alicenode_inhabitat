@@ -16,10 +16,8 @@ out vec4 FragColor;
 float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 	float dfar = gl_DepthRange.far;
 	float dnear = gl_DepthRange.near;
-	
 	vec4 clip_space_pos = viewProjectionMatrix * vec4(p, 1.);
-	float ndc_depth = clip_space_pos.z / clip_space_pos.w;
-	
+	float ndc_depth = clip_space_pos.z / clip_space_pos.w;	
 	// standard perspective:
 	return (((dfar-dnear) * ndc_depth) + dnear + dfar) / 2.0;
 }

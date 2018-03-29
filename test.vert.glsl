@@ -12,7 +12,7 @@ void main()
 {
     vec3 vPos = aPos * 0.1;
     vPos.xy += aOffset
-    	+ (vec2(sin(time), cos(time)) * 0.1);
+    	+ (vec2(sin(time), cos(time)) * 0.001);
     
     gl_Position = uProjectionMatrix * uViewMatrix * vec4(vPos, 1.0);
     

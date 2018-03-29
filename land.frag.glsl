@@ -102,7 +102,7 @@ float fScene(vec3 p) {
 	float h = abs(sin(c.y*0.2)*sin(c.x*0.2 + time));
 	
 	pR(pc.yx, h*0.1*sin(c.y+time*1.3));
-	pR(pc.yz, h*0.1*sin(c.x+time*0.7));
+	pR(pc.yz, h*0.1*sin(c.x+time*3.7));
 	
 	float s = fSphere(pc, h); //
 	float b = fBox(pc, vec3(0.3, h, 0.3));

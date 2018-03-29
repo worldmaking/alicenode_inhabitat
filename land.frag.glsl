@@ -152,7 +152,6 @@ void main() {
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
 		//FragColor = vec4(color, 1.);
-		//gl_FragColor.rb += n.xz;
 	} else if (t >= maxd) {
     	// shot through to background
     	

@@ -111,7 +111,10 @@ void onFrame() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * NUM_TRIS, &state->translations[0], GL_STATIC_DRAW);
 	
 	// update nav
-	glm::mat4 viewMat = glm::lookAt(glm::vec3(0., 0., 10.), glm::vec3(0., 0., 0.), glm::vec3(0., 1., 0.));
+	glm::mat4 viewMat = glm::lookAt(
+		glm::vec3(0., 0., 10.), 
+		glm::vec3(0., 0., 0.), 
+		glm::vec3(0., 1., 0.));
 	glm::mat4 projMat = glm::perspective(45.0f, 4.f/3.f, 0.1f, 100.0f);
 	glm::mat4 viewMatInverse = glm::inverse(viewMat);
 	glm::mat4 projMatInverse = glm::inverse(projMat);

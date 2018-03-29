@@ -11,6 +11,9 @@ unsigned int VAO;
 unsigned int VBO;
 unsigned int instanceVBO;
 
+Shader * landShader;
+QuadMesh quadMesh;
+
 float vertices[] = {
     -0.5f, -0.5f, 0.0f,
      0.5f, -0.5f, 0.0f,
@@ -20,35 +23,6 @@ float vertices[] = {
 State * state;
 Mmap<State> statemap;
 
-void onFrame() {
-	{
-		int i = rnd::integer(NUM_TRIS);
-		float y = state->translations[i].y;
-		y = y - 0.1f;
-		if (y > 1.) y -= 2.;
-		if (y < -1.) y += 2.;
-		state->translations[i].y = y;
-	}
-	for (int i=0; i<NUM_TRIS; i++) {
-		float y = state->translations[i].y;
-		y = y * 0.99f;
-		if (y > 1.) y -= 2.;
-		if (y < -1.) y += 2.;
-		state->translations[i].y = y;
-	}
-	// update GPU;
-	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * NUM_TRIS, &state->translations[0], GL_STATIC_DRAW);
-	
-	shader_test->use();
-    shader_test->uniform("time", Alice::Instance().t);
-    
-    glBindVertexArray(VAO);
-    // offset, vertex count
-    //glDrawArrays(GL_TRIANGLES, 0, 3);
-    // draw instances:
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 3, NUM_TRIS);  
-}
 
 void onUnloadGPU() {
 	// free resources:
@@ -56,6 +30,8 @@ void onUnloadGPU() {
 		delete shader_test;
 		shader_test = 0;
 	}	
+	
+	quadMesh.dest_closing();
 	
 	if (VAO) {
 		glDeleteVertexArrays(1, &VAO);
@@ -74,6 +50,10 @@ void onUnloadGPU() {
 void onReloadGPU() {
 
 	onUnloadGPU();
+	
+	landShader = Shader::fromFiles("land.vert.glsl", "land.frag.glsl");
+	
+	quadMesh.dest_changed();
 	
 	shader_test = Shader::fromFiles("test.vert.glsl", "test.frag.glsl");
 	if (!shader_test) return;
@@ -105,6 +85,45 @@ void onReloadGPU() {
 	glVertexAttribDivisor(2, 1);  
 
 }
+
+void onFrame() {
+	
+	// update simulation:
+	{
+		int i = rnd::integer(NUM_TRIS);
+		float y = state->translations[i].y;
+		y = y - 0.1f;
+		if (y > 1.) y -= 2.;
+		if (y < -1.) y += 2.;
+		state->translations[i].y = y;
+	}
+	for (int i=0; i<NUM_TRIS; i++) {
+		float y = state->translations[i].y;
+		y = y * 0.99f;
+		if (y > 1.) y -= 2.;
+		if (y < -1.) y += 2.;
+		state->translations[i].y = y;
+	}
+	
+	// update GPU;
+	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * NUM_TRIS, &state->translations[0], GL_STATIC_DRAW);
+	
+	// start rendering:
+	
+	landShader->use();
+	quadMesh.draw();
+	
+	shader_test->use();
+    shader_test->uniform("time", Alice::Instance().t);
+    
+    glBindVertexArray(VAO);
+    // offset, vertex count
+    //glDrawArrays(GL_TRIANGLES, 0, 3);
+    // draw instances:
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 3, NUM_TRIS);  
+}
+
 
 void state_initialize() {
 	for (int i=0; i<NUM_TRIS; i++) {

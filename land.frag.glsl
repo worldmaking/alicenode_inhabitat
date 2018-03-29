@@ -140,7 +140,6 @@ void main() {
 	//FragColor = texture(tex, texCoord);
 	FragColor = vec4(count);
 	
-	
 	if (d < precis) {
 		FragColor = vec4(1.);
 		

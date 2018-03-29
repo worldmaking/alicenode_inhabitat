@@ -161,7 +161,7 @@ void main() {
     	float denom = rd.y;
     	if (abs(denom) > 1e-6) { 
 			vec3 p0l0 = -ro; 
-			float t = dot(-ro, vec3(0.,1.,0.)) / denom; 
+			float t = -ro.y / rd.y; 
 			p = ro+rd*t;
 		} 
     	

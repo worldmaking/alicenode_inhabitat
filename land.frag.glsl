@@ -158,10 +158,10 @@ void main() {
     	// locate on floor plane instead 
     	
     	
-    	float denom = rd.y;//dot(vec3(0.,1.,0.), rd);  // == rd.y
+    	float denom = rd.y;
     	if (abs(denom) > 1e-6) { 
-			vec3 p0l0 = vec3(0.) - ro; 
-			float t = dot(p0l0, vec3(0.,1.,0.)) / denom; 
+			vec3 p0l0 = -ro; 
+			float t = dot(-ro, vec3(0.,1.,0.)) / denom; 
 			p = ro+rd*t;
 		} 
     	

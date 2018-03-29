@@ -162,7 +162,7 @@ void main() {
 			p = ro+rd*t;
 		} 
     	
-    	//FragColor += vec4(0.2, 0., 0., 1.);
+    	FragColor += vec4(0.2, 0., 0., 1.);
     	//discard;
 	} else {
 		// too many ray steps

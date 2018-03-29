@@ -155,13 +155,10 @@ void main() {
 		//gl_FragColor.rb += n.xz;
 	} else if (t >= maxd) {
     	// shot through to background
-    	// locate on floor plane instead 
     	
-    	
-    	float denom = rd.y;
-    	if (abs(denom) > 1e-6) { 
-			vec3 p0l0 = -ro; 
-			float t = -ro.y / rd.y; 
+    	// locate on floor plane instead:
+    	if (abs(rd.y) > 1e-6) { 
+			t = -ro.y / rd.y; 
 			p = ro+rd*t;
 		} 
     	

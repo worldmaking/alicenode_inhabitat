@@ -162,12 +162,7 @@ void main() {
     	//discard;
 	} else {
 		// too many ray steps
-		//FragColor = vec4(0.);
-		// locate on floor plane instead:
-    	if (abs(rd.y) > 1e-6) { 
-			t = -ro.y / rd.y; 
-			p = ro+rd*t;
-		} 
+		FragColor = vec4(1.);
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:

@@ -6,6 +6,7 @@
 
 #include "state.h"
 
+
 Shader * shader_test;
 unsigned int VAO;
 unsigned int VBO;

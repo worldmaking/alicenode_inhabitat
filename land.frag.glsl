@@ -135,8 +135,8 @@ void main() {
         count += STEP_SIZE;
     }
 	
-	FragColor = vec4(texCoord, 0.5, 1.);
-	FragColor = vec4(rd, 0.);
+	//FragColor = vec4(texCoord, 0.5, 1.);
+	//FragColor = vec4(rd, 0.);
 	//FragColor = texture(tex, texCoord);
 	FragColor = vec4(count);
 	

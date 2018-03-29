@@ -82,6 +82,11 @@ float fBox(vec3 p, vec3 b) {
 	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+// Capsule: A Cylinder with round caps on both sides
+float fCapsule(vec3 p, float r, float c) {
+	return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
+}
+
 float fScene(vec3 p) {
 	vec3 pc = p;
 	vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));

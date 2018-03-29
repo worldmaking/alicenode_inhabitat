@@ -156,7 +156,7 @@ void main() {
 	} else if (t >= maxd) {
     	// shot through to background:
     	//FragColor += vec4(0.2, 0., 0., 1.);
-    	discard;
+    	//discard;
 	} else {
 		// too many ray steps
 		FragColor = vec4(0.);

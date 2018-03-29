@@ -93,8 +93,8 @@ float fScene(vec3 p) {
 	float h = abs(sin(c.y*0.2)*sin(c.x*0.2 + time));
 	float s = fSphere(pc, h); //
 	float b = fBox(pc, vec3(0.3, h, 0.3));
-	float c = fCapsule(pc, 0.2, h);
-	return c; //min(b,s);
+	float z = fCapsule(pc, 0.2, h);
+	return z; //min(b,s);
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

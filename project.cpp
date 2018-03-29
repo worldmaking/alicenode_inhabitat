@@ -121,6 +121,7 @@ void onFrame() {
 	
 	shader_test->use();
     shader_test->uniform("time", Alice::Instance().t);
+    shader_test->uniform("uViewMatrix", viewMat);
     shader_test->uniform("uProjectionMatrix", projMat);
     
     glBindVertexArray(VAO);

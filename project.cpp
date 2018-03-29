@@ -122,7 +122,7 @@ void onFrame() {
 	// start rendering:
 	
 	landShader->use();
-    landShader->uniform("uViewProjectionMatrixInverse", projMatInverse * viewMatInverse);
+    landShader->uniform("uViewProjectionMatrixInverse", glm::inverse(projMat * viewMat));
 	quadMesh.draw();
 	
 	shader_test->use();

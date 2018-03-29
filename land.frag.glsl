@@ -98,7 +98,7 @@ float fScene(vec3 p) {
 	
 	
 	vec3 pc = p;
-	vec2 c = pModInterval2(pc.xz, vec2(0.5), vec2(-32.), vec2(32.));
+	vec2 c = pModInterval2(pc.xz, vec2(0.25), vec2(-32.), vec2(32.));
 	float h = abs(sin(c.y*0.2)*sin(c.x*0.2 + time));
 	
 	pR(pc.yx, h*0.2*sin(c.y+time*1.3));

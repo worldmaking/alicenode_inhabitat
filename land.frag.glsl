@@ -163,7 +163,7 @@ void main() {
 			d = fScene(p);
 		} 
     	
-    	FragColor = vec4(mod(d, 1.));
+    	FragColor = vec4(d);
     	//discard;
 	} else {
 		// too many ray steps

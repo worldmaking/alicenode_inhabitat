@@ -90,7 +90,7 @@ float fCapsule(vec3 p, float r, float c) {
 float fScene(vec3 p) {
 	vec3 pc = p;
 	vec2 c = pModInterval2(pc.xz, vec2(0.5), vec2(-64.), vec2(64.));
-	float h = abs(sin(c.y*0.2)*sin(c.x*0.1 + time));
+	float h = abs(sin(c.y*0.1)*sin(c.x*0.1 + time));
 	float s = fSphere(pc, h); //
 	float b = fBox(pc, vec3(0.3, h, 0.3));
 	float z = fCapsule(pc, 0.05, h);

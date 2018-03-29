@@ -113,7 +113,7 @@ void onFrame() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * NUM_TRIS, &state->translations[0], GL_STATIC_DRAW);
 	
 	// update nav
-	double a = M_PI * t / 3.;
+	double a = M_PI * t / 30.;
 	glm::mat4 viewMat = glm::lookAt(
 		glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
 		glm::vec3(0., 0., 0.), 

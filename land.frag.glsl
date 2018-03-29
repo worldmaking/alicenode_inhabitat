@@ -12,6 +12,18 @@ out vec4 FragColor;
 #define MAX_STEPS 128
 #define STEP_SIZE 1./float(MAX_STEPS)
 
+// for gl_FragDepth:
+float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
+	float dfar = gl_DepthRange.far;
+	float dnear = gl_DepthRange.near;
+	
+	vec4 clip_space_pos = viewProjectionMatrix * vec4(p, 1.);
+	float ndc_depth = clip_space_pos.z / clip_space_pos.w;
+	
+	// standard perspective:
+	return (((dfar-dnear) * ndc_depth) + dnear + dfar) / 2.0;
+}
+
 // Maximum/minumum elements of a vector
 float vmax(vec2 v) {
 	return max(v.x, v.y);

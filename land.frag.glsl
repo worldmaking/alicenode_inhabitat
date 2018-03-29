@@ -149,7 +149,7 @@ void main() {
 		FragColor.rgb += 0.1*color;
 		//FragColor.rb += n.xz;
 		
-	} else if (t >= maxd) {
+	} else { //if (t >= maxd) {
     	// shot through to background
     	
     	// locate on floor plane instead:

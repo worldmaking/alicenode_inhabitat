@@ -1,6 +1,7 @@
 #version 330 core
 uniform sampler2D tex;
 uniform float time;
+uniform mat4 uViewProjectionMatrix;
 
 in vec2 texCoord;
 in vec3 ray, origin;
@@ -162,5 +163,5 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	gl_FragDepth = computeDepth(p);
+	gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
 }

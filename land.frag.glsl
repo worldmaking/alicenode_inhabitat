@@ -141,8 +141,6 @@ void main() {
 	FragColor = vec4(count);
 	
 	if (d < precis) {
-		FragColor = vec4(1.);
-		
 		vec3 n = normal4(p, .01);
 	
 		color = n*0.5+0.5;

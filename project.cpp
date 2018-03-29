@@ -88,6 +88,8 @@ void onReloadGPU() {
 }
 
 void onFrame() {
+
+	double t = Alice::Instance().t;
 	
 	// update simulation:
 	{
@@ -112,7 +114,7 @@ void onFrame() {
 	
 	// update nav
 	glm::mat4 viewMat = glm::lookAt(
-		glm::vec3(0., 20., 20.), 
+		glm::vec3(sin(t), 20., 20.), 
 		glm::vec3(0., 0., 0.), 
 		glm::vec3(0., 1., 0.));
 	glm::mat4 projMat = glm::perspective(45.0f, 4.f/3.f, 0.1f, 100.0f);

@@ -14,7 +14,7 @@ void main()
     vPos.xy += aOffset
     	+ (vec2(sin(time), cos(time)) * 0.1);
     
-    gl_Position = vec4(vPos, 1.0);
+    gl_Position = uProjectionMatrix * vec4(vPos, 1.0);
     
     fColor = vec3(0.5) + aPos;
 }  

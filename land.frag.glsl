@@ -8,7 +8,7 @@ in vec3 ray, origin;
 out vec4 FragColor;
 
 #define PI 3.14159265359
-#define EPS 0.01
+#define EPS 0.1
 #define VERYFARAWAY  400.
 #define MAX_STEPS 128
 #define STEP_SIZE 1./float(MAX_STEPS)

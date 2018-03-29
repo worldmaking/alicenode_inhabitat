@@ -115,6 +115,7 @@ void onFrame() {
 	glm::mat4 projMat = glm::perspective(45.0f, 4.f/3.f, 0.1f, 100.0f);
 	glm::mat4 viewMatInverse = glm::inverse(viewMat);
 	glm::mat4 projMatInverse = glm::inverse(projMat);
+	
 	// start rendering:
 	
 	landShader->use();

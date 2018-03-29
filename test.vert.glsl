@@ -10,7 +10,7 @@ uniform float time;
 
 void main()
 {
-    vec3 vPos = aPos * 0.1;
+    vec3 vPos = aPos;
     vPos.xy += aOffset
     	+ (vec2(sin(time), cos(time)) * 0.1);
     

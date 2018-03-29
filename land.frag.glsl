@@ -85,7 +85,7 @@ float fBox(vec3 p, vec3 b) {
 float fScene(vec3 p) {
 	vec3 pc = p;
 	vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));
-	float h = abs(sin(c.y*0.2)*sin(c.x*0.2 + time));
+	float h = 2.*abs(sin(c.y*0.2)*sin(c.x*0.2 + time));
 	float b = fSphere(pc, h); //fBox(pc, vec3(0.5, h, 0.45));
 	return b;
 }

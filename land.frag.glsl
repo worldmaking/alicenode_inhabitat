@@ -106,7 +106,7 @@ float fScene(vec3 p) {
 	
 	float s = fSphere(pc, h); //
 	float b = fBox(pc, vec3(0.3, h, 0.3));
-	float z = fCapsule(pc, 0.1, h);
+	float z = fCapsule(pc, 0.05, h);
 	return z;
 }
 

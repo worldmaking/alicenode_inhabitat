@@ -1,4 +1,4 @@
-2 #include "al/al_console.h"
+  #include "al/al_console.h"
 #include "al/al_math.h"
 #include "al/al_gl.h"
 #include "al/al_mmap.h"
@@ -12,9 +12,9 @@ unsigned int VBO;
 unsigned int instanceVBO;
 
 float vertices[] = {
-    -0.2f, -0.5f, 0.0f,
-     0.3f, -0.5f, 0.0f,
-     0.3f,  0.9f, 0.0f
+    -0.4f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.9f, 0.0f
 };
 
 State * state;

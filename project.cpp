@@ -12,9 +12,9 @@ unsigned int VBO;
 unsigned int instanceVBO;
 
 float vertices[] = {
-    -0.3f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.9f, 0.0f
+    -0.1f, -0.5f, 0.0f,
+     0.3f, -0.5f, 0.0f,
+     0.3f,  0.9f, 0.0f
 };
 
 State * state;

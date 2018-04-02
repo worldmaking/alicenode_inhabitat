@@ -1,4 +1,4 @@
- #include "al/al_console.h"
+   #include "al/al_console.h"
 #include "al/al_math.h"
 #include "al/al_gl.h"
 #include "al/al_mmap.h"
@@ -12,7 +12,7 @@ unsigned int VBO;
 unsigned int instanceVBO;
 
 float vertices[] = {
-    -0.2f, -0.5f, 0.0f,
+    -0.1f, -0.5f, 0.0f,
      0.5f, -0.5f, 0.0f,
      0.0f,  0.9f, 0.0f
 };
@@ -26,9 +26,9 @@ Mmap<State> statemap1;
 void onFrame() {
 	int i = rnd::integer(NUM_TRIS);
 	float y = state1->translations[i].y;
-	y = y + 0.002f;
+	y = y + 0.2f;
 	if (y > 1.) y -= 2.;
-	if (y < -1.) y += 2.;
+	if (y < 0.) y += 2.;
 	state1->translations[i].y = y;
 	
 	// update GPU;
@@ -68,7 +68,7 @@ extern "C" {
     	
     	shader_test = Shader::fromFiles("test.vert.glsl", "test.frag.glsl");
     	console.log("ok");
-		console.log("shader loaded %p = %d", shader_test, (int)shader_test->program);
+		console.log("shader loaded %p", shader_test);
 		if (!shader_test) return 0;
 		{
 			
@@ -103,29 +103,12 @@ extern "C" {
 		
 		// register event handlers 
 		alice.onFrame.connect(onFrame);
-		
-		console.log("helloo!oooo\n");
     
         return 0;
     }
     
     AL_EXPORT int onunload() {
     
-    	// free resources:
-    	delete shader_test;
-    	shader_test = 0;
-    	
-    	
-    	glDeleteVertexArrays(1, &VAO);
-    	VAO = 0;
-    	
-    	glDeleteBuffers(1, &VBO);
-    	VBO = 0;
-    	
-    	glDeleteBuffers(1, &instanceVBO);
-    	instanceVBO = 0;
-    	
-    	
     	// unregister handlers
     	Alice::Instance().onFrame.disconnect(onFrame);
     	

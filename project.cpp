@@ -119,15 +119,22 @@ void onReloadGPU() {
 
 	glGenBuffers(1, &instanceVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * NUM_OBJECTS, &state->translations[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
 
 	glEnableVertexAttribArray(2);
 	// attr location, element size & type, normalize?, source stride & offset
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, location));
 	// mark this attrib as being per-instance	
 	glVertexAttribDivisor(2, 1);  
-
+	
+	glEnableVertexAttribArray(3);
+	// attr location, element size & type, normalize?, source stride & offset
+	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, orientation));
+	// mark this attrib as being per-instance	
+	glVertexAttribDivisor(3, 1);  
+	
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 }
 
 void onFrame() {
@@ -136,12 +143,14 @@ void onFrame() {
 	
 	// update simulation:
 	for (int i=0; i<NUM_OBJECTS; i++) {
-		state->translations[i] = glm::clamp(state->translations[i] + glm::ballRand(0.1f), -10.f, 10.f);
+		Object &o = state->objects[i];
+		//o.location = glm::clamp(o.location + glm::ballRand(0.1f), -10.f, 10.f);	
+		//o.orientation = quat_random();
 	}
 	
 	// upload GPU;
 	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * NUM_OBJECTS, &state->translations[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
 	
 	// update nav
 	double a = M_PI * t / 30.;
@@ -177,7 +186,7 @@ void onFrame() {
 
 void state_initialize() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
-		state->translations[i] = glm::ballRand(1.f);
+		state->objects[i].location = glm::ballRand(1.f);
 	}
 }
 

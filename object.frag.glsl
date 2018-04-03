@@ -62,8 +62,9 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 }
 
 float fScene(vec3 p) {
-	float s = fSphere(p, 0.99+0.5*abs(sin(time)));
-	float b = fBox(p, vec3(1.));
+	float size = 0.8;
+	float s = fSphere(p, size*(1.0+0.5*abs(sin(time))));
+	float b = fBox(p, vec3(size));
 	return max(b,-s);
 }
 
@@ -138,7 +139,7 @@ void main() {
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//FragColor.rgb = mod((ro+0.5)*0.5,0.5)+0.5;
     	//FragColor.rgb = mod(rd,0.5)+0.5;
-    	discard;
+    	//discard;
     	
 	} else {
 		// too many ray steps

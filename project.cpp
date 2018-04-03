@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-   #include "al/al_console.h"
-=======
 #include "al/al_console.h"
->>>>>>> 2542a2e5c4d6ab3d46a831f1193c87189d62b297
 #include "al/al_math.h"
 #include "al/al_gl.h"
 #include "al/al_mmap.h"
@@ -19,11 +15,6 @@ Shader * landShader;
 QuadMesh quadMesh;
 
 float vertices[] = {
-<<<<<<< HEAD
-    -0.1f, -0.4f, 0.1f,
-     0.5f, -0.5f, 0.2f,
-     0.0f,  0.2f, 0.3f
-=======
     -1.0f,-1.0f,-1.0f, 
     -1.0f,-1.0f, 1.0f,
     -1.0f, 1.0f, 1.0f, 
@@ -71,7 +62,6 @@ float vertices[] = {
     1.0f, 1.0f, 1.0f,
     -1.0f, 1.0f, 1.0f,
     1.0f,-1.0f, 1.0f
->>>>>>> 2542a2e5c4d6ab3d46a831f1193c87189d62b297
 };
 
 State * state;

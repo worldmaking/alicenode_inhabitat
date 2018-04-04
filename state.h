@@ -1,7 +1,7 @@
 #ifndef STATE_H
 #define STATE_H
 
-#define NUM_OBJECTS 50
+#define NUM_OBJECTS 500
 
 struct Object {
 	glm::vec3 location;

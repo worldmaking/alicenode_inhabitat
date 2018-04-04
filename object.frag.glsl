@@ -167,9 +167,8 @@ void main() {
     if (d < precis) {
 		vec3 n = normal4(p, .01);
 		n = quat_rotate(world_orientation, n);
-		color = n*0.5+0.5;
-		color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
-		color += texture2D(tex0, pos2texcoord(p)).rgb;
+		//color = n*0.5+0.5;
+		color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

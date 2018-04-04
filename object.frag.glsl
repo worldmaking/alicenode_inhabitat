@@ -161,7 +161,7 @@ float fScene(vec3 p) {
 	pR(pc.xz, 0.5*sin(time * 14. + a));
 	
 	
-	float c1 = fCylinder(pc.xzy, size*.1, size*0.5);
+	float c1 = fCylinder(pc.xzy, size*.05, size*0.5);
 	
 	float z = max(s1, -s0); 
 	//z = min(z, b1);

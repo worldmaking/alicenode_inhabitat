@@ -178,8 +178,6 @@ void main() {
 		
 		FragColor.rgb += 0.3*color;
 		//FragColor.rb += n.xz;
-		// also write to depth buffer, so that landscape occludes other creatures:
-		gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
 		
 	} else if (t >= maxd) {
     	// shot through to background
@@ -193,15 +191,13 @@ void main() {
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//discard;
     	
-    	FragColor.rgb = sky(rd);
-    	gl_FragDepth = 1.;
-    	
 	} else {
 		// too many ray steps
 		FragColor = vec4(1.);
-		// also write to depth buffer, so that landscape occludes other creatures:
-		gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
 	}
 	
+    	FragColor.rgb = sky(rd);
 	
+	// also write to depth buffer, so that landscape occludes other creatures:
+	gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
 }

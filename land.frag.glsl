@@ -217,6 +217,10 @@ void main() {
 		
 		color *= cheap_self_occlusion;
 		
+		
+		
+		
+		
 		// fog effect:
 		color = mix(color, fogcolor, pow(count, 2.));
 		

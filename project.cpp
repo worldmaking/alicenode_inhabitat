@@ -3,7 +3,6 @@
 #include "al/al_gl.h"
 #include "al/al_mmap.h"
 #include "alice.h"
-//test svg dfdfdfgfgfg
 #include "state.h"
 
 
@@ -116,17 +115,21 @@ void onFrame() {
 	glm::mat4 viewProjMatInverse = glm::inverse(viewProjMat);
 	
 	// start rendering:
+	glDisable(GL_DEPTH_TEST);
 	
 	landShader->use();
     landShader->uniform("time", t);
     landShader->uniform("uViewProjectionMatrix", viewProjMat);
     landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 	quadMesh.draw();
+
+	glEnable(GL_DEPTH_TEST);
 	
-	shader_test->use();
-    shader_test->uniform("time", t);
-    shader_test->uniform("uViewMatrix", viewMat);
-    shader_test->uniform("uProjectionMatrix", projMat);
+	objectShader->use();
+    objectShader->uniform("time", t);
+    objectShader->uniform("uViewMatrix", viewMat);
+    objectShader->uniform("uViewProjectionMatrix", viewProjMat);
+    objectShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
     
     glBindVertexArray(VAO);
     // offset, vertex count

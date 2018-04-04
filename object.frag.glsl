@@ -184,6 +184,8 @@ void main() {
 		color = sky(n) * color;
 		color = sky(ref) * color;
 		
+		//float view_dot_normal = max(dot(n, fvViewDirection), 0.0);
+		
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;
 		

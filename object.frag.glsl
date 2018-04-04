@@ -99,7 +99,10 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 float fScene(vec3 p) {
 	float s = fSphere(p, size*(1.+0.3*abs(sin(time))));
 	float b = fBox(p, vec3(size));
-	return max(b,-s);
+	
+	float s1 = fSphere(p+vec3(0., 0., size*0.5), size*0.5);
+	
+	return s1; //max(b,-s);
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

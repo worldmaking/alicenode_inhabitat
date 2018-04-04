@@ -181,6 +181,9 @@ void main() {
 		// reflection vector 
 		vec3 ref = reflect(ray, n);
 		
+		float view_dot_normal = max(dot(n, ray), 0.0);
+		
+		
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		

@@ -213,7 +213,7 @@ void main() {
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		
 		float metallic = oblique;
-		color = mix(sky(ref)*0.5, sky(n), metallic);
+		color = mix(sky(ref), sky(n)*0.5, metallic);
 		
 		color *= cheap_self_occlusion;
 		

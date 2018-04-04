@@ -174,6 +174,7 @@ void main() {
 		vec3 n = normal4(p, .01);
 		n = quat_rotate(world_orientation, n);
 		vec3 ref = reflect(quat_rotate(world_orientation, rd), n);
+		ref = quat_rotate(world_orientation, reflect(rd, normal4(p, .01)));
 		//ref = quat_rotate(world_orientation, ref);
 		
 		//color += (n*1.)*0.1;

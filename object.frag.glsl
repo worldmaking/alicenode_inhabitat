@@ -176,6 +176,8 @@ void main() {
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
+		color *= 5.;
+		
 		color = sky(n) * color;
 		
 		FragColor.rgb = color;

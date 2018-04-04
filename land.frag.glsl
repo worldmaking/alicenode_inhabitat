@@ -181,7 +181,7 @@ void main() {
 		
 	} else if (t >= maxd) {
     	// shot through to background
-    	p = ro+maxd*rd;
+    	p = ro+gl_DepthRange.far*rd;
     	
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//discard;

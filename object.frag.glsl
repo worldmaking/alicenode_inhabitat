@@ -130,7 +130,7 @@ float fScene(vec3 p) {
 	
 	float z = max(s1, -s0); 
 	//z = min(z, b1);
-	//z = min(se, z); //max(b,-z);
+	z = min(se, z); //max(b,-z);
 	z = min(c1, z);
 	return z;
 }

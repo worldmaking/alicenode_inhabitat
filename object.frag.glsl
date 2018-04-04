@@ -100,10 +100,11 @@ float fScene(vec3 p) {
 	float s = fSphere(p, size*(1.+0.3*abs(sin(time))));
 	float b = fBox(p, vec3(size));
 	
+	float s0 = fSphere(p+vec3(0., 0., size), size*0.5);
 	float s1 = fSphere(p+vec3(0., 0., size*0.25), size*0.75);
 	float b1 = fBox(p+vec3(0., 0., -size*0.5), vec3(size, size*0.25, size*0.5));
 	
-	return min(s1, b1); //max(b,-s);
+	return min(max(s1, -s0), b1); //max(b,-s);
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

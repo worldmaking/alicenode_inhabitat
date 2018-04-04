@@ -97,7 +97,6 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 }
 
 float fScene(vec3 p) {
-	//float size = 0.9;
 	float s = fSphere(p, size*(1.+0.3*abs(sin(time))));
 	float b = fBox(p, vec3(size));
 	return max(b,-s);

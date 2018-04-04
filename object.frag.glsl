@@ -139,6 +139,7 @@ float fScene(vec3 p) {
 	float b1 = fBox(p+vec3(0., 0., -size*0.5), vec3(size, size*0.1, size*0.5));
 	
 	vec3 pc = p+vec3(0., 0., -size*0.5);
+	pR45(pc);
 	
 	float c1 = fCylinder(pc.xzy, size*.1, size*0.5);
 	

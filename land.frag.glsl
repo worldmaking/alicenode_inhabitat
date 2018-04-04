@@ -53,6 +53,13 @@ float vmin(vec4 v) {
 	return min(min(v.x, v.y), min(v.z, v.w));
 }
 
+// Repeat in two dimensions
+vec2 pMod2(inout vec2 p, vec2 size) {
+	vec2 c = floor((p + size*0.5)/size);
+	p = mod(p + size*0.5,size) - size*0.5;
+	return c;
+}
+
 // Repeat only a few times: from indices <start> to <stop> (similar to above, but more flexible)
 vec2 pModInterval2(inout vec2 p, vec2 size, vec2 start, vec2 stop) {
 	vec2 halfsize = size*0.5;

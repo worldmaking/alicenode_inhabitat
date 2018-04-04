@@ -182,11 +182,6 @@ void main() {
 	} else if (t >= maxd) {
     	// shot through to background
     	
-    	// locate on floor plane instead:
-    	if (abs(rd.y) > 1e-6) { 
-			t = -ro.y / rd.y; 
-			p = ro+rd*t;
-		} 
     	
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//discard;

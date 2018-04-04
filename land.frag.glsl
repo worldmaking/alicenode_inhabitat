@@ -191,7 +191,7 @@ void main() {
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
 		vec3 ref = reflect(rd, n);
-		color = sky(ref) * matcolor;
+		//color = sky(ref) * matcolor;
 		
 		// fog effect:
 		color = mix(color, fogcolor, pow(count, 2.));

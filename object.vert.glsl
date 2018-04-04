@@ -10,6 +10,7 @@ layout (location = 3) in vec4 iOrientation;
 out vec3 worldpos, objectpos, eyepos;
 out vec3 ray_direction, ray_origin;
 out vec4 world_orientation;
+out float size;
 
 vec4 quat_fromeuler(float az, float el, float ba) {
 	float c1 = cos(az * 0.5);
@@ -67,8 +68,10 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 
 void main()
 {
+    size = 0.5;
+    
     // basic vertex position:
-    objectpos = aPos;
+    objectpos = aPos * size;
     
     // instance position:
     worldpos = iLocation;

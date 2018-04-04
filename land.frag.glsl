@@ -14,7 +14,8 @@ out vec4 FragColor;
 #define STEP_SIZE 1./float(MAX_STEPS)
 
 vec3 sky(vec3 dir) {
-	return dir*0.5+0.5;
+	vec3 n = dir*0.5+0.5;
+	return mix(n, 1., 0.5);
 }
 
 // for gl_FragDepth:

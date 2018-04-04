@@ -169,7 +169,7 @@ void main() {
 		n = quat_rotate(world_orientation, n);
 		color = n*0.5+0.5;
 		color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
-		//color += texture2D(tex0, pos2texcoord(p)).rgb;
+		color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

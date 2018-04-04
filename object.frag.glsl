@@ -241,7 +241,7 @@ void main() {
 		color *= cheap_self_occlusion;
 		
 		// fog effect:
-		vec3 fogcolor = sky(rd);
+		vec3 fogcolor = sky(ray);
 		float fogmix = length(worldpos)/VERYFARAWAY;
 		color = mix(color, fogcolor, fogmix);
 		

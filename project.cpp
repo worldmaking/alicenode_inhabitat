@@ -145,7 +145,7 @@ void onFrame() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		Object &o = state->objects[i];
 		o.location = glm::clamp(o.location + glm::ballRand(0.1f), -10.f, 10.f);	
-		o.orientation = glm::normalize(quat_random());
+		o.orientation = safe_normalize(glm::slerp(o.orientation, quat_random(), 0.01f));
 	}
 	
 	// upload GPU;

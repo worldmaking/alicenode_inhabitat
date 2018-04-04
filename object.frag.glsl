@@ -189,7 +189,7 @@ void main() {
 		
 		
 		float metallic = 1.;
-		color *= mix(sky(n), sky(ref), metallic) * view_dot_normal;
+		color *= mix(sky(n), sky(ref), metallic) * view_dot_normal_inverse;
 		
 		
 		FragColor.rgb = color;

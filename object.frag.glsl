@@ -197,7 +197,9 @@ void main() {
 		color *= cheap_self_occlusion;
 		
 		// fog effect:
+		vec3 fogcolor = sky(rd);
 		float fogmix = length(worldpos)/VERYFARAWAY;
+		color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = color;
 		

@@ -165,7 +165,7 @@ float fScene(vec3 p) {
 	//z = min(z, b1);
 	z = min(se, z); //max(b,-z);
 	z = min(c1, z);
-	return z;
+	return c1;
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

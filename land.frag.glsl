@@ -13,6 +13,10 @@ out vec4 FragColor;
 #define MAX_STEPS 128
 #define STEP_SIZE 1./float(MAX_STEPS)
 
+vec3 sky(vec3 dir) {
+	return dir*0.5+0.5;
+}
+
 // for gl_FragDepth:
 float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 	float dfar = gl_DepthRange.far;

@@ -185,7 +185,7 @@ void main() {
 		// fog effect:
 		color = mix(color, fogcolor, pow(count, 2.));
 		
-		FragColor.rgb = color;
+		//FragColor.rgb = color;
 		
 	} else if (t >= maxd) {
     	// shot through to background

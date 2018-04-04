@@ -128,11 +128,11 @@ float fScene(vec3 p) {
 	
 	float c1 = fCylinder(p, 0.5, 0.2);
 	
-	float s = max(s1, -s0); 
-	s = min(s, b1);
-	s = min(se, s); //max(b,-s);
-	s = min(c1, s);
-	return s;
+	float z = max(s1, -s0); 
+	//z = min(z, b1);
+	//z = min(se, z); //max(b,-z);
+	z = min(c1, z);
+	return z;
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

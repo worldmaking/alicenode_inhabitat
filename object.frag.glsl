@@ -197,7 +197,7 @@ void main() {
 		color *= cheap_self_occlusion;
 		
 		// fog effect:
-		float fogmix = pow(t/maxd, 1.));
+		//float fogmix = pow(t/maxd, 1.));
 		
 		FragColor.rgb = color;
 		

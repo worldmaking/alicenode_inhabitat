@@ -119,6 +119,7 @@ void onFrame() {
 	
 	landShader->use();
     landShader->uniform("time", t);
+    landShader->uniform("uViewMatrix", viewMat);
     landShader->uniform("uViewProjectionMatrix", viewProjMat);
     landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 	quadMesh.draw();

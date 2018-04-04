@@ -184,7 +184,6 @@ void main() {
 		// fog effect:
 		
 		
-		
 		//FragColor.rb += n.xz;
 		
 	} else if (t >= maxd) {

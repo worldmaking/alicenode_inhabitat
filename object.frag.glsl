@@ -192,7 +192,7 @@ void main() {
 		float metallic = oblique;
 		color = mix(sky(n)*0.5, sky(ref), metallic);
 		
-		color *= cheap_self_occlusion;
+		//color *= cheap_self_occlusion;
 		//
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

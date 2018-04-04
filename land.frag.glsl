@@ -178,6 +178,11 @@ void main() {
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
 		FragColor.rgb = color * 0.5;
+		
+		// fog effect:
+		
+		//vec3 fogcolor = 
+		
 		//FragColor.rb += n.xz;
 		
 	} else if (t >= maxd) {

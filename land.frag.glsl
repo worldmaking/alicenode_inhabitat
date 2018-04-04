@@ -171,6 +171,8 @@ void main() {
 	//FragColor = texture(tex, texCoord);
 	FragColor = vec4(count);
 	
+	vec3 fogcolor = sky(rd);
+	
 	if (d < precis) {
 		vec3 n = normal4(p, .01);
 		color = sky(n); //n*0.5+0.5;
@@ -181,7 +183,7 @@ void main() {
 		
 		// fog effect:
 		
-		vec3 fogcolor = sky(rd);
+		
 		
 		//FragColor.rb += n.xz;
 		
@@ -191,11 +193,11 @@ void main() {
     	
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//discard;
-    	FragColor.rgb = sky(rd);
+    	FragColor.rgb = fogcolor;
     	
 	} else {
 		// too many ray steps
-		FragColor.rgb = sky(rd); //vec4(1.);
+		FragColor.rgb = fogcolor; //vec3(1.);
 	}
 	
     	

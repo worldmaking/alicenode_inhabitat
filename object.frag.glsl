@@ -190,7 +190,7 @@ void main() {
 		
 		float metallic = view_dot_normal;
 		color *= mix(sky(n), sky(ref), metallic);
-		
+		color = vec3(view_dot_normal);
 		
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

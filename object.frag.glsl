@@ -190,7 +190,7 @@ void main() {
 		
 		
 		float metallic = oblique;
-		color *= mix(sky(n)*0.5, sky(ref), metallic);
+		color = mix(sky(n)*0.5, sky(ref), metallic);
 		//
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

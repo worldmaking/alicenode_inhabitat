@@ -101,6 +101,7 @@ float fScene(vec3 p) {
 	float b = fBox(p, vec3(size));
 	
 	float s1 = fSphere(p+vec3(0., 0., size*0.5), size*0.5);
+	float b1 = fBox(p+vec3(0., 0., -size*0.5), vec3(size*0.5));
 	
 	return s1; //max(b,-s);
 }

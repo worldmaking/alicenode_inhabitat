@@ -52,7 +52,7 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 }
 
 #define EPS 0.01
-#define VERYFARAWAY  4.
+#define VERYFARAWAY  64.
 #define MAX_STEPS 64
 #define STEP_SIZE 1./float(MAX_STEPS)
 

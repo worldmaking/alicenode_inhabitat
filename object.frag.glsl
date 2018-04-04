@@ -126,9 +126,9 @@ float fScene(vec3 p) {
 	
 	float b1 = fBox(p+vec3(0., 0., -size*0.5), vec3(size, size*0.1, size*0.5));
 	
-	vec3 pc = p;
+	vec3 pc = p+vec3(0., 0., -size*0.5);
 	
-	float c1 = fCylinder(p.xzy+vec3(0., -size*0.5, 0.), size*.1, size*0.5);
+	float c1 = fCylinder(p.xzy, size*.1, size*0.5);
 	
 	float z = max(s1, -s0); 
 	//z = min(z, b1);

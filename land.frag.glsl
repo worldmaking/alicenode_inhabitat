@@ -181,7 +181,7 @@ void main() {
 		
 		// fog effect:
 		
-		//vec3 fogcolor = 
+		vec3 fogcolor = sky(rd);
 		
 		//FragColor.rb += n.xz;
 		
@@ -195,7 +195,7 @@ void main() {
     	
 	} else {
 		// too many ray steps
-		FragColor = vec4(1.);
+		FragColor.rgb = sky(rd); //vec4(1.);
 	}
 	
     	

@@ -157,7 +157,7 @@ float fScene(vec3 p) {
 	vec3 pc = p+vec3(0., 0., -size*0.5);
 	pR45(pc.xz);
 	
-	pModPolar(pc.xz, 8);
+	pModPolar(pc.xz, 3);
 	
 	float c1 = fCylinder(pc.xzy, size*.1, size*0.5);
 	

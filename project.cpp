@@ -83,21 +83,12 @@ void onFrame() {
 
 	double t = Alice::Instance().t;
 	
-	// update simulation:
-	{
-		int i = rnd::integer(NUM_TRIS);
-		float y = state->translations[i].y;
-		y = y - 0.1f;
-		if (y > 1.) y -= 2.;
-		if (y < -1.) y += 2.;
-		state->translations[i].y = y;
-	}
-	for (int i=0; i<NUM_TRIS; i++) {
-		float y = state->translations[i].y;
-		y = y * 0.99f;
-		if (y > 1.) y -= 2.;
-		if (y < -1.) y += 2.;
-		state->translations[i].y = y;
+	for (int i=0; i<NUM_OBJECTS; i++) {
+		Object &o = state->objects[i];
+		o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-32.f, 0.f, -32.f), glm::vec3(32.f, 10.f, 32.f));	
+		//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
+		o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.05f));
+		
 	}
 	
 	// upload GPU;

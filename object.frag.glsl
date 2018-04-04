@@ -171,11 +171,15 @@ void main() {
     color = vec3(1.-pow(count, 0.75));
     
     if (d < precis) {
-		vec3 n = normal4(p, .01);
-		n = quat_rotate(world_orientation, n);
-		vec3 ref = reflect(quat_rotate(world_orientation, rd), n);
-		//ref = quat_rotate(world_orientation, reflect(rd, normal4(p, .01)));
-		//ref = quat_rotate(world_orientation, ref);
+    	// normal in object space:
+		vec3 no = normal4(p, .01);
+		// normal in world space
+		vec3 n = quat_rotate(world_orientation, no);
+		// ray direction in world space
+		vec3 ray = quat_rotate(world_orientation, rd);
+		
+		// reflection vector 
+		vec3 ref = reflect(ray, n);
 		
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);

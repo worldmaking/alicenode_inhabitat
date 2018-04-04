@@ -168,7 +168,6 @@ void main() {
         count += STEP_SIZE;
     }
     
-    color = vec3(1.-pow(count, 0.75));
     
     if (d < precis) {
     	// normal in object space:
@@ -188,9 +187,12 @@ void main() {
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
+		float cheap_self_occlusion = vec3(1.-pow(count, 0.75));
 		
 		float metallic = oblique;
 		color = mix(sky(n)*0.5, sky(ref), metallic);
+		
+		color *= cheap_self_occlusion;
 		//
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

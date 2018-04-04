@@ -190,6 +190,7 @@ void main() {
 		//color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
+		vec3 ref = reflect(rd, n);
 		
 		// fog effect:
 		color = mix(color, fogcolor, pow(count, 2.));

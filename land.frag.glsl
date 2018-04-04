@@ -194,6 +194,8 @@ void main() {
     	//discard;
     	
     	FragColor.rgb = sky(rd);
+    	gl_FragDepth = 1.;
+    	
 	} else {
 		// too many ray steps
 		FragColor = vec4(1.);

@@ -13,7 +13,7 @@ out vec4 FragColor;
 
 
 vec3 sky(vec3 dir) {
-	vec3 n = dir1*0.5+0.5;
+	vec3 n = di*0.5+0.5;
 	//n.g = mix(n.b, n.r, 0.8);
 	return mix(n, vec3(1.), 0.75);
 }

@@ -168,7 +168,7 @@ void main() {
         count += STEP_SIZE;
     }
     
-    color = vec3(1.-pow(count, 0.5);
+    color = vec3(1.-pow(count, 0.5));
     
     if (d < precis) {
 		vec3 n = normal4(p, .01);

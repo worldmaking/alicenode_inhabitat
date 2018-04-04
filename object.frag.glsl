@@ -162,7 +162,7 @@ void main() {
         count += STEP_SIZE;
     }
     
-    FragColor = vec4(count);
+    color = vec3(count);
     
     if (d < precis) {
 		vec3 n = normal4(p, .01);

@@ -14,6 +14,7 @@ unsigned int instanceVBO;
 Shader * landShader;
 QuadMesh quadMesh;
 
+
 float vertices[] = {
     -1.0f,-1.0f,-1.0f, 
     -1.0f,-1.0f, 1.0f,

@@ -182,7 +182,7 @@ void main() {
 		vec3 ref = reflect(ray, n);
 		
 		float view_dot_normal = max(dot(n, ray), 0.0);
-		
+		float view_dot_normal_inverse = 1.0 - view_dot_normal;
 		
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
@@ -190,7 +190,7 @@ void main() {
 		color += 0.;
 		
 		color = sky(n) * color;
-		color = sky(ref) * color;
+		color = sky(ref) * color * view_dot_normal;
 		
 		//float view_dot_normal = max(dot(n, fvViewDirection), 0.0);
 		

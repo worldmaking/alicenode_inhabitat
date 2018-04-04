@@ -187,13 +187,10 @@ void main() {
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
-		color += 0.;
 		
 		float metallic = 1.;
-		color *= mix(sky(n), sky(ref), metallic);
+		color *= mix(sky(n), sky(ref), metallic) * view_dot_normal_inverse;
 		
-		
-		//float view_dot_normal = max(dot(n, fvViewDirection), 0.0);
 		
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

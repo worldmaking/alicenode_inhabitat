@@ -48,6 +48,11 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 #define MAX_STEPS 64
 #define STEP_SIZE 1./float(MAX_STEPS)
 
+vec3 sky(vec3 dir) {
+	vec3 n = dir*0.5+0.5;
+	return mix(n, vec3(1.), 0.75);
+}
+
 // Maximum/minumum elements of a vector
 float vmax(vec2 v) {
 	return max(v.x, v.y);

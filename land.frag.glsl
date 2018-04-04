@@ -186,13 +186,14 @@ void main() {
     	
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//discard;
+    	FragColor.rgb = sky(rd);
     	
 	} else {
 		// too many ray steps
 		FragColor = vec4(1.);
 	}
 	
-    	FragColor.rgb = sky(rd);
+    	
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
 	gl_FragDepth = computeDepth(p, uViewProjectionMatrix);

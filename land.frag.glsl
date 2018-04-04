@@ -174,8 +174,10 @@ void main() {
 	vec3 fogcolor = sky(rd);
 	
 	if (d < precis) {
+		vec3 matcolor = vec3(0.3, 0.4, 0.7);
+	
 		vec3 n = normal4(p, .01);
-		color = sky(n) * 0.5; //n*0.5+0.5;
+		color = sky(n) * matcolor;
 		//color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		

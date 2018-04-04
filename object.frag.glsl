@@ -174,6 +174,7 @@ void main() {
 		vec3 n = normal4(p, .01);
 		n = quat_rotate(world_orientation, n);
 		
+		
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		

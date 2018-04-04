@@ -177,7 +177,7 @@ void main() {
 		//color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
-		FragColor.rgb += 0.3*color;
+		FragColor.rgb = color;
 		//FragColor.rb += n.xz;
 		
 	} else if (t >= maxd) {

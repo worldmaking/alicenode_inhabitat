@@ -104,9 +104,10 @@ float fScene(vec3 p) {
 	float s0 = fSphere(p+vec3(0., -size*0.5, size), size*0.5*osc);
 	float s1 = fSphere(p+vec3(0., 0., size*0.25), size*0.75);
 	
-	float se1 = fSphere(p+vec3(size*0.5, size*0.5, size*0.5), size*0.25);
+	float se1 = fSphere(p+vec3( size*0.5, size*0.5, size*0.5), size*0.25);
+	float se2 = fSphere(p+vec3(-size*0.5, size*0.5, size*0.5), size*0.25);
 	
-	float se = se1;
+	float se = min(se1, se2);
 	
 	float b1 = fBox(p+vec3(0., 0., -size*0.5), vec3(size, size*0.1, size*0.5));
 	

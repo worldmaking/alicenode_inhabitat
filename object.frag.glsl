@@ -188,7 +188,7 @@ void main() {
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
 		
-		float metallic = view_dot_normal_inverse;
+		float metallic = view_dot_normal;
 		color *= mix(sky(n), sky(ref), metallic);
 		
 		

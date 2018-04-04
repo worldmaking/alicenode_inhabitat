@@ -182,7 +182,7 @@ void main() {
 		color += 0.;
 		
 		color = sky(n) * color;
-		color = sky(ref) * color;
+		//color = sky(ref) * color;
 		
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

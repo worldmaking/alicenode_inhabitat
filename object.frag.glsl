@@ -87,6 +87,13 @@ float fBox(vec3 p, vec3 b) {
 	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+// Cylinder standing upright on the xz plane
+float fCylinder(vec3 p, float r, float height) {
+	float d = length(p.xz) - r;
+	d = max(d, abs(p.y) - height);
+	return d;
+}
+
 float fSphere(vec3 p, float r) {
 	return length(p) - r;
 }
@@ -119,7 +126,13 @@ float fScene(vec3 p) {
 	
 	float b1 = fBox(p+vec3(0., 0., -size*0.5), vec3(size, size*0.1, size*0.5));
 	
-	return min(se, min(max(s1, -s0), b1)); //max(b,-s);
+	float c1 = fCylinder(p, 0.5, 0.2);
+	
+	float s = max(s1, -s0); 
+	s = min(s, b1);
+	s = min(se, s); //max(b,-s);
+	s = min(c1, s);
+	return s;
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

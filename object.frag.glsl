@@ -153,7 +153,7 @@ float fScene(vec3 p) {
 	float se = min(se1, se2);
 	
 	
-	vec3 pc = p+vec3(0., 0., -size*0.5);
+	vec3 pc = p+vec3(0., 0., -size*0.25);
 	float a = pModPolar(pc.xz, 18.);
 	//pR(pc.xz, 0.9+cos(time * 7. + a*PI/6.));
 	

@@ -144,7 +144,7 @@ void onFrame() {
 	// update simulation:
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		Object &o = state->objects[i];
-		//o.location = glm::clamp(o.location + glm::ballRand(0.1f), -10.f, 10.f);	
+		o.location = glm::clamp(o.location + glm::ballRand(0.1f), -10.f, 10.f);	
 		//o.orientation = glm::normalize(quat_random());
 	}
 	

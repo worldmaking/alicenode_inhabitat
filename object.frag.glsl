@@ -162,7 +162,7 @@ float fScene(vec3 p) {
 	float c1 = fCylinder(pc.zxy, size*.05, size*0.7);
 	
 	float z = max(s1, -s0); 
-	//z = min(z, b1);
+	z = min(z, b1);
 	z = min(se, z); //max(b,-z);
 	z = min(c1, z);
 	return z;

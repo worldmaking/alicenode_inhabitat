@@ -16,7 +16,7 @@ vec3 sky(vec3 dir) {
 
 	vec3 dir1 = dir;
 	dir1.x = cos(asin(dir1.x) * acos(dir1.y) * 2.);
-	dir1.y = cos(acos(dir1.x) * asin(dir1.y) * 2.);
+	dir1.y = sin(acos(dir1.x) * asin(dir1.y) * 2.);
 
 	vec3 n = dir1*0.5+0.5;
 	n.g = mix(n.b, n.r, 0.8);

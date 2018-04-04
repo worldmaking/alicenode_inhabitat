@@ -189,7 +189,7 @@ void main() {
 		
 		color += 0.;
 		
-		float metallic = 0.;
+		float metallic = 1.;
 		color *= mix(sky(n), sky(ref), metallic);
 		
 		

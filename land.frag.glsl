@@ -1,7 +1,7 @@
 #version 330 core
 uniform sampler2D tex;
 uniform float time;
-uniform mat4 uViewProjectionMatrix;
+uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 
 in vec2 texCoord;
 in vec3 ray, origin;

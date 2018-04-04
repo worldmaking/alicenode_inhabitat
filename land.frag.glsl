@@ -181,7 +181,7 @@ void main() {
 		
 		
 		// fog effect:
-		color = mix(color, fogcolor, t/maxd);
+		color = mix(color, fogcolor, count);
 		
 		FragColor.rgb = color;
 		

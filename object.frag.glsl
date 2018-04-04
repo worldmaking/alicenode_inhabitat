@@ -148,7 +148,7 @@ void main() {
     FragColor = vec4(rd, 1.0);
 	
 	float precis = EPS;
-	float maxd = VERYFARAWAY;
+	float maxd = 4.;
 	
 	vec3 color = vec3(0.);
 	float t = 0.0;

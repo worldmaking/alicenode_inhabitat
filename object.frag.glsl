@@ -196,10 +196,10 @@ void main() {
 		
 		color *= cheap_self_occlusion;
 		
-		//color = vec3(metallic);
-		//
+		// fog effect:
+		float fogmix = pow(t/maxd, 1.));
+		
 		FragColor.rgb = color;
-		//FragColor.rb += n.xz;
 		
 	} else if (t >= maxd) {
     	// shot through to background

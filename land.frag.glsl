@@ -178,6 +178,8 @@ void main() {
 		
 		FragColor.rgb += 0.3*color;
 		//FragColor.rb += n.xz;
+		// also write to depth buffer, so that landscape occludes other creatures:
+		gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
 		
 	} else if (t >= maxd) {
     	// shot through to background

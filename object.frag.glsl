@@ -189,8 +189,9 @@ void main() {
 		
 		color += 0.;
 		
-		color = sky(n) * color;
-		color = sky(ref) * color * view_dot_normal_inverse;
+		float metallic = 1.;
+		color *= mix(sky(n), sky(ref), metallic);
+		
 		
 		//float view_dot_normal = max(dot(n, fvViewDirection), 0.0);
 		

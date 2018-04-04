@@ -9,8 +9,15 @@ in float size;
 
 out vec4 FragColor;
 
+#define PI 3.14159265359
+
+
 vec3 sky(vec3 dir) {
-	vec3 n = dir*0.5+0.5;
+
+	vec3 dir1 = dir;
+	dir1.x = sin(PI * 2. * dir1.x);
+
+	vec3 n = dir1*0.5+0.5;
 	n.g = mix(n.b, n.r, 0.8);
 	return mix(n, vec3(1.), 0.75);
 }
@@ -48,7 +55,6 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 				);
 }
 
-#define PI 3.14159265359
 #define EPS 0.01
 #define VERYFARAWAY  4.
 #define MAX_STEPS 64

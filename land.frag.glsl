@@ -183,6 +183,7 @@ void main() {
 	vec3 fogcolor = sky(rd);
 	
 	if (d < precis) {
+		/*
 		vec3 matcolor = color; //vec3(0.7, 0.5, 0.3);
 	
 		vec3 n = normal4(p, .01);
@@ -192,6 +193,29 @@ void main() {
 		
 		vec3 ref = reflect(rd, n);
 		color = sky(ref) * matcolor;
+		*/
+		
+		// normal in object space:
+		vec3 n = normal4(p, .01);
+		// ray direction in world space
+		vec3 ray = rd;
+		
+		// reflection vector 
+		vec3 ref = reflect(ray, n);
+		
+		float acute = abs(dot(n, ray)); // how much surface faces us
+		float oblique = 1.0 - acute; // how much surface is perpendicular to us
+		color = vec3(oblique);
+		
+		//color += (n*1.)*0.1;
+		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
+		
+		float cheap_self_occlusion = 1.-pow(count, 0.75);
+		
+		float metallic = acute;
+		color = mix(sky(n)*0.5, sky(ref), metallic);
+		
+		color *= cheap_self_occlusion;
 		
 		// fog effect:
 		color = mix(color, fogcolor, pow(count, 2.));

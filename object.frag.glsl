@@ -177,7 +177,7 @@ void main() {
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
-		color += .25;
+		color += 0.;
 		
 		color = sky(n);// * color;
 		

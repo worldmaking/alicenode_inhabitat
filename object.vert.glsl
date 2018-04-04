@@ -68,7 +68,7 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 
 void main()
 {
-    size = 0.1;
+    size = 0.2;
     
     // basic vertex position:
     objectpos = aPos * size;

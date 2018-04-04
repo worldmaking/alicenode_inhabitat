@@ -175,16 +175,15 @@ void main() {
 	
 	if (d < precis) {
 		vec3 n = normal4(p, .01);
-		color = sky(n); //n*0.5+0.5;
+		color = sky(n) * 0.5; //n*0.5+0.5;
 		//color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		
-		FragColor.rgb = color * 0.5;
 		
 		// fog effect:
+		color = mix(color, fogcolor, t/maxd);
 		
-		
-		//FragColor.rb += n.xz;
+		FragColor.rgb = color;
 		
 	} else if (t >= maxd) {
     	// shot through to background

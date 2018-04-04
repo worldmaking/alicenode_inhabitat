@@ -79,6 +79,11 @@ void pR(inout vec2 p, float a) {
 	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+// Plane with normal n (n is normalized) at some distance from the origin
+float fPlane(vec3 p, vec3 n, float distanceFromOrigin) {
+	return dot(p, n) + distanceFromOrigin;
+}
+
 float fSphere(vec3 p, float r) {
 	return length(p) - r;
 }
@@ -96,6 +101,8 @@ float fCapsule(vec3 p, float r, float c) {
 
 float fScene(vec3 p) {
 	
+	float plane = fPlane(p, vec3(0.,1.,0.), 0.0);
+	
 	vec3 pc = p;
 	vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));
 	float h = abs(sin(c.y*0.2)*sin(c.x*0.2));
@@ -106,7 +113,7 @@ float fScene(vec3 p) {
 	//float s = fSphere(pc, h); //
 	//float b = fBox(pc, vec3(0.3, h, 0.3));
 	float z = fCapsule(pc, 0.1, h);
-	return z;
+	return min(z, plane);
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

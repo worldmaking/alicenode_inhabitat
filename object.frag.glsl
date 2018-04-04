@@ -4,8 +4,42 @@ uniform float time;
 
 in vec3 ray_direction, ray_origin;
 in vec3 worldpos, objectpos, eyepos;
+in vec4 world_orientation;
 
 out vec4 FragColor;
+
+//	q must be a normalized quaternion
+vec3 quat_rotate(vec4 q, vec3 v) {
+	vec4 p = vec4(
+		q.w*v.x + q.y*v.z - q.z*v.y,	// x
+		q.w*v.y + q.z*v.x - q.x*v.z,	// y
+		q.w*v.z + q.x*v.y - q.y*v.x,	// z
+		-q.x*v.x - q.y*v.y - q.z*v.z	// w
+	);
+	return vec3(
+		p.x*q.w - p.w*q.x + p.z*q.y - p.y*q.z,	// x
+		p.y*q.w - p.w*q.y + p.x*q.z - p.z*q.x,	// y
+		p.z*q.w - p.w*q.z + p.y*q.x - p.x*q.y	// z
+	);
+}
+
+// equiv. quat_rotate(quat_conj(q), v):
+// q must be a normalized quaternion
+vec3 quat_unrotate(in vec4 q, in vec3 v) {
+	// return quat_mul(quat_mul(quat_conj(q), vec4(v, 0)), q).xyz;
+	// reduced:
+	vec4 p = vec4(
+				  q.w*v.x - q.y*v.z + q.z*v.y,  // x
+				  q.w*v.y - q.z*v.x + q.x*v.z,  // y
+				  q.w*v.z - q.x*v.y + q.y*v.x,  // z
+				  q.x*v.x + q.y*v.y + q.z*v.z   // w
+				  );
+	return vec3(
+				p.w*q.x + p.x*q.w + p.y*q.z - p.z*q.y,  // x
+				p.w*q.y + p.y*q.w + p.z*q.x - p.x*q.z,  // y
+				p.w*q.z + p.z*q.w + p.x*q.y - p.y*q.x   // z
+				);
+}
 
 #define PI 3.14159265359
 #define EPS 0.01
@@ -62,8 +96,8 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 }
 
 float fScene(vec3 p) {
-	float size = 0.8;
-	float s = fSphere(p, size*(1.0+0.5*abs(sin(time))));
+	float size = 0.9;
+	float s = fSphere(p, size*(0.99+0.5*abs(sin(time))));
 	float b = fBox(p, vec3(size));
 	return max(b,-s);
 }
@@ -130,16 +164,11 @@ void main() {
 	} else if (t >= maxd) {
     	// shot through to background
     	
-    	// locate on floor plane instead:
-    	if (abs(rd.y) > 1e-6) { 
-			t = -ro.y / rd.y; 
-			p = ro+rd*t;
-		} 
     	
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//FragColor.rgb = mod((ro+0.5)*0.5,0.5)+0.5;
     	//FragColor.rgb = mod(rd,0.5)+0.5;
-    	//discard;
+    	discard;
     	
 	} else {
 		// too many ray steps
@@ -147,7 +176,8 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	gl_FragDepth = computeDepth(worldpos + p, uViewProjectionMatrix);
+	//gl_FragDepth = computeDepth(worldpos + p, uViewProjectionMatrix);
+	gl_FragDepth = computeDepth(worldpos + quat_rotate(world_orientation, p), uViewProjectionMatrix);
 	
 	//FragColor.rgb = mod(rd * 8., 1.);
 }

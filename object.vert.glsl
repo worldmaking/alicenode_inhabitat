@@ -9,6 +9,7 @@ layout (location = 3) in vec4 iOrientation;
 
 out vec3 worldpos, objectpos, eyepos;
 out vec3 ray_direction, ray_origin;
+out vec4 world_orientation;
 
 vec4 quat_fromeuler(float az, float el, float ba) {
 	float c1 = cos(az * 0.5);
@@ -68,10 +69,13 @@ void main()
 {
     // basic vertex position:
     objectpos = aPos;
+    
     // instance position:
     worldpos = iLocation;
+  	world_orientation = iOrientation;
     
     // final position of vertex in world space:
+    //vec3 vertexpos = worldpos + objectpos;
     vec3 vertexpos = worldpos + quat_rotate(iOrientation, objectpos);
 
 	// we want the raymarching to operate in object-local space, not world space
@@ -86,5 +90,6 @@ void main()
     eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 	// ray direction computed from eye to vertex world position:
+	//ray_direction = (vertexpos-eyepos);
 	ray_direction = quat_unrotate(iOrientation, vertexpos-eyepos); 
 }  

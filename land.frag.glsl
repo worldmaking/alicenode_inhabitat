@@ -174,7 +174,7 @@ void main() {
 	vec3 fogcolor = sky(rd);
 	
 	if (d < precis) {
-		vec3 matcolor = vec3(0.3, 0.4, 0.7);
+		vec3 matcolor = vec3(0.7, 0.4, 0.5);
 	
 		vec3 n = normal4(p, .01);
 		color = sky(n) * matcolor;

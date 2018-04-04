@@ -9,7 +9,7 @@ out vec4 FragColor;
 
 #define PI 3.14159265359
 #define EPS 0.01
-#define VERYFARAWAY  400.
+#define VERYFARAWAY  100.
 #define MAX_STEPS 128
 #define STEP_SIZE 1./float(MAX_STEPS)
 

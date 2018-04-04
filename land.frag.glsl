@@ -173,7 +173,7 @@ void main() {
 	
 	if (d < precis) {
 		vec3 n = normal4(p, .01);
-		color = n*0.5+0.5;
+		color = sky(n); //n*0.5+0.5;
 		//color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
 		//color += texture2D(tex0, pos2texcoord(p)).rgb;
 		

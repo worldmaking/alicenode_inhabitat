@@ -172,8 +172,9 @@ void main() {
     
     if (d < precis) {
 		vec3 n = normal4(p, .01);
+		vec3 ref = reflect(rd, n);
 		n = quat_rotate(world_orientation, n);
-		
+		ref = quat_rotate(world_orientation, ref);
 		
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);

@@ -181,16 +181,16 @@ void main() {
 		// reflection vector 
 		vec3 ref = reflect(ray, n);
 		
-		float acute = abs(dot(n, ray));
-		float oblique = 1.0 - view_dot_normal;
+		float acute = abs(dot(n, ray)); // how much surface faces us
+		float oblique = 1.0 - acute; // how much surface is perpendicular to us
 		
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
 		
-		float metallic = view_dot_normal;
-		color *= mix(sky(n), sky(ref), metallic);
-		color = vec3(view_dot_normal);
+		float metallic = oblique;
+		color *= mix(sky(n), sky(ref)*2., metallic);
+		//color = vec3(metallic);
 		
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

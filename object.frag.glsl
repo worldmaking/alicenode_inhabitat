@@ -196,7 +196,7 @@ void main() {
 		
 		color *= cheap_self_occlusion;
 		
-		color = vec3(metallic);
+		//color = vec3(metallic);
 		//
 		FragColor.rgb = color;
 		//FragColor.rb += n.xz;

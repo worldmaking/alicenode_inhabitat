@@ -1,6 +1,6 @@
 #version 330 core
 
-uniform mat4 uViewProjectionMatrixInverse;
+uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec2 aTexCoord;

@@ -13,7 +13,7 @@ unsigned int instanceVBO;
 
 float vertices[] = {
     -0.3f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
+     0.5f, +0.f, 0.0f,
      0.0f,  0.9f, 0.0f
 };
 
@@ -26,7 +26,7 @@ Mmap<State> statemap1;
 void onFrame() {
 	int i = rnd::integer(NUM_TRIS);
 	float y = state1->translations[i].y;
-	y = y + 0.002f;
+	y = y - 0.002f;
 	if (y > 1.) y -= 2.;
 	if (y < -1.) y += 2.;
 	state1->translations[i].y = y;

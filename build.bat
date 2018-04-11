@@ -10,11 +10,7 @@ if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\BuildTools\%VCVARS64%
 
 
 REM compile & link:
-cl /nologo /LD /W3 /EHsc /O2 ^
-/I %ALICE_DIR%\include ^
-%ALICE_DIR%\alice.lib ^
-project.cpp ^
-user32.lib kernel32.lib shell32.lib gdi32.lib opengl32.lib 
+cl /nologo /LD /W3 /EHsc /O2 /I %ALICE_DIR%\include %ALICE_DIR%\alice.lib project.cpp user32.lib kernel32.lib shell32.lib gdi32.lib opengl32.lib 
 
 @del project.obj project.exp
 

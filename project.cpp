@@ -137,9 +137,6 @@ void state_initialize() {
 	}
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 typedef double t_sample;
 
 inline t_sample cubic_interp(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {

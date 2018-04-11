@@ -138,6 +138,7 @@ void state_initialize() {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 typedef double t_sample;
 
@@ -193,89 +194,6 @@ inline t_sample spline_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_
 	//return (f0*a*a2 + f1*a2 + f2*a + x);
 }
 
-void test() {
-
-	int count = 10000000000;
-	int bufsize = 512;
-	int bufwrap = bufsize-1;
-	double buf[bufsize];
-	for (int i=0; i<bufsize; i++) {
-		buf[i] = glm::linearRand(0.f, 100000.f);
-	}
-	
-	/*
-	{
-		double r = 0.;
-		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<count; i++) {
-			r += cubic_interp(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
-		
-		}
-		auto steady_end = std::chrono::steady_clock::now();
-		printf("cubic: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
-	}
-
-	{
-		double r = 0.;
-		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<count; i++) {
-			r += altcubic(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
-		
-		}
-		auto steady_end = std::chrono::steady_clock::now();
-		printf("altcubic: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
-	}
-
-	{
-		double r = 0.;
-		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<count; i++) {
-			r += spline_harker(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
-		
-		}
-		auto steady_end = std::chrono::steady_clock::now();
-		printf("spline_interp: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
-	}
-
-	{
-		double r = 0.;
-		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<count; i++) {
-			r += spline_interp(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
-		
-		}
-		auto steady_end = std::chrono::steady_clock::now();
-		printf("spline harker: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
-	}
-	*/
-	
-	
-	{
-		double r = 0.;
-		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<count; i++) {
-			float a = spline_interp(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
-			float b = altcubic(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
-			float err = fabs(a-b);
-			if (err > 0.) {
-				fprintf(stderr, "FAIL %f %f %f\n", a, err, b);
-			}
-		}
-		auto steady_end = std::chrono::steady_clock::now();
-		printf("spline harker: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
-	}
-
-	/*for (int i=0; i<100000000; i++) {
-		float a = glm::linearRand(-100000.f, 100000.f);
-		float N = glm::linearRand(0.f, 1000.f);
-		float b = wrap(a, -N, N);
-		if (b < -N || b >= N) {
-			fprintf(stderr, "FAIL %f %f %f\n", a, N, b);
-		}
-	}*/
-}	
-
->>>>>>> client updated project
 extern "C" {
     AL_EXPORT int onload() {
     	
@@ -296,12 +214,7 @@ extern "C" {
     	// register event handlers 
 		alice.onFrame.connect(onFrame);
 		alice.onReloadGPU.connect(onReloadGPU);
-		
-<<<<<<< HEAD
-=======
-		test();
-		
->>>>>>> client updated project
+
         return 0;
     }
     

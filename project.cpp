@@ -139,9 +139,8 @@ void onReloadGPU() {
 
 void onFrame(uint32_t width, uint32_t height) {
 
-	printf("%d %d\n", width, height);
-
 	double t = Alice::Instance().t;
+	float aspect = width/float(height);
 
 	// update simulation:
 	for (int i=0; i<NUM_OBJECTS; i++) {
@@ -162,7 +161,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
 	glm::vec3(0., 0., 0.), 
 	glm::vec3(0., 1., 0.));
-	glm::mat4 projMat = glm::perspective(45.0f, 4.f/3.f, 0.1f, 100.0f);
+	glm::mat4 projMat = glm::perspective(45.0f, aspect, 0.1f, 100.0f);
 	glm::mat4 viewProjMat = projMat * viewMat;
 	glm::mat4 viewProjMatInverse = glm::inverse(viewProjMat);
 

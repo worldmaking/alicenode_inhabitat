@@ -189,7 +189,7 @@ void main() {
 	vec3 rd = normalize(ray_direction);
 	vec3 ro = ray_origin; 
 	
-    FragColor = vec4(rd, 1.0);
+    //FragColor = vec4(rd, 1.0);
 	
 	float precis = EPS;
 	float maxd = 4.;

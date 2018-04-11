@@ -181,7 +181,7 @@ inline t_sample spline_interp(t_sample a, t_sample w, t_sample x, t_sample y, t_
 	return (f0*a*a2 + f1*a2 + f2*a + x);
 }
 
-inline t_sample cubic_interp_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z)
+inline t_sample spline_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z)
 {
     // N.B. - this is currently a high-quality cubic hermite
     const t_sample f0 = t_sample(0.5) * (z - w) + t_sample(1.5) * (x - y);
@@ -195,38 +195,54 @@ inline t_sample cubic_interp_harker(t_sample a, t_sample w, t_sample x, t_sample
 
 void test() {
 
+	double a = glm::linearRand(-100000.f, 100000.f);
+	double x1 = glm::linearRand(-100000.f, 100000.f);
+	double x2 = glm::linearRand(-100000.f, 100000.f);
+	double x3 = glm::linearRand(-100000.f, 100000.f);
+	double x4 = glm::linearRand(-100000.f, 100000.f);
+	
 	{
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
 		for (int i=0; i<1000000000; i++) {
-			double a = glm::linearRand(-100000.f, 100000.f);
-			double x1 = glm::linearRand(-100000.f, 100000.f);
-			double x2 = glm::linearRand(-100000.f, 100000.f);
-			double x3 = glm::linearRand(-100000.f, 100000.f);
-			double x4 = glm::linearRand(-100000.f, 100000.f);
-		
-			r += spline_interp(a, x1, x2, x3, x4);
+			r += cubic_interp(a, x1, x2, x3, x4);
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
-		printf("done: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+		printf("cubic: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
 	}
 
 	{
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
 		for (int i=0; i<1000000000; i++) {
-			double a = glm::linearRand(-100000.f, 100000.f);
-			double x1 = glm::linearRand(-100000.f, 100000.f);
-			double x2 = glm::linearRand(-100000.f, 100000.f);
-			double x3 = glm::linearRand(-100000.f, 100000.f);
-			double x4 = glm::linearRand(-100000.f, 100000.f);
-		
-			r += cubic_interp_harker(a, x1, x2, x3, x4);
+			r += altcubic(a, x1, x2, x3, x4);
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
-		printf("done harker: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+		printf("altcubic: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+	}
+
+	{
+		double r = 0.;
+		auto steady_start = std::chrono::steady_clock::now(); 
+		for (int i=0; i<1000000000; i++) {
+			r += spline_interp(a, x1, x2, x3, x4);
+		
+		}
+		auto steady_end = std::chrono::steady_clock::now();
+		printf("spline_interp: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+	}
+
+	{
+		double r = 0.;
+		auto steady_start = std::chrono::steady_clock::now(); 
+		for (int i=0; i<1000000000; i++) {
+			r += spline_interp(a, x1, x2, x3, x4);
+		
+		}
+		auto steady_end = std::chrono::steady_clock::now();
+		printf("spline harker: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
 	}
 
 	/*for (int i=0; i<100000000; i++) {

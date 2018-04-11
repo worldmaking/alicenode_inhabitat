@@ -211,7 +211,7 @@ void test() {
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
-		printf("cubic: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+		printf("cubic: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
 	}
 
 	{
@@ -222,7 +222,7 @@ void test() {
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
-		printf("altcubic: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+		printf("altcubic: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
 	}
 
 	{
@@ -233,7 +233,7 @@ void test() {
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
-		printf("spline_interp: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+		printf("spline_interp: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
 	}
 
 	{
@@ -244,7 +244,7 @@ void test() {
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
-		printf("spline harker: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+		printf("spline harker: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
 	}
 
 	/*for (int i=0; i<100000000; i++) {

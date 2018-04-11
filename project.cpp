@@ -150,6 +150,28 @@ inline t_sample cubic_interp(t_sample a, t_sample w, t_sample x, t_sample y, t_s
 	return (f0*a*a2 + f1*a2 + f2*a + f3);
 }
 
+inline t_sample altcubic(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
+	const t_sample f0 = 1. + a; 
+	
+	const t_sample f1 = 1. - a; 
+	
+	const t_sample f2 = 2. - a; 
+	
+	const t_sample f3 = f1 * f2; 
+	
+	const t_sample f4 = f0 * a;
+	
+	const t_sample fw = -.1666667 * f3 * a; 
+	
+	const t_sample fx = .5 * f0 * f3; 
+	
+	const t_sample fy = .5 * f4 * f2; 
+	
+	const t_sample fz = -.1666667 * f4 * f1;
+	
+	return w * fw + x * fx + y * fy + z * fz;
+}
+
 // Breeuwsma catmull-rom spline interpolation
 inline t_sample spline_interp(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 	const t_sample a2 = a*a;

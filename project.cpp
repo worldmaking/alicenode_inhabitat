@@ -137,7 +137,7 @@ void onReloadGPU() {
 
 }
 
-void onFrame() {
+void onFrame(uint32_t width, uint32_t height) {
 
 	double t = Alice::Instance().t;
 
@@ -183,7 +183,7 @@ void onFrame() {
 	//glDrawArrays(GL_TRIANGLES, 0, 3);
 	// draw instances:
 	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_OBJECTS);   
-	}
+}
 
 
 void state_initialize() {

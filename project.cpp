@@ -255,7 +255,7 @@ void test() {
 		auto steady_start = std::chrono::steady_clock::now(); 
 		for (int i=0; i<count; i++) {
 			float a = spline_interp(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
-			float b = spline_harker(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
+			float b = altcubic(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
 			float err = fabs(a-b);
 			if (err > 0.) {
 				fprintf(stderr, "FAIL %f %f %f\n", a, err, b);

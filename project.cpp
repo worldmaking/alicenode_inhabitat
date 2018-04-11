@@ -139,6 +139,8 @@ void onReloadGPU() {
 
 void onFrame(uint32_t width, uint32_t height) {
 
+	printf("%d %d\n", width, height);
+
 	double t = Alice::Instance().t;
 
 	// update simulation:

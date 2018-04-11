@@ -195,6 +195,13 @@ inline t_sample spline_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_
 
 void test() {
 
+	int count = 1000000000;
+	int bufsize = 512;
+	int bufwrap = bufsize-1;
+	double buf[bufsize];
+	for (int i=0; i<bufsize; i++) {
+		buf[i] = glm::linearRand(0.f, 100000.f);
+	}
 	
 	double x1 = glm::linearRand(-100000.f, 100000.f);
 	double x2 = glm::linearRand(-100000.f, 100000.f);
@@ -204,9 +211,9 @@ void test() {
 	{
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<1000000000; i++) {
+		for (int i=0; i<count; i++) {
 			double a = glm::linearRand(-100000.f, 100000.f);
-			r += cubic_interp(a, x1, x2, x3, x4);
+			r += cubic_interp(a, buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
@@ -216,9 +223,9 @@ void test() {
 	{
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<1000000000; i++) {
+		for (int i=0; i<count; i++) {
 			double a = glm::linearRand(-100000.f, 100000.f);
-			r += altcubic(a, x1, x2, x3, x4);
+			r += altcubic(a, buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
@@ -228,9 +235,9 @@ void test() {
 	{
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<1000000000; i++) {
+		for (int i=0; i<count; i++) {
 			double a = glm::linearRand(-100000.f, 100000.f);
-			r += spline_interp(a, x1, x2, x3, x4);
+			r += spline_harker(a, buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();
@@ -240,9 +247,9 @@ void test() {
 	{
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
-		for (int i=0; i<1000000000; i++) {
+		for (int i=0; i<count; i++) {
 			double a = glm::linearRand(-100000.f, 100000.f);
-			r += spline_interp(a, x1, x2, x3, x4);
+			r += spline_interp(a, buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();

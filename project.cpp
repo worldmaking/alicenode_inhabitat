@@ -203,6 +203,7 @@ void test() {
 		buf[i] = glm::linearRand(0.f, 100000.f);
 	}
 	
+	/*
 	{
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
@@ -242,6 +243,23 @@ void test() {
 		for (int i=0; i<count; i++) {
 			r += spline_interp(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
 		
+		}
+		auto steady_end = std::chrono::steady_clock::now();
+		printf("spline harker: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());
+	}
+	*/
+	
+	
+	{
+		double r = 0.;
+		auto steady_start = std::chrono::steady_clock::now(); 
+		for (int i=0; i<count; i++) {
+			float a = spline_interp(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
+			float b = spline_harker(buf[(i+67456) & bufwrap], buf[i & bufwrap], buf[(i+1) & bufwrap], buf[(i+2) & bufwrap], buf[(i+3) & bufwrap]);
+			float err = fabs(a-b);
+			if (err > 0.) {
+				fprintf(stderr, "FAIL %f %f %f\n", a, err, b);
+			}
 		}
 		auto steady_end = std::chrono::steady_clock::now();
 		printf("spline harker: %f %fs\n", r, std::chrono::duration<double>(steady_end - steady_start).count());

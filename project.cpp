@@ -137,6 +137,78 @@ void state_initialize() {
 	}
 }
 
+<<<<<<< HEAD
+=======
+typedef double t_sample;
+
+inline t_sample cubic_interp(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
+	const t_sample a2 = a*a;
+	const t_sample f0 = z - y - w + x;
+	const t_sample f1 = w - x - f0;
+	const t_sample f2 = y - w;
+	const t_sample f3 = x;
+	return (f0*a*a2 + f1*a2 + f2*a + f3);
+}
+
+inline t_sample cubic_interp_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z)
+{
+    // N.B. - this is currently a high-quality cubic hermite
+    const t_sample f0 = t_sample(0.5) * (z - w) + t_sample(1.5) * (x - y);
+    const t_sample f1 = w - t_sample(2.5) * x + y + y - t_sample(0.5) * z;
+    const t_sample f2 = t_sample(0.5) * (y - w);
+    
+    return (((f0 * a + f1) * a + f2) * a + x);
+    //const t_sample a2 = a*a;
+	//return (f0*a*a2 + f1*a2 + f2*a + x);
+}
+
+void test() {
+
+	{
+		double r = 0.;
+		auto steady_start = std::chrono::steady_clock::now(); 
+		for (int i=0; i<1000000000; i++) {
+			double a = glm::linearRand(-100000.f, 100000.f);
+			double x1 = glm::linearRand(-100000.f, 100000.f);
+			double x2 = glm::linearRand(-100000.f, 100000.f);
+			double x3 = glm::linearRand(-100000.f, 100000.f);
+			double x4 = glm::linearRand(-100000.f, 100000.f);
+		
+			r += cubic_interp(a, x1, x2, x3, x4);
+		
+		}
+		auto steady_end = std::chrono::steady_clock::now();
+		printf("done: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+	}
+
+	{
+		double r = 0.;
+		auto steady_start = std::chrono::steady_clock::now(); 
+		for (int i=0; i<1000000000; i++) {
+			double a = glm::linearRand(-100000.f, 100000.f);
+			double x1 = glm::linearRand(-100000.f, 100000.f);
+			double x2 = glm::linearRand(-100000.f, 100000.f);
+			double x3 = glm::linearRand(-100000.f, 100000.f);
+			double x4 = glm::linearRand(-100000.f, 100000.f);
+		
+			r += cubic_interp_harker(a, x1, x2, x3, x4);
+		
+		}
+		auto steady_end = std::chrono::steady_clock::now();
+		printf("done harker: %fs\n", std::chrono::duration<double>(steady_end - steady_start).count());
+	}
+
+	/*for (int i=0; i<100000000; i++) {
+		float a = glm::linearRand(-100000.f, 100000.f);
+		float N = glm::linearRand(0.f, 1000.f);
+		float b = wrap(a, -N, N);
+		if (b < -N || b >= N) {
+			fprintf(stderr, "FAIL %f %f %f\n", a, N, b);
+		}
+	}*/
+}	
+
+>>>>>>> client updated project
 extern "C" {
     AL_EXPORT int onload() {
     	
@@ -158,6 +230,11 @@ extern "C" {
 		alice.onFrame.connect(onFrame);
 		alice.onReloadGPU.connect(onReloadGPU);
 		
+<<<<<<< HEAD
+=======
+		test();
+		
+>>>>>>> client updated project
         return 0;
     }
     

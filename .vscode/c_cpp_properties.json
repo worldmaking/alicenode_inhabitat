@@ -55,7 +55,10 @@
             "includePath": [
                 "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/include",
                 "${workspaceFolder}",
-                "E:/GitHub/alicenode/include"
+                "E:/GitHub/alicenode/include",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/ucrt",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/um",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/shared"
             ],
             "defines": [
                 "_DEBUG",
@@ -67,6 +70,8 @@
                 "path": [
                     "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/include/*",
                     "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/ucrt/*",
+                    "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/shared/*",
+                    "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/um/*",
                     "${workspaceFolder}",
                     "${workspaceFolder}/../alicenode/include"
                 ],

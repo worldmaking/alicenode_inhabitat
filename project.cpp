@@ -195,7 +195,7 @@ inline t_sample spline_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_
 
 void test() {
 
-	int count = 1000000000;
+	int count = 10000000000;
 	int bufsize = 512;
 	int bufwrap = bufsize-1;
 	double buf[bufsize];

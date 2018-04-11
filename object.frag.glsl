@@ -252,7 +252,7 @@ void main() {
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//FragColor.rgb = mod((ro+0.5)*0.5,0.5)+0.5;
     	//FragColor.rgb = mod(rd,0.5)+0.5;
-    	//discard;
+    	discard;
     	
 	} else {
 		// too many ray steps

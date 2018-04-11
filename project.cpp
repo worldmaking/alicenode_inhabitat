@@ -150,6 +150,15 @@ inline t_sample cubic_interp(t_sample a, t_sample w, t_sample x, t_sample y, t_s
 	return (f0*a*a2 + f1*a2 + f2*a + f3);
 }
 
+// Breeuwsma catmull-rom spline interpolation
+inline t_sample spline_interp(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
+	const t_sample a2 = a*a;
+	const t_sample f0 = t_sample(-0.5)*w + t_sample(1.5)*x - t_sample(1.5)*y + t_sample(0.5)*z;
+	const t_sample f1 = w - t_sample(2.5)*x + t_sample(2)*y - t_sample(0.5)*z;
+	const t_sample f2 = t_sample(-0.5)*w + t_sample(0.5)*y;
+	return (f0*a*a2 + f1*a2 + f2*a + x);
+}
+
 inline t_sample cubic_interp_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z)
 {
     // N.B. - this is currently a high-quality cubic hermite
@@ -174,7 +183,7 @@ void test() {
 			double x3 = glm::linearRand(-100000.f, 100000.f);
 			double x4 = glm::linearRand(-100000.f, 100000.f);
 		
-			r += cubic_interp(a, x1, x2, x3, x4);
+			r += spline_interp(a, x1, x2, x3, x4);
 		
 		}
 		auto steady_end = std::chrono::steady_clock::now();

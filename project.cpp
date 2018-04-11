@@ -195,7 +195,7 @@ inline t_sample spline_harker(t_sample a, t_sample w, t_sample x, t_sample y, t_
 
 void test() {
 
-	double a = glm::linearRand(-100000.f, 100000.f);
+	
 	double x1 = glm::linearRand(-100000.f, 100000.f);
 	double x2 = glm::linearRand(-100000.f, 100000.f);
 	double x3 = glm::linearRand(-100000.f, 100000.f);
@@ -205,6 +205,7 @@ void test() {
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
 		for (int i=0; i<1000000000; i++) {
+			double a = glm::linearRand(-100000.f, 100000.f);
 			r += cubic_interp(a, x1, x2, x3, x4);
 		
 		}
@@ -216,6 +217,7 @@ void test() {
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
 		for (int i=0; i<1000000000; i++) {
+			double a = glm::linearRand(-100000.f, 100000.f);
 			r += altcubic(a, x1, x2, x3, x4);
 		
 		}
@@ -227,6 +229,7 @@ void test() {
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
 		for (int i=0; i<1000000000; i++) {
+			double a = glm::linearRand(-100000.f, 100000.f);
 			r += spline_interp(a, x1, x2, x3, x4);
 		
 		}
@@ -238,6 +241,7 @@ void test() {
 		double r = 0.;
 		auto steady_start = std::chrono::steady_clock::now(); 
 		for (int i=0; i<1000000000; i++) {
+			double a = glm::linearRand(-100000.f, 100000.f);
 			r += spline_interp(a, x1, x2, x3, x4);
 		
 		}

@@ -222,7 +222,7 @@ t_sample tapcubic1(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 }
 
 void test() {
-	int rounds = 100000000;
+	int rounds = 1000000000;
 	int size = 512;
 	int wrap = size-1;
 	double buf[size];

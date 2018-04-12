@@ -194,6 +194,8 @@ void state_initialize() {
 }
 
 typedef double t_sample;
+
+// mul 14 add 6
 t_sample tapcubic(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 	t_sample f0 = 1. + a; 
 	t_sample f1 = 1. - a; 
@@ -208,6 +210,7 @@ t_sample tapcubic(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 }
 
 typedef double t_sample;
+// mul 11 add 8
 t_sample tapcubic1(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 
 	t_sample t0 = (a - a*a)*0.5;

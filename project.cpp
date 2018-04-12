@@ -193,6 +193,42 @@ void state_initialize() {
 	}
 }
 
+typedef double t_sample;
+t_sample tapcubic(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
+	t_sample f0 = 1. + a; 
+	t_sample f1 = 1. - a; 
+	t_sample f2 = 2. - a; 
+	t_sample f3 = f1 * f2; 
+	t_sample f4 = f0 * a;
+	t_sample fw = -.1666667 * f3 * a; 
+	t_sample fx = .5 * f0 * f3; 
+	t_sample fy = .5 * f4 * f2; 
+	t_sample fz = -.1666667 * f4 * f1;
+	return w * fw + x * fx + y * fy + z * fz;
+}
+
+void test() {
+	int rounds = 100000000;
+	int size = 512;
+	int wrap = size-1;
+	double buf[size];
+	for (int i=0; i<size; i++) {
+		buf[i]= glm::linearRand(0., 1.);
+	}
+
+	{
+		auto t1 = std::chrono::system_clock::now();
+		double r;
+		for (int i=0; i<rounds; i++) {
+			r += tapcubic(buf[(i) & wrap], buf[(i+1) & wrap], buf[(i+2) & wrap], buf[(i+3) & wrap], buf[(i+4) & wrap]);
+		}
+		auto t2 = std::chrono::system_clock::now();
+
+		auto duration = (double)std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
+		printf("time spent %f (%f)\n", duration, r);
+	}
+}
+
 extern "C" {
     AL_EXPORT int onload() {
     	
@@ -214,7 +250,7 @@ extern "C" {
 		alice.onFrame.connect(onFrame);
 		alice.onReloadGPU.connect(onReloadGPU);
 
-		//test();
+		test();
 
 		return 0;
     }

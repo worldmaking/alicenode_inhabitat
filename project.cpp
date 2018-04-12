@@ -218,11 +218,7 @@ t_sample tapcubic1(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 	t_sample fx = (1. - a) * t1; 
 	t_sample fy = (     a) * t1; 
 	t_sample fz = (1. + a) * t2;
-	return 
-		  w * fw 
-		+ x * fx 
-		+ y * fy 
-		+ z * fz;
+	return w * fw + x * fx + y * fy + z * fz;
 }
 
 void test() {

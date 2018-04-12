@@ -208,7 +208,7 @@ t_sample tapcubic(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 	return w * fw + x * fx + y * fy + z * fz;
 }
 
-// seems to have same performance
+// worse performance :-(
 t_sample tapcubic1(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
 
 	t_sample t0 = (a - a*a)*0.5;

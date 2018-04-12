@@ -240,7 +240,7 @@ void test() {
 		auto t2 = std::chrono::system_clock::now();
 
 		auto duration = (double)std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
-		printf("time spent %f (%f)\n", duration, r);
+		printf("tapcubic  %f (%f)\n", duration, r);
 	}
 
 	{
@@ -252,7 +252,7 @@ void test() {
 		auto t2 = std::chrono::system_clock::now();
 
 		auto duration = (double)std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
-		printf("time spent %f (%f)\n", duration, r);
+		printf("tapcubic1 %f (%f)\n", duration, r);
 	}
 }
 

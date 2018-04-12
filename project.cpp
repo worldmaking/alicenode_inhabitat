@@ -235,7 +235,7 @@ void test() {
 		auto t1 = std::chrono::system_clock::now();
 		double r=0;
 		for (int i=0; i<rounds; i++) {
-			r += tapcubic1(buf[(i) & wrap], buf[(i+1) & wrap], buf[(i+2) & wrap], buf[(i+3) & wrap], buf[(i+4) & wrap]);
+			r += tapcubic(buf[(i) & wrap], buf[(i+1) & wrap], buf[(i+2) & wrap], buf[(i+3) & wrap], buf[(i+4) & wrap]);
 		}
 		auto t2 = std::chrono::system_clock::now();
 
@@ -247,7 +247,7 @@ void test() {
 		auto t1 = std::chrono::system_clock::now();
 		double r=0;
 		for (int i=0; i<rounds; i++) {
-			r += tapcubic(buf[(i) & wrap], buf[(i+1) & wrap], buf[(i+2) & wrap], buf[(i+3) & wrap], buf[(i+4) & wrap]);
+			r += tapcubic1(buf[(i) & wrap], buf[(i+1) & wrap], buf[(i+2) & wrap], buf[(i+3) & wrap], buf[(i+4) & wrap]);
 		}
 		auto t2 = std::chrono::system_clock::now();
 

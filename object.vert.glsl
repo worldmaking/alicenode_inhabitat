@@ -15,27 +15,6 @@ out vec4 world_orientation;
 // starting ray for this vertex. ray direction is in world space; origin is in object space.
 out vec3 ray_direction, ray_origin;
 
-vec4 quat_fromeuler(float az, float el, float ba) {
-	float c1 = cos(az * 0.5);
-	float c2 = cos(el * 0.5);
-	float c3 = cos(ba * 0.5);
-	float s1 = sin(az * 0.5);
-	float s2 = sin(el * 0.5);
-	float s3 = sin(ba * 0.5);
-	// equiv Q1 = Qy * Qx; -- since many terms are zero
-	float tw = c1*c2;
-	float tx = c1*s2;
-	float ty = s1*c2;
-	float tz =-s1*s2;
-	// equiv Q2 = Q1 * Qz; -- since many terms are zero
-	return vec4(
-		tx*c3 + ty*s3,
-		ty*c3 - tx*s3,
-		tw*s3 + tz*c3,
-		tw*c3 - tz*s3
-	);
-}
-
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
 	vec4 p = vec4(

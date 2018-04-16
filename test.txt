@@ -1,0 +1,5 @@
+[ '/Users/mp/alicenode_inhabitat          ad9e008 ',
+  'master]\n/Users/mp/alicenode_inhabitat/dave     ad9e008 ',
+  'dave]\n/Users/mp/alicenode_inhabitat/Graham   ad9e008 ',
+  'Graham]\n/Users/mp/alicenode_inhabitat/Michael  ad9e008 ',
+  'Michael]\n' ]

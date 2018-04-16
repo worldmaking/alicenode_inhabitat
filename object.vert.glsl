@@ -12,7 +12,7 @@ layout (location = 3) in vec4 iOrientation;
 out vec3 worldpos;
 out float size;
 out vec4 world_orientation;
-// starting ray for this vertex
+// starting ray for this vertex. ray direction is in world space; origin is in object space.
 out vec3 ray_direction, ray_origin;
 
 vec4 quat_fromeuler(float az, float el, float ba) {

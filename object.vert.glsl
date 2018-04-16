@@ -10,9 +10,9 @@ layout (location = 3) in vec4 iOrientation;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 worldpos;
-out float size;
+out float scale;
 out vec4 world_orientation;
-// starting ray for this vertex. ray direction is in world space; origin is in object space.
+// starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
 
 //	q must be a normalized quaternion
@@ -50,11 +50,11 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 
 void main()
 {
-    // size of object
-	size = 1.;
+    // size of object (TODO: instance attribute)
+	scale = 1.;
     
     // basic vertex position:
-    vec3 objectpos = aPos * size;
+    vec3 objectpos = aPos * scale;
     
     // instance position:
     worldpos = iLocation;
@@ -63,10 +63,6 @@ void main()
     // final position of vertex in world space:
     vec3 vertexpos = worldpos + quat_rotate(iOrientation, objectpos);
 
-	// we want the raymarching to operate in object-local space, not world space
-	// TODO: apply instance-local rotation/scale also? 
-	ray_origin = objectpos;
-    
     // calculate gl_Position in whatever way is appropriate first
 	// e.g. gl_Position = uViewProjectionMatrix * vec4(worldPosition.xyz, 1.);
     gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
@@ -74,6 +70,7 @@ void main()
     // derive eye location in world space from current (model)view matrix:
     vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
-	// ray direction computed from eye to vertex world position:
+	// we want the raymarching to operate in object-local space:
+	ray_origin = objectpos;
 	ray_direction = quat_unrotate(iOrientation, vertexpos-eyepos); 
 }  

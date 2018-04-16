@@ -50,7 +50,7 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 
 void main()
 {
-    // size of object (TODO: instance attribute)
+    // size of object (TODO: instance attribute?)
 	scale = 1.;
     
     // basic vertex position:

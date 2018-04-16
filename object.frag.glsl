@@ -4,8 +4,8 @@ uniform float time;
 
 in vec3 ray_direction, ray_origin;
 in vec3 worldpos;
-in vec4 world_orientation;
 in float size;
+in vec4 world_orientation;
 
 out vec4 FragColor;
 

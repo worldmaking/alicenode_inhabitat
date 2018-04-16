@@ -177,7 +177,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	objectShader->uniform("time", t);
 	objectShader->uniform("uViewMatrix", viewMat);
 	objectShader->uniform("uViewProjectionMatrix", viewProjMat);
-	objectShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+	//objectShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 
 	glBindVertexArray(VAO);
 	// offset, vertex count

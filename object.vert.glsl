@@ -8,10 +8,11 @@ layout (location = 0) in vec3 aPos;
 layout (location = 2) in vec3 iLocation;
 layout (location = 3) in vec4 iOrientation;
 
-out vec3 worldpos, objectpos, eyepos;
+out vec3 objectpos, eyepos;
 out vec3 ray_direction, ray_origin;
+// object pose & scale, needs careful handling in SDF calculation
+out vec3 worldpos;
 out vec4 world_orientation;
-// object scale. needs careful handling in SDF calculation
 out float size;
 
 vec4 quat_fromeuler(float az, float el, float ba) {

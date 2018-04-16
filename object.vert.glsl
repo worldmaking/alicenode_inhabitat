@@ -50,21 +50,21 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 
 void main() {
 
-    // need to pass instance pose info to frag shader
-    world_position = iLocation;
-  	world_scale = 1.; 
-    world_orientation = iOrientation;
-    
-    // converting vertex into world space:
-    vec3 scaledpos = aPos * world_scale;
-    vec3 vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
-    // calculate gl_Position the usual way
-    gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
-    
-    // derive eye location in world space from current view matrix:
+	// need to pass instance pose info to frag shader
+	world_position = iLocation;
+	world_scale = 1.; 
+	world_orientation = iOrientation;
+
+	// converting vertex into world space:
+	vec3 scaledpos = aPos * world_scale;
+	vec3 vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
+	// calculate gl_Position the usual way
+	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
+
+	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
-    vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
-	
+	vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
+
 	// we want the raymarching to operate in object-local space:
 	ray_origin = scaledpos;
 	ray_direction = quat_unrotate(world_orientation, vertexpos-eyepos); 

@@ -3,8 +3,8 @@ uniform mat4 uViewProjectionMatrix;
 uniform float time;
 
 in vec3 ray_direction, ray_origin;
-in vec3 worldpos;
-in float scale;
+in vec3 world_position;
+in float world_scale;
 in vec4 world_orientation;
 
 out vec4 FragColor;
@@ -141,24 +141,24 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 
 float fScene(vec3 p) {
 	float osc = (0.3+abs(sin(time*7.)));
-	float s = fSphere(p, scale*osc);
-	float b = fBox(p, vec3(scale));
+	float s = fSphere(p, world_scale*osc);
+	float b = fBox(p, vec3(world_scale));
 	
-	float s0 = fSphere(p+vec3(0., -scale*0.5, scale), scale*0.5*osc);
-	float s1 = fSphere(p+vec3(0., 0., scale*0.25), scale*0.75);
+	float s0 = fSphere(p+vec3(0., -world_scale*0.5, world_scale), world_scale*0.5*osc);
+	float s1 = fSphere(p+vec3(0., 0., world_scale*0.25), world_scale*0.75);
 	
-	float se1 = fSphere(p+vec3( scale*0.5, scale*0.4, scale*0.6), scale*0.2);
-	float se2 = fSphere(p+vec3(-scale*0.5, scale*0.4, scale*0.6), scale*0.2);
+	float se1 = fSphere(p+vec3( world_scale*0.5, world_scale*0.4, world_scale*0.6), world_scale*0.2);
+	float se2 = fSphere(p+vec3(-world_scale*0.5, world_scale*0.4, world_scale*0.6), world_scale*0.2);
 	
 	float se = min(se1, se2);
 	
 	
-	vec3 pc = p+vec3(0., 0., -scale*0.25);
+	vec3 pc = p+vec3(0., 0., -world_scale*0.25);
 	float a = pModPolar(pc.xz, 36.);
 	pR(pc.yx, 0.+0.2*cos(time * 7. + abs(a*PI/3.)));
 	
 	
-	float c1 = fCylinder(pc.zxy, scale*.02, scale*0.7);
+	float c1 = fCylinder(pc.zxy, world_scale*.02, world_scale*0.7);
 	
 	float z = max(s1, -s0); 
 	z = min(se, z); //max(b,-z);
@@ -240,18 +240,13 @@ void main() {
 		
 		// fog effect:
 		vec3 fogcolor = sky(ray);
-		float fogmix = length(worldpos)/VERYFARAWAY;
+		float fogmix = length(world_position)/VERYFARAWAY;
 		color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = color;
 		
 	} else if (t >= maxd) {
     	// shot through to background
-    	
-    	
-    	//FragColor = vec4(clamp(fScene(p), 0., 1.));
-    	//FragColor.rgb = mod((ro+0.5)*0.5,0.5)+0.5;
-    	//FragColor.rgb = mod(rd,0.5)+0.5;
     	discard;
     	
 	} else {
@@ -260,8 +255,8 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	//gl_FragDepth = computeDepth(worldpos + p, uViewProjectionMatrix);
-	gl_FragDepth = computeDepth(worldpos + quat_rotate(world_orientation, p), uViewProjectionMatrix);
+	//gl_FragDepth = computeDepth(world_position + p, uViewProjectionMatrix);
+	gl_FragDepth = computeDepth(world_position + quat_rotate(world_orientation, p), uViewProjectionMatrix);
 	
 	//FragColor.rgb = mod(rd * 8., 1.);
 }

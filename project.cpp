@@ -284,7 +284,7 @@ extern "C" {
 		alice.onFrame.connect(onFrame);
 		alice.onReloadGPU.connect(onReloadGPU);
 
-		test();
+		//test();
 
 		return 0;
     }

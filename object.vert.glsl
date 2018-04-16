@@ -13,7 +13,7 @@ out vec3 worldpos;
 out float size;
 out vec4 world_orientation;
 
-out vec3 objectpos, eyepos;
+out vec3 objectpos;
 out vec3 ray_direction, ray_origin;
 
 vec4 quat_fromeuler(float az, float el, float ba) {
@@ -95,7 +95,7 @@ void main()
     gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
     
     // derive eye location in world space from current (model)view matrix:
-    eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
+    vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 	// ray direction computed from eye to vertex world position:
 	//ray_direction = (vertexpos-eyepos);

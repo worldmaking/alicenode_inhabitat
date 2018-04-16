@@ -2,8 +2,9 @@
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 uniform float time;
 
+// vertex in object space:
 layout (location = 0) in vec3 aPos;
-
+// object in world space:
 layout (location = 2) in vec3 iLocation;
 layout (location = 3) in vec4 iOrientation;
 
@@ -68,7 +69,8 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 
 void main()
 {
-    size = 1.;
+    // size of object
+	size = 1.;
     
     // basic vertex position:
     objectpos = aPos * size;

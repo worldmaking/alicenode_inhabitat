@@ -1,5 +1,5 @@
 #version 330 core
-uniform mat4 uViewProjectionMatrix, uViewMatrix;
+uniform mat4 uViewProjectionMatrix;
 uniform float time;
 
 in vec3 ray_direction, ray_origin;

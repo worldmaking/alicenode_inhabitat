@@ -41,7 +41,8 @@ void main() {
 	vec3 rd = normalize(ray_direction);
 
 	vec3 color = basecolor.rgb; //sky(rd);
-	
+	float isBackground = dot(normal, normal);
+	color = isBackground ? basecolor.rgb : sky(rd);
 
 	// reflection vector 
 	vec3 ref = reflect(rd, normal);

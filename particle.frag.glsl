@@ -82,10 +82,10 @@ void main() {
 		FragColor.rgb = vec3(1.);
 	} else if (t > maxd) {
 		FragColor.rgb = vec3(0.);
-		//discard;
+		discard;
 	} else {
 		FragColor.rgb = vec3(0.5);
-		//discard;
+		discard;
 	}
 	FragColor.rgb = vec3(1.-count);
 

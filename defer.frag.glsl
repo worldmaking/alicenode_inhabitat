@@ -28,5 +28,9 @@ void main() {
 	//float fogmix = length(world_position)/VERYFARAWAY;
 	//color = mix(color, fogcolor, fogmix);
 
+	color = gl_DepthRange.far;
+
 	FragColor.rgb = color.rgb;
+
+	
 }

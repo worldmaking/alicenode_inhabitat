@@ -102,6 +102,7 @@ void main() {
 		FragColor.rgb = vec3(1);
 	}
 	
+	FragColor.rgb = offset;
 
 	/*
 	if (d < precis) {

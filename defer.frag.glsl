@@ -59,7 +59,7 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	color.rgb = vec3(pow(length(position - eye_position), 2.)); 
+	color.rgb = vec3(pow(length(position - eye_position), 1./2.)); 
 
 	
 

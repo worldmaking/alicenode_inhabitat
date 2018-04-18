@@ -182,7 +182,6 @@ void main() {
 	if (d < precis) {
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
-		color = vec3(cheap_self_occlusion);
 		
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = normal4(p, .01);

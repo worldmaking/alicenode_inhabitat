@@ -74,7 +74,7 @@ void main() {
 	// this is also thus the normal of a sphere centered at the particle
 	vec3 spherenormal = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
 
-	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
+	vec3 offset = world_scale * spherenormal; //mat3(uViewMatrixInverse) * vec3(snorm, 0.);
 	vec3 vertex_position = point_position + offset;
 	vec3 rd = normalize(vertex_position - eye_position);
 	vec3 ro = offset - rd * world_scale;

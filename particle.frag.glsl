@@ -9,6 +9,21 @@ out vec4 FragColor;
 
 #define PI 3.14159265359
 
+//	q must be a normalized quaternion
+vec3 quat_rotate(vec4 q, vec3 v) {
+	vec4 p = vec4(
+		q.w*v.x + q.y*v.z - q.z*v.y,	// x
+		q.w*v.y + q.z*v.x - q.x*v.z,	// y
+		q.w*v.z + q.x*v.y - q.y*v.x,	// z
+		-q.x*v.x - q.y*v.y - q.z*v.z	// w
+	);
+	return vec3(
+		p.x*q.w - p.w*q.x + p.z*q.y - p.y*q.z,	// x
+		p.y*q.w - p.w*q.y + p.x*q.z - p.z*q.x,	// y
+		p.z*q.w - p.w*q.z + p.y*q.x - p.x*q.y	// z
+	);
+}
+
 // Maximum/minumum elements of a vector
 float vmax(vec2 v) {
 	return max(v.x, v.y);

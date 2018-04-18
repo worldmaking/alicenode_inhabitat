@@ -84,7 +84,7 @@ void main() {
 	vec3 rd = normalize(billboard_position - eye_position);
 	// the ray origin (relative to the particle location)
 	// is computed by stepping back along the ray
-	vec3 ro = billboard - rd * world_scale*sphere.z;
+	vec3 ro = billboard - rd * world_scale;
 	
 	float maxd = 4. * world_scale;
 	float d = maxd;

@@ -69,13 +69,16 @@ void main() {
 	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	
-	// front face of a unit-radius sphere at this particle's location,
+	// front surface of a unit-radius sphere,
 	// rotated to face the camera just like the billboard itself
 	// this is also thus the normal of a sphere centered at the particle
 	vec3 spherenormal = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
 
+	// front surface of this sphere centered on the particle in world space:
+	vec3 vertex_position = point_position + world_scale*spherenormal;
 
 	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
+	// 
 	vec3 vertex_position = point_position + world_scale*spherenormal;
 	vec3 rd = normalize(vertex_position - eye_position);
 	vec3 ro = offset - rd * world_scale;

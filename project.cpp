@@ -515,7 +515,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	// start rendering:
 
 	
-	if (1) {
+	if (0) {
 		fbo.begin();
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(0, 0, fbo.dim.x, fbo.dim.y);

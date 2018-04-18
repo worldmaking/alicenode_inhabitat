@@ -211,7 +211,7 @@ void main() {
 		
 		vec3 color;
 		
-		color = sky(n); 
+		color = sky(-n); 
 		//color = sky(-ref);
 		
 		// fog effect:

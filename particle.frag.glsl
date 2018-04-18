@@ -93,8 +93,7 @@ void main() {
 	// override:
 	vec3 n = normalize(ro);// * world_scale;
 
-	vec3 p = ro;
-
+	
 	FragColor.rgb = ro;
 	
 

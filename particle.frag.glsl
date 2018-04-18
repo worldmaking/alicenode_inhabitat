@@ -194,6 +194,8 @@ void main() {
 			discard;
 		}
 	} else {
+		// this is a much simpler algorithm, for spheres only
+
 		// front face of a unit-radius sphere on this particle
 		vec3 sphere = normalize(vec3(snorm, 1.));
 		// rotated to face the camera just like the billboard itself

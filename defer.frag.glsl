@@ -40,6 +40,7 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
+	
 
 	// reflection vector 
 	vec3 ref = reflect(rd, normal);

@@ -544,6 +544,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		deferShader->use();
+		deferShader->uniform("uViewMatrix", viewMat);
+		deferShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 		deferShader->uniform("gColor", 0);
 		deferShader->uniform("gNormal", 1);
 		deferShader->uniform("gPosition", 2);

@@ -558,10 +558,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		deferShader->uniform("gNormal", 1);
 		deferShader->uniform("gPosition", 2);
 		gBuffer.bindTextures();
-		/*
 		
 		quadMesh.draw();
-		*/
 		gBuffer.unbindTextures();
 		deferShader->unuse();
 

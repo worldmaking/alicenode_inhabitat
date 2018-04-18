@@ -80,9 +80,7 @@ void main() {
 	vec3 box = vec3(snorm, 1.);
 	vec3 box_position = point_position + world_scale * mat3(uViewMatrixInverse) * box;
 
-	// the billboard vertex
-	//vec3 plane = vec3(snorm, 0.);
-	// rotated & scaled to the world:
+	// the billboard vertex, rotated & scaled to the world:
 	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
 	// this billboard located in world space:
 	vec3 billboard_position = point_position + billboard;

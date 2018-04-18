@@ -13,6 +13,9 @@ vec3 sky(vec3 dir) {
 	return mix(n, vec3(1.), 0.75);
 }
 
+#define EPS 0.01
+#define VERYFARAWAY  64.
+
 #define PI 3.14159265359
 
 //	q must be a normalized quaternion

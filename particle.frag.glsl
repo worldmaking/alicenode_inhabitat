@@ -182,6 +182,8 @@ void main() {
 		
 		float metallic = acute;
 		color = mix(sky(n), sky(ref), metallic);
+
+		color = vec3(acute);
 		
 		//color *= cheap_self_occlusion;
 		

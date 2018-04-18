@@ -107,7 +107,7 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-	FragColor.rgb = vec3(1.-count);
+	FragColor.rgb = vec3(count);
 
 	//FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;

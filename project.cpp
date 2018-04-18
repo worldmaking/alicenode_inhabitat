@@ -11,6 +11,7 @@ struct GBuffer {
 	unsigned int fbo;
 	unsigned int rbo;
 	unsigned int gColor, gNormal, gPosition;
+	unsigned int textures[3];
 	unsigned int attachments[3];
 
 	glm::ivec2 dim = glm::ivec2(1024, 1024);

@@ -73,8 +73,6 @@ void main() {
 	// rotated to face the camera just like the billboard itself
 	// this is also thus the normal of a sphere centered at the particle
 	vec3 spherenormal = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
-	
-
 
 	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
 	vec3 vertex_position = point_position + offset;

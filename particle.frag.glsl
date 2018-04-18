@@ -206,22 +206,6 @@ void main() {
 		
 		vec3 p = sphere;
 		vec3 n = spherenormal;
-		vec3 ray = normalize(world_position + p - eye_position);
-
-		// reflection vector 
-		vec3 ref = reflect(ray, n);
-		
-		vec3 color;
-		
-		color = sky(-n); 
-		color = sky(-ref);
-
-		color = 1.-color;
-		
-		// fog effect:
-		vec3 fogcolor = sky(ray);
-		float fogmix = length(world_position)/VERYFARAWAY;
-		color = mix(color, fogcolor, fogmix);
 
 		FragColor.rgb = vec3(0.5); 
 		FragNormal.xyz = n;

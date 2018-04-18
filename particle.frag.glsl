@@ -43,7 +43,7 @@ float fBox(vec3 p, vec3 b) {
 float fScene(vec3 p) {
 	float s = length(p)-(world_scale);
 	float b = fBox(p, vec3(0.5*world_scale));
-	return max(-s,b);
+	return max(-b,s);
 }
 
 // p is the vec3 position of the surface at the fragment.

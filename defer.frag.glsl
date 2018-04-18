@@ -15,5 +15,4 @@ void main() {
 
 	//FragColor += color;
 	
-	//FragColor.r =
 }

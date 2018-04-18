@@ -76,10 +76,10 @@ void main() {
 
 	// the billboard vertex, rotated & scaled to the world:
 	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
-
-	vec3 vertex_position = point_position + billboard;
-	//vertex_position = point_position + world_scale*spherenormal;
-	vec3 rd = normalize(vertex_position - eye_position);
+	// this billboard located in world space:
+	vec3 billboard_position = point_position + billboard;
+	// use this to compute the ray:
+	vec3 rd = normalize(billboard_position - eye_position);
 	vec3 ro = billboard - rd * world_scale;
 
 	float maxd = 2. * world_scale;

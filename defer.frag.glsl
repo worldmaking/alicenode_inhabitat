@@ -23,7 +23,7 @@ void main() {
 	vec3 position = texture(gPosition, texCoord).xyz;
 	vec3 rd = normalize(ray_direction);
 
-	if (true) {
+	if (false) {
 		// reflection vector 
 		vec3 ref = reflect(rd, normal);
 		float acute = abs(dot(normal, rd)); // how much surface faces us

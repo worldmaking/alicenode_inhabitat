@@ -39,6 +39,6 @@ void main() {
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	
-
+	FragColor = color;
 	
 }

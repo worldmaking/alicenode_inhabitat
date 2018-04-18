@@ -195,8 +195,19 @@ void main() {
 		discard;
 	}
 	} else {
-
-		FragColor.rgb = vec3(0.5);
+		// front face of a unit-radius sphere on this particle
+		vec3 sphere = normalize(vec3(snorm, 1.));
+		// rotated to face the camera just like the billboard itself
+		// this is also thus the normal of a sphere centered at the particle
+		vec3 n = mat3(uViewMatrixInverse) * sphere;
+		// the billboard vertex, rotated & scaled to the world:
+		vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
+		// this billboard vertex, located in world space:
+		vec3 billboard_position = world_position + billboard;
+		// use this to compute the ray direction from the eye:
+		vec3 ray = normalize(billboard_position - eye_position);
+		
+		FragColor.rgb = n;
 	}
 	
 	// place this fragment properly in the depth buffer

@@ -102,7 +102,7 @@ void main() {
 		FragColor.rgb = vec3(1);
 	}
 	
-	FragColor.rgb = mod(offset);
+	FragColor.rgb = vec3(length(offset));
 
 	/*
 	if (d < precis) {

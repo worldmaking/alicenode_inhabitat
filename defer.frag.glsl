@@ -24,7 +24,6 @@ void main() {
 	FragColor.rgb = normal.xyz;
 	//FragColor.rgb = position.xyz;
 
-
 	// fog effect:
 	//vec3 fogcolor = sky(ray);
 	float fogmix = length(position)/far_clip;

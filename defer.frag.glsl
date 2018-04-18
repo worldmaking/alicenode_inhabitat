@@ -46,25 +46,25 @@ void main() {
 	float acute = abs(dot(normal, rd)); // how much surface faces us
 	float oblique = 1.0 - acute; // how much surface is perpendicular to us
 
-	color *= 1. - 0.5*oblique;	
+	//color *= 1. - 0.5*oblique;	
 
 	//float metallic = acute;
 	float metallic = oblique;
-	color.rgb *= mix(sky(ref), sky(normal), metallic);
+	//color.rgb *= mix(sky(ref), sky(normal), metallic);
 		
 	// fog effect:
 	vec3 fogcolor = sky(rd);
 	float fogmix = clamp(normalized_depth, 0., 1.);
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
+	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// pos viz:
-	color.rgb = position.xyz;
+	//color.rgb = position.xyz;
 
 	// normal viz:
 	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	color.rgb = vec3(normalized_depth);
+	//color.rgb = vec3(normalized_depth);
 
 
 	

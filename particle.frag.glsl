@@ -107,9 +107,6 @@ void main() {
     }
 	FragColor.rgb = vec3(1.-count);
 
-	// override:
-	vec3 n = frontface;// * world_scale;
-
 	
 	//FragColor.rgb = ro/world_scale;
 

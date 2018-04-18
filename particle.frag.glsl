@@ -189,7 +189,7 @@ void main() {
 		vec3 fogcolor = sky(ray);
 		float fogmix = length(world_position)/VERYFARAWAY;
 		color = mix(color, fogcolor, fogmix);
-		*/
+		
 		FragColor.rgb = color;
 	} else {
 		FragColor.rgb = vec3(0.);

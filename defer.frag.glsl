@@ -7,6 +7,8 @@ uniform sampler2D gPosition;
 in vec2 texCoord;
 out vec4 FragColor;
 
+float far_clip = 64.;
+
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;

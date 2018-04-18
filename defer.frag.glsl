@@ -32,7 +32,7 @@ vec3 sky(vec3 dir) {
 }
 
 void main() {
-	vec4 color = texture(gColor, texCoord);
+	vec4 basecolor = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
 	vec3 relative_position = position - eye_position;
@@ -40,7 +40,7 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
-	
+	vec3 color = sky(rd);
 
 	// reflection vector 
 	vec3 ref = reflect(rd, normal);
@@ -70,6 +70,6 @@ void main() {
 
 	
 
-	FragColor = color;	
+	FragColor.rgb = color;	
 
 }

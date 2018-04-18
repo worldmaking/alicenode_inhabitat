@@ -205,20 +205,8 @@ void main() {
 		// reflection vector 
 		vec3 ref = reflect(ray, n);
 		
-		float acute = abs(dot(n, ray)); // how much surface faces us
-		float oblique = 1.0 - acute; // how much surface is perpendicular to us
-		color = vec3(oblique);
-		
-		//color += (n*1.)*0.1;
-		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
-		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		color = vec3(cheap_self_occlusion);
-		
-		// fog effect:
-		float fogmix = pow(count, 2.);
-		fogmix = max(fogmix, t/VERYFARAWAY);
-		//color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = color;
 		FragNormal.xyz = n;

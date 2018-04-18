@@ -18,6 +18,7 @@ bloom, colour correction, antialiasing
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform float uFarClip;
 
 in vec2 texCoord;
 in vec3 ray_direction, ray_origin, eye_position;

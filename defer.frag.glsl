@@ -42,5 +42,5 @@ void main() {
 
 	FragColor = color;	
 
-	FragColor.rgb = normal*0.5+0.5;
+	//FragColor.rgb = normal*0.5+0.5;
 }

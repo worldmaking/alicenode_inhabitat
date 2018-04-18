@@ -6,6 +6,7 @@ uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 in vec2 texCoord;
 in vec3 ray, origin, eyepos;
 layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec3 FragNormal;
 
 #define PI 3.14159265359
 #define EPS 0.01
@@ -227,6 +228,7 @@ void main() {
 		color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = color;
+		FragNormal.xyz = n;
 		
 	} else if (t >= maxd) {
     	// shot through to background

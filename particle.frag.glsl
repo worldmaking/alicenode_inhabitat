@@ -3,7 +3,7 @@ uniform mat4 uViewMatrixInverse, uViewProjectionMatrix;
 uniform float time;
 
 in vec4 world_orientation;
-in vec3 point_position, eye_position;
+in vec3 world_position, eye_position;
 in float world_scale;
 out vec4 FragColor;
 
@@ -111,7 +111,7 @@ void main() {
 	// this might not be accurate when using very wide FOV
 	if (length(snorm) > 1.) discard; 
 
-	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
+	// world_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	
 	// front face of a unit-radius sphere on this particle
@@ -122,7 +122,7 @@ void main() {
 	// the billboard vertex, rotated & scaled to the world:
 	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
 	// this billboard vertex, located in world space:
-	vec3 billboard_position = point_position + billboard;
+	vec3 billboard_position = world_position + billboard;
 	// use this to compute the ray direction from the eye:
 	vec3 rd = normalize(billboard_position - eye_position);
 	// the ray origin (relative to the particle location)
@@ -184,7 +184,7 @@ void main() {
 		color = mix(sky(n), sky(ref), metallic);
 		
 		color *= cheap_self_occlusion;
-		/*
+		
 		// fog effect:
 		vec3 fogcolor = sky(ray);
 		float fogmix = length(world_position)/VERYFARAWAY;
@@ -199,5 +199,5 @@ void main() {
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location
 	// but this is super-expensive; better to skip it if the particles are small enough
-	//gl_FragDepth = computeDepth(point_position + p, uViewProjectionMatrix);
+	//gl_FragDepth = computeDepth(world_position + p, uViewProjectionMatrix);
 }

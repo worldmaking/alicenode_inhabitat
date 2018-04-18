@@ -59,8 +59,7 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	float l = dot(position - ray_origin, rd);
-	color.rgb = vec3(l/far_clip);
+	color.rgb = vec3(dot(position - ray_origin, rd/far_clip);
 
 	
 

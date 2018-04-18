@@ -204,12 +204,9 @@ void main() {
 		// this is also thus the normal of a sphere centered at the particle
 		vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
 		
-		vec3 p = sphere;
-		vec3 n = spherenormal;
-
 		FragColor.rgb = vec3(0.5); 
-		FragNormal.xyz = n;
-		FragPosition.xyz = world_position + p;
+		FragNormal.xyz = spherenormal;
+		FragPosition.xyz = world_position + sphere;
 	}
 	
 	// place this fragment properly in the depth buffer

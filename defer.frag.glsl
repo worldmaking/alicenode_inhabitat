@@ -29,7 +29,7 @@ void main() {
 	float oblique = 1.0 - acute; // how much surface is perpendicular to us
 
 	float metallic = acute;
-	color.rgb = mix(sky(ref), sky(normal), metallic);
+	//color.rgb = mix(sky(ref), sky(normal), metallic);
 		
 	
 	// fog effect:

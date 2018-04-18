@@ -6,6 +6,67 @@
 #include "alice.h"
 #include "state.h"
 
+struct GBuffer {
+
+	unsigned int gBuffer;
+	unsigned int rboDepth;
+	unsigned int gColor, gNormal, gPosition;
+	unsigned int attachments[3];
+
+	glm::ivec2 dim = glm::ivec2(1024, 1024);
+	
+
+	void dest_changed() {
+
+		glGenFramebuffers(1, &gBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+
+		// Buffer 0: color buffer
+		glGenTextures(1, &gColor);
+		glBindTexture(GL_TEXTURE_2D, gColor);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dim.x, dim.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gColor, 0);
+		attachments[0] = GL_COLOR_ATTACHMENT0;
+		
+		// Buffer 1: normal
+		glGenTextures(1, &gNormal);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, dim.x, dim.y, 0, GL_RGB, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+		attachments[1] = GL_COLOR_ATTACHMENT1;
+
+		// Buffer 2: position
+		glGenTextures(1, &gPosition);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, dim.x, dim.y, 0, GL_RGB, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+		attachments[2] = GL_COLOR_ATTACHMENT2;
+		
+		glDrawBuffers(3, attachments);
+
+		// create & attach depth buffer
+		glGenRenderbuffers(1, &rboDepth);
+		glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, dim.x, dim.y);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+		// finally check if framebuffer is complete
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			std::cout << "Framebuffer not complete!" << std::endl;
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	}
+
+	void dest_closing() {
+		// TODO
+	}
+};
+
 Shader * objectShader;
 unsigned int objectVAO;
 unsigned int objectVBO;
@@ -18,6 +79,8 @@ float particleSize = 1.f/64;
 Shader * particleShader;
 Shader * landShader;
 QuadMesh quadMesh;
+SimpleFBO fbo;
+GBuffer gBuffer;
 
 double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fluid_noise;
 Fluid3D<> fluid;
@@ -183,6 +246,8 @@ void onUnloadGPU() {
 	}	
 	
 	quadMesh.dest_closing();
+	fbo.dest_closing();
+	gBuffer.dest_closing();
 	
 	if (objectVAO) {
 		glDeleteVertexArrays(1, &objectVAO);
@@ -217,6 +282,8 @@ void onReloadGPU() {
 	objectShader = Shader::fromFiles("object.vert.glsl", "object.frag.glsl");
 	
 	quadMesh.dest_changed();
+	fbo.dest_changed();
+	gBuffer.dest_changed();
 
 	{
 		// define the VAO 
@@ -352,6 +419,13 @@ void onFrame(uint32_t width, uint32_t height) {
 	glm::mat4 viewProjMatInverse = glm::inverse(viewProjMat);
 
 	// start rendering:
+	fbo.begin();
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(0, 0, fbo.dim.x, fbo.dim.y);
+	glViewport(0, 0, fbo.dim.x, fbo.dim.y);
+	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	landShader->use();
 	landShader->uniform("time", t);
@@ -388,6 +462,14 @@ void onFrame(uint32_t width, uint32_t height) {
 	glDisable(GL_POINT_SPRITE);
 	glBindVertexArray(0);
 
+	glDisable(GL_SCISSOR_TEST);
+	fbo.end();
+
+	glViewport(0, 0, width, height);
+	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	fbo.draw();
 }
 
 
@@ -493,6 +575,9 @@ extern "C" {
 		fluid_boundary_damping = .2;
 		fluid_noise_count = 32;
 		fluid_noise = 8.;
+
+		fbo.dim.x = 1920;
+		fbo.dim.y = 1080;
 
 		// allocate on GPU:
 		onReloadGPU();

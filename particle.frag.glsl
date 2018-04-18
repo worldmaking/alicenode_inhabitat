@@ -120,7 +120,7 @@ void main() {
 	//	FragColor.rgb = vec3(0.);
 	//	discard;
 	} else {
-		FragColor.rgb = vec3(0.);
+		//FragColor.rgb = vec3(0.);
 		//discard;
 	}
 	

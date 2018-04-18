@@ -58,7 +58,7 @@ void main() {
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// pos viz:
-	color.rgb = relative_position.xyz;
+	color.rgb = position.xyz;
 
 	// normal viz:
 	//color.rgb = normal*0.5+0.5;

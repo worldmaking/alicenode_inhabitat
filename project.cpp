@@ -548,11 +548,11 @@ void onFrame(uint32_t width, uint32_t height) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
 		//glGenerateMipmap(GL_TEXTURE_2D);
 
-		/*
 		glViewport(0, 0, width, height);
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(1.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		/*
 		
 		deferShader->use();
 		deferShader->uniform("gColor", 0);

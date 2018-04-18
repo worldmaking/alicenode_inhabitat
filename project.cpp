@@ -289,7 +289,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// update simulation:
 		fluid_update();
 
-		if (0) {
+		if (1) {
 			for (int i=0; i<NUM_PARTICLES; i++) {
 				Particle &o = state->particles[i];
 

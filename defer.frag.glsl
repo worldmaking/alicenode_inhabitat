@@ -1,5 +1,20 @@
 #version 330 core
 
+/*
+possible buffers:
+
+base color RGB, alpha (opacity)
+self-AO
+material/shading model
+material properties: metallic, roughness
+
+other inputs:
+depth (from position)
+
+possible fx:
+bloom, colour correction, antialiasing
+*/
+
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
@@ -40,7 +55,14 @@ void main() {
 	float fogmix = clamp(length(position)/far_clip, 0., 1.);
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
+	// normal viz:
+	//color.rgb = normal*0.5+0.5;
+
+	// depth viz:
+	color.rgb = position - eye_position; 
+
+	
+
 	FragColor = color;	
 
-	//FragColor.rgb = normal*0.5+0.5;
 }

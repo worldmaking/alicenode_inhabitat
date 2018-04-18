@@ -61,6 +61,10 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 void main() {
 	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
+
+	// front face of a cube 
+	vec3 frontface = mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
+
 	vec3 sphere = world_scale * mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
 
 	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 0.);

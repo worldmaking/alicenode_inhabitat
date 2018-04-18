@@ -22,5 +22,5 @@ void main() {
 	//FragColor.rgb = position.xyz;
 
 
-	FragColor.rgb = sky(position);
+	FragColor.rgb = sky(normal);
 }

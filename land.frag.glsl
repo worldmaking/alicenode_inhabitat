@@ -185,7 +185,6 @@ void main() {
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = normal4(p, .01);
 		
-		
 	} else if (t >= maxd) {
     	// shot through to background
     	p = ro+maxd*rd;

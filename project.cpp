@@ -536,7 +536,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
 		glDisable(GL_SCISSOR_TEST);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
-		//glGenerateMipmap(GL_TEXTURE_2D);
+		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 
 		glViewport(0, 0, width, height);
 		glEnable(GL_DEPTH_TEST);

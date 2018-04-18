@@ -51,7 +51,6 @@ void main() {
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	vec3 offset = mat3(uViewMatrixInverse) * world_scale * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 0.);
 	vec3 vertex_position = point_position + offset;
-	
 	vec3 rd = normalize(vertex_position - eye_position);
 	vec3 ro = vertex_position - rd * world_scale - point_position;
 
@@ -61,7 +60,7 @@ void main() {
 	float precis = 0.001;
 	float count = 0.;
 	float t = 0.;
-	#define MAX_STEPS 16
+	#define MAX_STEPS 4
 	float STEP_SIZE = 1./float(MAX_STEPS);
 	for( int i=0; i<MAX_STEPS; i++ ) {
 	

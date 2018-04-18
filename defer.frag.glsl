@@ -36,7 +36,7 @@ void main() {
 	// fog effect:
 	vec3 fogcolor = sky(rd);
 	float fogmix = length(position)/far_clip;
-	//color = mix(color, fogcolor, fogmix);
+	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	
 

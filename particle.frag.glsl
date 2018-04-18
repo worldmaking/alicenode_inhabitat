@@ -78,7 +78,7 @@ void main() {
 	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
 	// this billboard located in world space:
 	vec3 billboard_position = point_position + billboard;
-	// use this to compute the ray:
+	// use this to compute the ray direction from the eye:
 	vec3 rd = normalize(billboard_position - eye_position);
 	vec3 ro = billboard - rd * world_scale;
 

@@ -64,7 +64,7 @@ void main() {
 
 	// signed-normalized coordinate over the billboard:
 	vec2 snorm = vec2(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y);
-
+	if (length(snorm) > 1.) discard;
 	// front face of a unit-radius cube at this particle's location,
 	// rotated to face the camera just like the billboard itself:
 	vec3 frontface = mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);

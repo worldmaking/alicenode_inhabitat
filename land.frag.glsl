@@ -177,8 +177,6 @@ void main() {
         count += STEP_SIZE;
     }
 	
-	vec3 fogcolor = sky(rd);
-	
 	if (d < precis) {
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);

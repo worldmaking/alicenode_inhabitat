@@ -219,7 +219,7 @@ void main() {
 		float fogmix = length(world_position)/VERYFARAWAY;
 		color = mix(color, fogcolor, fogmix);
 
-		FragColor.rgb = sky(color); 
+		FragColor.rgb = color; 
 	}
 	
 	// place this fragment properly in the depth buffer

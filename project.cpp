@@ -13,7 +13,7 @@ unsigned int objectInstanceVBO;
 
 unsigned int particlesVAO;
 unsigned int particlesVBO;
-float particleSize = 0.1f;
+float particleSize = 0.03f;
 
 Shader * particleShader;
 Shader * landShader;
@@ -319,7 +319,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			fluid.velocities.front().read_interp(o.location, &flow.x);
 			o.location = wrap(o.location + flow * 1.f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
 
-			state->particles[i].location = o.location;
+			//state->particles[i].location = o.location;
 
 		}
 	}

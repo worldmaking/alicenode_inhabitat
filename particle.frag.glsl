@@ -220,6 +220,11 @@ void main() {
 		
 		color *= 0.5;
 
+		// fog effect:
+		vec3 fogcolor = sky(ray);
+		float fogmix = length(world_position)/VERYFARAWAY;
+		color = mix(color, fogcolor, fogmix);
+
 		FragColor.rgb = ray*0.5+0.5;
 	}
 	

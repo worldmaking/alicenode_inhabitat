@@ -213,11 +213,7 @@ void main() {
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
-		
-		float metallic = acute;
-		color = mix(sky(ref), sky(n), metallic);
-		
-		color *= cheap_self_occlusion;
+		color = vec3(cheap_self_occlusion);
 		
 		// fog effect:
 		float fogmix = pow(count, 2.);

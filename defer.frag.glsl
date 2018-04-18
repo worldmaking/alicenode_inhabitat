@@ -25,8 +25,6 @@ in vec3 ray_direction, ray_origin, eye_position;
 
 out vec4 FragColor;
 
-float far_clip = 32.;
-
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;
 	n.g = mix(n.g, n.r, 0.5);
@@ -39,7 +37,7 @@ void main() {
 	vec3 position = texture(gPosition, texCoord).xyz;
 	vec3 relative_position = position - eye_position;
 	float depth = length(relative_position);
-	float normalized_depth = depth/far_clip;
+	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
 

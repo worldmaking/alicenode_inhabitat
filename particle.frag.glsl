@@ -225,6 +225,7 @@ void main() {
 
 		FragColor.rgb = color; 
 		FragNormal.xyz = n;
+		FragPosition.xyz = world_position + p;
 	}
 	
 	// place this fragment properly in the depth buffer

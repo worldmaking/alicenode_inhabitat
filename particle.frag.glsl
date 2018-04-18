@@ -2,7 +2,7 @@
 uniform mat4 uViewMatrixInverse, uViewProjectionMatrix;
 uniform float time;
 
-
+in vec4 world_orientation;
 in vec3 point_position, eye_position;
 in float world_scale;
 out vec4 FragColor;

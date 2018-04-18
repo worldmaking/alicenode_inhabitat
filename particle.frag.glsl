@@ -62,7 +62,7 @@ void main() {
 	// signed-normalized coordinate over the billboard:
 	vec2 snorm = vec2(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y);
 
-	// circular mask. 
+	// quick circular mask. 
 	// this might not be accurate when using very wide FOV
 	if (length(snorm) > 1.) discard; 
 
@@ -112,7 +112,7 @@ void main() {
 	FragColor.rgb = vec3(1.-count);
 
 	// override:
-	vec3 n = normalize(ro);// * world_scale;
+	vec3 n = frontface;// * world_scale;
 
 	
 	//FragColor.rgb = ro/world_scale;

@@ -218,9 +218,7 @@ void main() {
     
     
     if (d < precis) {
-    	
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
-		
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
 		

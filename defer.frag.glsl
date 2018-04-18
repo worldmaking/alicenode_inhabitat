@@ -37,6 +37,8 @@ void main() {
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
 	vec3 relative_position = position - eye_position;
+	float depth = length(relative_position);
+	float normalized_depth = depth/far_clip;
 	vec3 rd = normalize(ray_direction);
 
 
@@ -53,15 +55,14 @@ void main() {
 		
 	// fog effect:
 	vec3 fogcolor = sky(rd);
-	float fogmix = clamp(length(relative_position)/far_clip, 0., 1.);
+	float fogmix = clamp(normalized_depth, 0., 1.);
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// normal viz:
 	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	float depth = length(relative_position)/far_clip;
-	color.rgb = vec3(depth);
+	color.rgb = vec3(normalized_depth);
 
 	
 

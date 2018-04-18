@@ -112,88 +112,87 @@ void main() {
 	if (length(snorm) > 1.) discard; 
 
 	if (false) {
-	// world_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
-	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
-	
-	// front face of a unit-radius sphere on this particle
-	vec3 sphere = normalize(vec3(snorm, 1.));
-	// rotated to face the camera just like the billboard itself
-	// this is also thus the normal of a sphere centered at the particle
-	vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
-	// the billboard vertex, rotated & scaled to the world:
-	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
-	// this billboard vertex, located in world space:
-	vec3 billboard_position = world_position + billboard;
-	// use this to compute the ray direction from the eye:
-	vec3 rd = normalize(billboard_position - eye_position);
-	// the ray origin (relative to the particle location)
-	// is computed by stepping back along the ray
-	vec3 ro = billboard - rd * world_scale;
-	
-	float maxd = 4. * world_scale;
-	float d = maxd;
-	vec3 p = ro;
-	float precis = 0.001;
-	float count = 0.;
-	float t = 0.;
-	#define MAX_STEPS 8
-	float STEP_SIZE = 1./float(MAX_STEPS);
-	for( int i=0; i<MAX_STEPS; i++ ) {
-	
-        d = fScene(p);
-        
-        if (d < precis || t > maxd ) {
-        	//if (t <= maxd) count += STEP_SIZE * (d)/precis;
-        	break; // continue;
-        }
-        
-        // advance ray
-        t += d;
-        p = ro+rd*t;
-        count += STEP_SIZE;
-    }
-	FragColor.rgb = vec3(count);
+		// do this option for complex geometries:
+		
+		// front face of a unit-radius sphere on this particle
+		vec3 sphere = normalize(vec3(snorm, 1.));
+		// rotated to face the camera just like the billboard itself
+		// this is also thus the normal of a sphere centered at the particle
+		vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
+		// the billboard vertex, rotated & scaled to the world:
+		vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
+		// this billboard vertex, located in world space:
+		vec3 billboard_position = world_position + billboard;
+		// use this to compute the ray direction from the eye:
+		vec3 rd = normalize(billboard_position - eye_position);
+		// the ray origin (relative to the particle location)
+		// is computed by stepping back along the ray
+		vec3 ro = billboard - rd * world_scale;
+		
+		float maxd = 4. * world_scale;
+		float d = maxd;
+		vec3 p = ro;
+		float precis = 0.001;
+		float count = 0.;
+		float t = 0.;
+		#define MAX_STEPS 8
+		float STEP_SIZE = 1./float(MAX_STEPS);
+		for( int i=0; i<MAX_STEPS; i++ ) {
+		
+			d = fScene(p);
+			
+			if (d < precis || t > maxd ) {
+				//if (t <= maxd) count += STEP_SIZE * (d)/precis;
+				break; // continue;
+			}
+			
+			// advance ray
+			t += d;
+			p = ro+rd*t;
+			count += STEP_SIZE;
+		}
+		FragColor.rgb = vec3(count);
 
-	//FragColor.rgb = spherenormal*0.5+0.5;
-	//FragColor.rgb = rd;
+		//FragColor.rgb = spherenormal*0.5+0.5;
+		//FragColor.rgb = rd;
 
-	//FragColor.rgb = 40.*abs(rdiff);
-	
-	//FragColor.rgb = ro*0.5+0.5;
-	
-	if (d < precis) {
-		// normal in object space:
-		vec3 no = normal4(p, .01);
-		// normal in world space
-		vec3 n = quat_rotate(world_orientation, no);
-		// ray direction in world space
-		vec3 ray = quat_rotate(world_orientation, rd);
+		//FragColor.rgb = 40.*abs(rdiff);
+		
+		//FragColor.rgb = ro*0.5+0.5;
+		
+		if (d < precis) {
+			// normal in object space:
+			vec3 no = normal4(p, .01);
+			// normal in world space
+			vec3 n = quat_rotate(world_orientation, no);
+			// ray direction in world space
+			vec3 ray = quat_rotate(world_orientation, rd);
 
-		// reflection vector 
-		vec3 ref = reflect(ray, n);
-		
-		float acute = abs(dot(n, ray)); // how much surface faces us
-		float oblique = 1.0 - acute; // how much surface is perpendicular to us
-		
-		//color += (n*1.)*0.1;
-		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
-		
-		
-		float metallic = acute;
-		vec3 color = mix(sky(n), sky(ref), metallic);
-		
-		color *= 0.5;
+			// reflection vector 
+			vec3 ref = reflect(ray, n);
+			
+			float acute = abs(dot(n, ray)); // how much surface faces us
+			float oblique = 1.0 - acute; // how much surface is perpendicular to us
+			
+			//color += (n*1.)*0.1;
+			//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
+			
+			
+			float metallic = acute;
+			vec3 color = mix(sky(n), sky(ref), metallic);
+			
+			color *= 0.5;
 
-		// fog effect:
-		vec3 fogcolor = sky(ray);
-		float fogmix = length(world_position)/VERYFARAWAY;
-		color = mix(color, fogcolor, fogmix);
-		
-		FragColor.rgb = color;
-	} else {
-		FragColor.rgb = vec3(0.);
-		discard;
-	}
+			// fog effect:
+			vec3 fogcolor = sky(ray);
+			float fogmix = length(world_position)/VERYFARAWAY;
+			color = mix(color, fogcolor, fogmix);
+			
+			FragColor.rgb = color;
+		} else {
+			FragColor.rgb = vec3(0.);
+			discard;
+		}
 	} else {
 		// front face of a unit-radius sphere on this particle
 		vec3 sphere = normalize(vec3(snorm, 1.));
@@ -225,7 +224,7 @@ void main() {
 		float fogmix = length(world_position)/VERYFARAWAY;
 		color = mix(color, fogcolor, fogmix);
 
-		FragColor.rgb = color;
+		FragColor.rgb = color; 
 	}
 	
 	// place this fragment properly in the depth buffer

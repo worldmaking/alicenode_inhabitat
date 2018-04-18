@@ -189,8 +189,7 @@ void main() {
     	// shot through to background
     	p = ro+maxd*rd;
     	
-    	//FragColor = vec4(clamp(fScene(p), 0., 1.));
-    	//discard;
+		//discard;
     	FragColor.rgb = fogcolor;
 		FragNormal.xyz = -rd;
     	

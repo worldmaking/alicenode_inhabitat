@@ -61,7 +61,10 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 void main() {
 	// signed-normalized coordinate over the billboard:
 	vec2 snorm = vec2(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y);
-	if (length(snorm) > 1.) discard; // circular mask.
+
+	// circular mask. 
+	// this might not be accurate when using very wide FOV
+	if (length(snorm) > 1.) discard; 
 
 	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite

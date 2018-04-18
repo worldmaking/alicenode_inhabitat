@@ -543,10 +543,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
 		glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-       
-
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
-
 		glDisable(GL_SCISSOR_TEST);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
 		//glGenerateMipmap(GL_TEXTURE_2D);

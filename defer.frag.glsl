@@ -9,7 +9,7 @@ in vec3 ray_direction, ray_origin, eye_position;
 
 out vec4 FragColor;
 
-float far_clip = 64.;
+float far_clip = 32.;
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;

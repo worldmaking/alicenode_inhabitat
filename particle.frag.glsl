@@ -109,7 +109,7 @@ void main() {
     }
 	FragColor.rgb = vec3(1.-count);
 
-	FragColor.rgb = mod(sphere*0.5+0.5, 1.);
+	FragColor.rgb = mod(sphere*0.5+0.5, 0.5);
 	//FragColor.rgb = rd;
 	
 	//FragColor.rgb = ro*0.5+0.5;

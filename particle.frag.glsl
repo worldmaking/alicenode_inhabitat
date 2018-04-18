@@ -48,6 +48,25 @@ float fScene(vec3 p) {
 	return b;
 }
 
+
+// compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`
+// (cheaper than the usual technique of sampling 6 cardinal points)
+// `fScene` should be the SDF evaluator `float distance = fScene(vec3 pos)`  
+// `eps` is the distance to compare points around the location `p` 
+// a smaller eps gives sharper edges, but it should be large enough to overcome sampling error
+// in theory, the gradient magnitude of an SDF should everywhere = 1, 
+// but in practice this isn’t always held, so need to normalize() the result
+vec3 normal4(in vec3 p, float eps) {
+	vec2 e = vec2(-eps, eps);
+	// tetrahedral points
+	float t1 = fScene(p + e.yxx), t2 = fScene(p + e.xxy), t3 = fScene(p + e.xyx), t4 = fScene(p + e.yyy); 
+	vec3 n = (e.yxx*t1 + e.xxy*t2 + e.xyx*t3 + e.yyy*t4);
+	// normalize for a consistent SDF:
+	//return n / (4.*eps*eps);
+	// otherwise:
+	return normalize(n);
+}
+
 // p is the vec3 position of the surface at the fragment.
 // viewProjectionMatrix would be typically passed in as a uniform
 // assign result to gl_FragDepth:

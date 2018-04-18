@@ -77,6 +77,9 @@ void main() {
 
 	vec3 sphere_position = point_position + world_scale * spherenormal;
 
+	vec3 box = vec3(snorm, 1.);
+	vec3 box_position = point_position + world_scale * mat3(uViewMatrixInverse) * box;
+
 	// the billboard vertex
 	vec3 plane = vec3(snorm, 0.);
 	vec3 rotated_plane = mat3(uViewMatrixInverse) * plane;

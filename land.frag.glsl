@@ -222,7 +222,7 @@ void main() {
 		// fog effect:
 		float fogmix = pow(count, 2.);
 		fogmix = max(fogmix, t/VERYFARAWAY);
-		color = mix(color, fogcolor, fogmix);
+		//color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = color;
 		FragNormal.xyz = n;

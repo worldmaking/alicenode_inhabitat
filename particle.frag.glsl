@@ -6,6 +6,7 @@ in vec4 world_orientation;
 in vec3 world_position, eye_position;
 in float world_scale;
 layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec3 FragNormal;
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;
@@ -222,6 +223,7 @@ void main() {
 		color = mix(color, fogcolor, fogmix);
 
 		FragColor.rgb = color; 
+		FragNormal.xyz = n;
 	}
 	
 	// place this fragment properly in the depth buffer

@@ -60,7 +60,7 @@ void main() {
 
 	// depth viz:
 	float l = dot(position - ray_origin, rd);
-	color.rgb = vec3(l);
+	color.rgb = vec3(l*01);
 
 	
 

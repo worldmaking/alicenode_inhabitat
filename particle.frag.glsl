@@ -158,6 +158,30 @@ void main() {
 		vec3 n = quat_rotate(world_orientation, no);
 		// ray direction in world space
 		vec3 ray = quat_rotate(world_orientation, rd);
+
+		// reflection vector 
+		vec3 ref = reflect(ray, n);
+		
+		float acute = abs(dot(n, ray)); // how much surface faces us
+		float oblique = 1.0 - acute; // how much surface is perpendicular to us
+		vec3 color = vec3(oblique);
+		/*
+		//color += (n*1.)*0.1;
+		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
+		
+		float cheap_self_occlusion = 1.-pow(count, 0.75);
+		
+		float metallic = acute;
+		color = mix(sky(n), sky(ref), metallic);
+		
+		color *= cheap_self_occlusion;
+		
+		// fog effect:
+		vec3 fogcolor = sky(ray);
+		float fogmix = length(world_position)/VERYFARAWAY;
+		color = mix(color, fogcolor, fogmix);
+		*/
+		FragColor.rgb = color;
 	} else {
 		FragColor.rgb = vec3(0.);
 		//discard;

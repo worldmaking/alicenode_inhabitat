@@ -192,6 +192,7 @@ void main() {
     	//FragColor = vec4(clamp(fScene(p), 0., 1.));
     	//discard;
     	FragColor.rgb = fogcolor;
+		FragNormal.xyz = -rd;
     	
 	} else {
 		// too many ray steps

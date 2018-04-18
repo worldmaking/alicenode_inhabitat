@@ -536,7 +536,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		fbo.draw();
 	} 
 
-	if () {
+	if (1) {
 		/*
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 

@@ -7,6 +7,12 @@ in vec3 point_position, eye_position;
 in float world_scale;
 out vec4 FragColor;
 
+vec3 sky(vec3 dir) {
+	vec3 n = dir*0.5+0.5;
+	n.g = mix(n.g, n.r, 0.5);
+	return mix(n, vec3(1.), 0.75);
+}
+
 #define PI 3.14159265359
 
 //	q must be a normalized quaternion

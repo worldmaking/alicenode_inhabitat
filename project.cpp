@@ -84,11 +84,13 @@ void fluid_update() {
 	//float * boundary = boundary;
 
 	// and some turbulence:
-	for (int i=0; i < rnd::uni(fluid_noise_count); i++) {
-		// pick a cell at random:
-		glm::vec3 * cell = data + rnd::integer(dim0*dim1*dim2);
-		// add a random vector:
-		*cell = glm::sphericalRand(rnd::uni(fluid_noise));
+	if (0) {
+		for (int i=0; i < rnd::uni(fluid_noise_count); i++) {
+			// pick a cell at random:
+			glm::vec3 * cell = data + rnd::integer(dim0*dim1*dim2);
+			// add a random vector:
+			*cell = glm::sphericalRand(rnd::uni(fluid_noise));
+		}
 	}
 
 	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);

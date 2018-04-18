@@ -111,6 +111,7 @@ void main() {
 	// this might not be accurate when using very wide FOV
 	if (length(snorm) > 1.) discard; 
 
+	if (1) {
 	// world_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	
@@ -192,6 +193,10 @@ void main() {
 	} else {
 		FragColor.rgb = vec3(0.);
 		discard;
+	}
+	} else {
+
+		FragColor.rgb = vec3(0.5);
 	}
 	
 	// place this fragment properly in the depth buffer

@@ -236,10 +236,6 @@ void main() {
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
-		
-		float metallic = acute;
-		color = mix(sky(n), sky(ref), metallic);
-		
 		color *= cheap_self_occlusion;
 		
 		// fog effect:
@@ -247,8 +243,8 @@ void main() {
 		float fogmix = length(world_position)/VERYFARAWAY;
 		color = mix(color, fogcolor, fogmix);
 		
-		FragColor.rgb = color;
-		FragNormal.xyz = n;
+		FragColor.rgb = vec3(cheap_self_occlusion);
+		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
 		
 	} else if (t >= maxd) {
     	// shot through to background

@@ -19,6 +19,8 @@ Shader * particleShader;
 Shader * landShader;
 QuadMesh quadMesh;
 
+bool updating = true;
+double simulationTime = 0.;
 
 double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fluid_noise;
 Fluid3D<> fluid;
@@ -282,41 +284,46 @@ void onReloadGPU() {
 
 void onFrame(uint32_t width, uint32_t height) {
 
-	double t = Alice::Instance().t;
+	double t = simulationTime; //Alice::Instance().t;
 	float aspect = width/float(height);
 
-	// update simulation:
-	fluid_update();
+	if (updating) {
 
-	for (int i=0; i<NUM_PARTICLES; i++) {
-		Particle &o = state->particles[i];
+		simulationTime += Alice::Instance().dt;
+		t = simulationTime;
 
-		glm::vec3 flow;
-		fluid.velocities.front().read_interp(o.location, &flow.x);
-		flow *= 2.f;
+		// update simulation:
+		fluid_update();
 
-		glm::vec3 noise = glm::sphericalRand(0.02f);
+		for (int i=0; i<NUM_PARTICLES; i++) {
+			Particle &o = state->particles[i];
 
-		o.location = wrap(o.location + flow + noise, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
+			glm::vec3 flow;
+			fluid.velocities.front().read_interp(o.location, &flow.x);
+			flow *= 2.f;
+
+			glm::vec3 noise = glm::sphericalRand(0.02f);
+
+			o.location = wrap(o.location + flow + noise, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
+		}
+
+		for (int i=0; i<NUM_OBJECTS; i++) {
+			Object &o = state->objects[i];
+
+			
+			o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
+			//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
+			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.05f));
+			
+
+			glm::vec3 flow;
+			fluid.velocities.front().read_interp(o.location, &flow.x);
+			o.location = wrap(o.location + flow * 1.f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
+
+			state->particles[i].location = o.location;
+
+		}
 	}
-
-	for (int i=0; i<NUM_OBJECTS; i++) {
-		Object &o = state->objects[i];
-
-		
-		o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
-		//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
-		o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.05f));
-		
-
-		glm::vec3 flow;
-		fluid.velocities.front().read_interp(o.location, &flow.x);
-		o.location = wrap(o.location + flow * 1.f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
-
-		state->particles[i].location = o.location;
-
-	}
-
 
 	// upload GPU;
 	glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);

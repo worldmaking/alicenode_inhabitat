@@ -9,6 +9,7 @@ in vec4 world_orientation;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
+layout (location = 2) out vec3 FragPosition;
 
 #define PI 3.14159265359
 

@@ -199,15 +199,13 @@ void main() {
 		vec3 sphere = normalize(vec3(snorm, 1.));
 		// rotated to face the camera just like the billboard itself
 		// this is also thus the normal of a sphere centered at the particle
-		vec3 n = mat3(uViewMatrixInverse) * sphere;
-		// the billboard vertex, rotated & scaled to the world:
-		vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
-		// this billboard vertex, located in world space:
-		vec3 billboard_position = world_position + billboard;
-		// use this to compute the ray direction from the eye:
-		vec3 ray = normalize(billboard_position - eye_position);
+		vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
 		
-		FragColor.rgb = n*0.5+0.5;
+		vec3 p = sphere;
+		vec3 n = spherenormal;
+		vec3 ray = normalize(world_position + p - eye_position);
+
+		FragColor.rgb = ray*0.5+0.5;
 	}
 	
 	// place this fragment properly in the depth buffer

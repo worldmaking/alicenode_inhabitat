@@ -44,7 +44,7 @@ float fScene(vec3 p) {
 	float r = world_scale * 0.75;
 	float s = length(p)-r;
 	float b = fBox(p, vec3(r));
-	return s;
+	return b;
 }
 
 // p is the vec3 position of the surface at the fragment.

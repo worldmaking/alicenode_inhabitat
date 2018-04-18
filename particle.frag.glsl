@@ -97,7 +97,7 @@ void main() {
 	FragColor.rgb = ro/world_scale;
 
 	if (length(offset) > world_scale) {
-		FragColor.rgb = mormalize(offset);
+		FragColor.rgb = normalize(offset);
 	} else {
 		FragColor.rgb = vec3(1);
 	}

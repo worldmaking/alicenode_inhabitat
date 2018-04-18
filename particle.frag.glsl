@@ -69,7 +69,7 @@ float fScene(vec3 p) {
 	float s = length(p)-r;
 	// r/2 is the biggest fBox we can fit in our bounding sphere
 	float b = fBox(p, vec3(r * 0.5));
-	return b;
+	return s;
 }
 
 

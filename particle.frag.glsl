@@ -180,7 +180,7 @@ void main() {
 		
 		float cheap_self_occlusion = 1.-count;
 		
-		float metallic = 0.;//acute;
+		float metallic = 1.;//acute;
 		color = mix(sky(n), sky(ref), metallic);
 		
 		color *= cheap_self_occlusion;

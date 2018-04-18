@@ -142,7 +142,7 @@ void main() {
         d = fScene(p);
         
         if (d < precis || t > maxd ) {
-        	if (t <= maxd) count += STEP_SIZE * (d)/precis;
+        	//if (t <= maxd) count += STEP_SIZE * (d)/precis;
         	break; // continue;
         }
         

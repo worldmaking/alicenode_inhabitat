@@ -66,7 +66,7 @@ void main() {
 	// rotated to face the camera just like the billboard itself:
 	vec3 frontface = mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
 	// spherebound:
-	if (length(frontface) > 1.) discard;
+	if (length(frontface) < 1.) discard;
 	
 	// 
 	vec3 ball = normalize(frontface);

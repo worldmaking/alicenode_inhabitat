@@ -59,16 +59,17 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 }
 
 void main() {
-	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
-	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
-
 	// signed-normalized coordinate over the billboard:
 	vec2 snorm = vec2(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y);
 	if (length(snorm) > 1.) discard; // circular mask.
 
+	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
+	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
+
+	
 	// front face of a unit-radius cube at this particle's location,
 	// rotated to face the camera just like the billboard itself:
-	vec3 frontface = mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
+	vec3 frontface = mat3(uViewMatrixInverse) * vec3(snorm, 1.);
 	// spherebound:
 	//if (length(frontface) < 1.) discard;
 	
@@ -76,9 +77,9 @@ void main() {
 	vec3 ball = normalize(frontface);
 	//frontface = normalize(frontface);
 
-	vec3 sphere = world_scale * mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
+	vec3 sphere = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 1.);
 
-	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 0.);
+	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
 	vec3 vertex_position = point_position + offset;
 	vec3 rd = normalize(vertex_position - eye_position);
 	vec3 ro = vertex_position - rd * world_scale - point_position;

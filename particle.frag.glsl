@@ -137,10 +137,12 @@ void main() {
 	//FragColor.rgb = ro*0.5+0.5;
 	
 	if (d < precis) {
-	//	FragColor.rgb = vec3(1.);
-	//} else if (t > maxd) {
-	//	FragColor.rgb = vec3(0.);
-	//	discard;
+		// normal in object space:
+		vec3 no = normal4(p, .01);
+		// normal in world space
+		vec3 n = quat_rotate(world_orientation, no);
+		// ray direction in world space
+		vec3 ray = quat_rotate(world_orientation, rd);
 	} else {
 		FragColor.rgb = vec3(0.);
 		//discard;

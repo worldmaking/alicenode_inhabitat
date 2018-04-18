@@ -69,7 +69,7 @@ void main() {
 	
 	// front face of a unit-radius cube at this particle's location,
 	// rotated to face the camera just like the billboard itself:
-	vec3 frontface = mat3(uViewMatrixInverse) * vec3(snorm, 1.);
+	vec3 frontface = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
 	// spherebound:
 	//if (length(frontface) < 1.) discard;
 	

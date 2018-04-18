@@ -66,6 +66,8 @@ void main() {
 	// rotated to face the camera just like the billboard itself:
 	vec3 frontface = mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
 
+	frontface = normalize(frontface);
+
 	vec3 sphere = world_scale * mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
 
 	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 0.);

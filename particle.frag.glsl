@@ -74,12 +74,13 @@ void main() {
 	// this is also thus the normal of a sphere centered at the particle
 	vec3 spherenormal = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
 
-	
-	vec3 offset = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
-	vec3 vertex_position = point_position + offset;
+	// the billboard vertex, rotated & scaled to the world:
+	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
+
+	vec3 vertex_position = point_position + billboard;
 	//vertex_position = point_position + world_scale*spherenormal;
 	vec3 rd = normalize(vertex_position - eye_position);
-	vec3 ro = offset - rd * world_scale;
+	vec3 ro = billboard - rd * world_scale;
 
 	float maxd = 2. * world_scale;
 	float d = maxd;
@@ -108,10 +109,6 @@ void main() {
 	FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;
 	
-	
-	//FragColor.rgb = vec3(frontface); 
-	
-	//FragColor.rgb = vec3(mod(length(offset), world_scale));
 
 	
 	if (d < precis) {

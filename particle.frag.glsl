@@ -111,7 +111,7 @@ void main() {
 	// this might not be accurate when using very wide FOV
 	if (length(snorm) > 1.) discard; 
 
-	if (true) {
+	if (false) {
 	// world_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	

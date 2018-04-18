@@ -95,6 +95,8 @@ void main() {
 
 	
 	FragColor.rgb = ro/world_scale;
+
+	if (length(ro) > world_scale) discard;
 	
 
 	/*

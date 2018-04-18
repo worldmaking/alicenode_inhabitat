@@ -23,8 +23,6 @@ void main() {
 	//FragColor.rgb = position.xyz;
 
 
-	vec3 color = vec3(0.5);
-
 	// fog effect:
 	//vec3 fogcolor = sky(ray);
 	//float fogmix = length(world_position)/VERYFARAWAY;

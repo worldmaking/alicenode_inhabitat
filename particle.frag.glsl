@@ -219,8 +219,6 @@ void main() {
 		float metallic = acute;
 		vec3 color = mix(sky(n), sky(ref), metallic);
 		
-		color *= 0.5;
-
 		// fog effect:
 		vec3 fogcolor = sky(ray);
 		float fogmix = length(world_position)/VERYFARAWAY;

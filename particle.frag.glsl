@@ -107,6 +107,7 @@ void main() {
     }
 	FragColor.rgb = vec3(1.-count);
 
+	FragColor.rgb = normal;
 	
 	//FragColor.rgb = ro/world_scale;
 

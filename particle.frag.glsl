@@ -115,7 +115,7 @@ void main() {
 	FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;
 
-	FragColor.rgb = plane
+	FragColor.rgb = plane;
 	
 	//FragColor.rgb = ro*0.5+0.5;
 	

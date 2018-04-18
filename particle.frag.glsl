@@ -85,7 +85,7 @@ void main() {
 	// is computed by stepping back along the ray
 	vec3 ro = billboard - rd * world_scale*sphere.z;
 	
-	float maxd = 2. * world_scale;
+	float maxd = 4. * world_scale;
 	float d = maxd;
 	vec3 p = ro;
 	float precis = 0.001;

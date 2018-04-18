@@ -32,7 +32,7 @@ void main() {
 
 	
 
-	FragColor.rgb = eye_position.rgb;
+	FragColor.rgb = ray_direction.rgb;
 
 	
 }

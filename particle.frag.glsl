@@ -41,9 +41,10 @@ float fBox(vec3 p, vec3 b) {
 }
 
 float fScene(vec3 p) {
-	float r = world_scale * 0.5;
+	float r = world_scale;
 	float s = length(p)-r;
-	float b = fBox(p, vec3(r));
+	// r/2 is the biggest fBox we can fit in our bounding sphere
+	float b = fBox(p, vec3(r * 0.5));
 	return b;
 }
 

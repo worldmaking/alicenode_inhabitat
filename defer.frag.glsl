@@ -25,14 +25,9 @@ void main() {
 
 	// reflection vector 
 	vec3 ref = reflect(rd, normal);
-	
 	float acute = abs(dot(normal, rd)); // how much surface faces us
 	float oblique = 1.0 - acute; // how much surface is perpendicular to us
 	
-	//FragColor = color;
-	FragColor.rgb = normal.xyz;
-	//FragColor.rgb = position.xyz;
-
 	// fog effect:
 	vec3 fogcolor = sky(rd);
 	float fogmix = clamp(length(position)/far_clip, 0., 1.);

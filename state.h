@@ -3,7 +3,7 @@
 
 #define NUM_OBJECTS	24
 #define NUM_PARTICLES 1024*64
-#define FIELD_DIM 64
+#define FIELD_DIM 32
 #define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
 
 struct Object {

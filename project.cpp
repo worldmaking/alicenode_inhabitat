@@ -399,6 +399,7 @@ void draw_scene(int width, int height) {
 	landShader->uniform("time", t);
 	landShader->uniform("uViewProjectionMatrix", viewProjMat);
 	landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+	landShader->uniform("uFarClip", far_clip);
 	quadMesh.draw();
 
 	objectShader->use();

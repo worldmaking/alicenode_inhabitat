@@ -145,7 +145,7 @@ float fScene(vec3 p) {
 	float b = fBox(p, vec3(world_scale));
 	
 	// mouth
-	float s0 = fSphere(p+vec3(0., 0., world_scale), world_scale*0.4*osc);
+	float s0 = fSphere(p+vec3(0., 0., world_scale), world_scale*0.3*osc);
 	float s1 = fSphere(p+vec3(0., 0., world_scale*0.25), world_scale*0.75);
 	
 	// eyes

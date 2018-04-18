@@ -297,7 +297,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				glm::vec3 flow;
 				fluid.velocities.front().read_interp(o.location, &flow.x);
-				flow *= 2.f;
+				flow *= 1.f;
 
 				glm::vec3 noise;// = glm::sphericalRand(0.02f);
 

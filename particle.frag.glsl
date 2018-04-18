@@ -91,7 +91,7 @@ void main() {
 	float precis = 0.001;
 	float count = 0.;
 	float t = 0.;
-	#define MAX_STEPS 8
+	#define MAX_STEPS 32
 	float STEP_SIZE = 1./float(MAX_STEPS);
 	for( int i=0; i<MAX_STEPS; i++ ) {
 	

@@ -97,14 +97,14 @@ void fluid_update() {
 
 	velocities.diffuse(fluid_viscosity, fluid_passes);
 	// apply boundaries:
-	apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
+	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
 	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
 	// stabilize:
 	fluid.project(fluid_passes / 2);
 	// advect:
 	velocities.advect(velocities.back(), 1.);
 	// apply boundaries:
-	apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
+	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
 	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
 
 	// clear gradients:

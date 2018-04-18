@@ -6,7 +6,7 @@ uniform float uViewPortHeight, uPointSize, time;
 layout (location = 0) in vec3 vertex_position;
 
 out vec4 world_orientation;
-out vec3 point_position, eye_position;
+out vec3 world_position, eye_position;
 out float world_scale;
 //out vec3
 
@@ -31,6 +31,6 @@ void main() {
 	eye_position = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 	// we want the raymarching to operate in object-local space:
-	point_position = vertex_position;
+	world_position = vertex_position;
 	//ray_origin = scaledpos;
 }  

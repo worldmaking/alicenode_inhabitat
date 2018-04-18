@@ -123,7 +123,7 @@ void main() {
 	//	discard;
 	} else {
 		FragColor.rgb = vec3(0.);
-		//discard;
+		discard;
 	}
 	
 	// place this fragment properly in the depth buffer

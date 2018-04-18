@@ -177,11 +177,6 @@ void main() {
         count += STEP_SIZE;
     }
 	
-	//FragColor = vec4(texCoord, 0.5, 1.);
-	//FragColor = vec4(rd, 0.);
-	//FragColor = texture(tex, texCoord);
-	color = vec3(mix(1., 0., pow(count, 0.5)));
-	
 	vec3 fogcolor = sky(rd);
 	
 	if (d < precis) {

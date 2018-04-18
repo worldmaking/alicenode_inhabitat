@@ -18,11 +18,18 @@ vec3 sky(vec3 dir) {
 }
 
 void main() {
-	vec3 rd = normalize(ray_direction);
-
 	vec4 color = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
+	vec3 rd = normalize(ray_direction);
+
+	// reflection vector 
+	vec3 ref = reflect(rd, normal);
+	
+	float acute = abs(dot(normal, rd)); // how much surface faces us
+	float oblique = 1.0 - acute; // how much surface is perpendicular to us
+	color = vec3(oblique);
+
 	//FragColor = color;
 	FragColor.rgb = normal.xyz;
 	//FragColor.rgb = position.xyz;

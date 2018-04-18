@@ -223,7 +223,7 @@ void main() {
 		float fogmix = length(world_position)/VERYFARAWAY;
 		color = mix(color, fogcolor, fogmix);
 
-		FragColor.rgb = color; 
+		FragColor.rgb = vec3(0.5); 
 		FragNormal.xyz = n;
 		FragPosition.xyz = world_position + p;
 	}

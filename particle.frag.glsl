@@ -80,6 +80,8 @@ void main() {
 	vec3 billboard_position = point_position + billboard;
 	// use this to compute the ray direction from the eye:
 	vec3 rd = normalize(billboard_position - eye_position);
+	// the ray origin (relative to the particle location)
+	// is computed by stepping back along the ray
 	vec3 ro = billboard - rd * world_scale;
 
 	float maxd = 2. * world_scale;

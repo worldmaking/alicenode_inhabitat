@@ -187,7 +187,7 @@ void main() {
 		
 	} else if (t >= maxd) {
     	// shot through to background
-    	p = ro+maxd*rd;
+    	//p = ro+maxd*rd;
     	
 		//discard;
     	FragColor.rgb = fogcolor;

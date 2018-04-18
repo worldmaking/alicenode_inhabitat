@@ -51,8 +51,8 @@ struct GBuffer {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, textures[2], 0);
 		attachments[2] = GL_COLOR_ATTACHMENT2;
 		
+		// set up the draw buffer attachments:
 		glDrawBuffers(numBuffers, attachments);
-
 		// create & attach depth buffer
 		glGenRenderbuffers(1, &rbo);
 		glBindRenderbuffer(GL_RENDERBUFFER, rbo);

@@ -116,7 +116,7 @@ void main() {
 	FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;
 
-	FragColor.rgb = mod(plane, 1.);
+	FragColor.rgb = mod(rotated_plane, 1.);
 	
 	//FragColor.rgb = ro*0.5+0.5;
 	

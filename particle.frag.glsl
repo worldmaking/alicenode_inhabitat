@@ -207,7 +207,7 @@ void main() {
 		// use this to compute the ray direction from the eye:
 		vec3 ray = normalize(billboard_position - eye_position);
 		
-		FragColor.rgb = n;
+		FragColor.rgb = n*0.5+0.5;
 	}
 	
 	// place this fragment properly in the depth buffer

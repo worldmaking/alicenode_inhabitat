@@ -115,8 +115,6 @@ void main() {
 	//FragColor.rgb = 40.*abs(rdiff);
 	
 	//FragColor.rgb = ro*0.5+0.5;
-
-	FragColor.rgb = vec3(sphere.z);
 	
 	if (d < precis) {
 	//	FragColor.rgb = vec3(1.);

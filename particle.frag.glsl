@@ -95,8 +95,7 @@ void main() {
 	rd = rd2;
 	// the ray origin (relative to the particle location)
 	// is computed by stepping back along the ray
-	vec3 ro = billboard - rd * world_scale*sphere.z;
-	ro = billboard_position - point_position;
+	vec3 ro = billboard - rd * world_scale;
 
 	float maxd = 2. * world_scale;
 	float d = maxd;

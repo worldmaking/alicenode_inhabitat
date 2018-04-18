@@ -63,7 +63,7 @@ void main() {
 	//color.rgb = position.xyz;
 
 	// normal viz:
-	color.rgb = normal*0.5+0.5;
+	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
 	//color.rgb = vec3(normalized_depth);

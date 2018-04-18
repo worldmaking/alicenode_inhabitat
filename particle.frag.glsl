@@ -70,7 +70,7 @@ void main() {
 	
 	// 
 	vec3 ball = normalize(frontface);
-	frontface = normalize(frontface);
+	//frontface = normalize(frontface);
 
 	vec3 sphere = world_scale * mat3(uViewMatrixInverse) * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 1.);
 
@@ -110,7 +110,7 @@ void main() {
 	FragColor.rgb = ro/world_scale;
 
 	if (length(offset) < world_scale) {
-		FragColor.rgb = length(frontface); //frontface*0.5+0.5; //normalize(sphere);
+		FragColor.rgb = vec3(length(frontface)); //frontface*0.5+0.5; //normalize(sphere);
 	} else {
 		discard; //FragColor.rgb = vec3(0);
 	}

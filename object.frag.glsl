@@ -218,30 +218,8 @@ void main() {
     
     
     if (d < precis) {
-    	// normal in object space:
-		vec3 no = normal4(p, .01);
-		// normal in world space
-		vec3 n = quat_rotate(world_orientation, no);
-		// ray direction in world space
-		vec3 ray = quat_rotate(world_orientation, rd);
-		
-		// reflection vector 
-		vec3 ref = reflect(ray, n);
-		
-		float acute = abs(dot(n, ray)); // how much surface faces us
-		float oblique = 1.0 - acute; // how much surface is perpendicular to us
-		color = vec3(oblique);
-		
-		//color += (n*1.)*0.1;
-		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
-		
+    	
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
-		color *= cheap_self_occlusion;
-		
-		// fog effect:
-		vec3 fogcolor = sky(ray);
-		float fogmix = length(world_position)/VERYFARAWAY;
-		color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));

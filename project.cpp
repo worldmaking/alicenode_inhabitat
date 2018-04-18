@@ -19,7 +19,6 @@ Shader * particleShader;
 Shader * landShader;
 QuadMesh quadMesh;
 
-bool updating = true;
 double simulationTime = 0.;
 
 double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fluid_noise;
@@ -287,7 +286,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = simulationTime; //Alice::Instance().t;
 	float aspect = width/float(height);
 
-	if (updating) {
+	if (Alice::Instance().isSimulating) {
 
 		simulationTime += Alice::Instance().dt;
 		t = simulationTime;

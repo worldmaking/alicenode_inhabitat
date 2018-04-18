@@ -69,7 +69,7 @@ void main() {
 	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	
-	// front face of a unit-radius sphere
+	// front face of a unit-radius sphere on this particle
 	vec3 sphere = normalize(vec3(snorm, 1.));
 	// rotated to face the camera just like the billboard itself
 	// this is also thus the normal of a sphere centered at the particle
@@ -112,7 +112,7 @@ void main() {
 	FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;
 	
-	FragColor.rgb = ro;
+	FragColor.rgb = ro*0.5+0.5;
 	
 	if (d < precis) {
 	//	FragColor.rgb = vec3(1.);

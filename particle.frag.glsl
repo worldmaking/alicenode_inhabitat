@@ -7,6 +7,7 @@ in vec3 world_position, eye_position;
 in float world_scale;
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
+layout (location = 2) out vec3 FragPosition;
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;

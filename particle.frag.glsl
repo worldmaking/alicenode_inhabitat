@@ -91,8 +91,12 @@ void main() {
 	FragColor.rgb = vec3(1.-count);
 
 	// override:
-	p = normalize(ro) * world_scale;
+	vec3 n = normalize(ro);// * world_scale;
 
+	FragColor.rgb = n;
+
+
+	/*
 	if (d < precis) {
 	//	FragColor.rgb = vec3(1.);
 	//} else if (t > maxd) {
@@ -101,7 +105,7 @@ void main() {
 	} else {
 		//FragColor.rgb = vec3(0.5);
 		discard;
-	}
+	}*/
 	
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location

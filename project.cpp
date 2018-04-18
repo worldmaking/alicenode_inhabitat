@@ -25,7 +25,7 @@ struct GBuffer {
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-		glGenTextures(3, textures);
+		glGenTextures(numBuffers, textures);
 
 		// Buffer 0: color buffer
 		glBindTexture(GL_TEXTURE_2D, textures[0]);
@@ -51,7 +51,7 @@ struct GBuffer {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, textures[2], 0);
 		attachments[2] = GL_COLOR_ATTACHMENT2;
 		
-		glDrawBuffers(3, attachments);
+		glDrawBuffers(numBuffers, attachments);
 
 		// create & attach depth buffer
 		glGenRenderbuffers(1, &rbo);
@@ -82,21 +82,17 @@ struct GBuffer {
 	}
 
 	void bindTextures() {
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, textures[2]);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, textures[1]);
-		glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textures[0]);
+		for (int i=numBuffers-1; i>=0; i--) {
+        	glActiveTexture(GL_TEXTURE0+i);
+        	glBindTexture(GL_TEXTURE_2D, textures[i]);
+		}
 	}
 
 	void unbindTextures() {
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, 0);
-		glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        for (int i=numBuffers-1; i>=0; i--) {
+        	glActiveTexture(GL_TEXTURE0+i);
+        	glBindTexture(GL_TEXTURE_2D, 0);
+		}
 	}
 };
 

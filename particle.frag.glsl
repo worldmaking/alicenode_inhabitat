@@ -106,8 +106,8 @@ void main() {
 
 	FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;
-	//FragColor.rgb = ro/world_scale;
-
+	
+	
 	//FragColor.rgb = vec3(frontface); 
 	
 	//FragColor.rgb = vec3(mod(length(offset), world_scale));

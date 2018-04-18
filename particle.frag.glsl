@@ -112,7 +112,7 @@ void main() {
 	FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;
 	
-
+	FragColor.rgb = ro;
 	
 	if (d < precis) {
 	//	FragColor.rgb = vec3(1.);

@@ -40,7 +40,7 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
-	vec3 color = basecolor; //sky(rd);
+	vec3 color = basecolor.rgb; //sky(rd);
 
 
 	// reflection vector 

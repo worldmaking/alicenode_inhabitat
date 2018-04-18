@@ -59,7 +59,7 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	color.rgb = position - eye_position; 
+	color.rgb = length(position - eye_position); 
 
 	
 

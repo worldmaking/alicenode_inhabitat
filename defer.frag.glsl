@@ -27,7 +27,7 @@ void main() {
 
 	// fog effect:
 	//vec3 fogcolor = sky(ray);
-	//float fogmix = length(world_position)/VERYFARAWAY;
+	float fogmix = length(position)/far_clip;
 	//color = mix(color, fogcolor, fogmix);
 
 	

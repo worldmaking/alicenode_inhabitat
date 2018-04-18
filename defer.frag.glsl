@@ -9,7 +9,7 @@ out vec4 FragColor;
 
 void main() {
 	vec4 color = texture(gColor, texCoord);
-	vec3 normal = texture(gNormal, texCoord);
-	vec3 position = texture(gPosition, texCoord);
+	vec3 normal = texture(gNormal, texCoord).xyz;
+	vec3 position = texture(gPosition, texCoord).xyz;
 	FragColor.rgb = vec3(texCoord, 0.5);
 }

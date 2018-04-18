@@ -2,6 +2,7 @@
 uniform sampler2D tex;
 uniform float time;
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
+uniform float uFarClip;
 
 in vec2 texCoord;
 in vec3 ray, origin, eyepos;

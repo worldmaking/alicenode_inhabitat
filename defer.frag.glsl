@@ -38,7 +38,5 @@ void main() {
 	float fogmix = length(position)/far_clip;
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
-	
-	FragColor = color;
-	
+	FragColor = color;	
 }

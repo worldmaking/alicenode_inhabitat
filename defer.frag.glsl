@@ -35,7 +35,7 @@ void main() {
 	vec4 color = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
-	vec3 relative_position = position - ray_origin;
+	vec3 relative_position = position - eye_position;
 	float depth = length(relative_position);
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);

@@ -89,7 +89,7 @@ void main() {
 	vec3 billboard_position = point_position + billboard;
 	// use this to compute the ray direction from the eye:
 	vec3 rd = normalize(billboard_position - eye_position);
-	vec3 rd1 = normalize(billboard_position - eye_position);
+	vec3 rd1 = normalize(sphere_position - eye_position);
 	vec3 rd2 = normalize(box_position - eye_position);
 	
 	rd = rd2;

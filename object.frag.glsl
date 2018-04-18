@@ -8,6 +8,7 @@ in float world_scale;
 in vec4 world_orientation;
 
 layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec3 FragNormal;
 
 #define PI 3.14159265359
 
@@ -246,6 +247,7 @@ void main() {
 		color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = color;
+		FragNormal.xyz = n;
 		
 	} else if (t >= maxd) {
     	// shot through to background

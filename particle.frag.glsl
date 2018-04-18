@@ -178,7 +178,7 @@ void main() {
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
-		float cheap_self_occlusion = 1.-count;
+		float cheap_self_occlusion = count;
 		
 		float metallic = acute;
 		color = mix(sky(n), sky(ref), metallic);

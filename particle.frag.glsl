@@ -72,8 +72,8 @@ void main() {
 	// front face of a unit-radius sphere
 	// rotated to face the camera just like the billboard itself
 	// this is also thus the normal of a sphere centered at the particle
-	vec3 unrotated_sphere = normalize(vec3(snorm, 1.));
-	vec3 spherenormal = mat3(uViewMatrixInverse) * unrotated_sphere;
+	vec3 sphere = normalize(vec3(snorm, 1.));
+	vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
 
 	// the billboard vertex, rotated & scaled to the world:
 	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
@@ -83,7 +83,7 @@ void main() {
 	vec3 rd = normalize(billboard_position - eye_position);
 	// the ray origin (relative to the particle location)
 	// is computed by stepping back along the ray
-	vec3 ro = billboard - rd * world_scale*unrotated_sphere.z;
+	vec3 ro = billboard - rd * world_scale*sphere.z;
 
 	float maxd = 2. * world_scale;
 	float d = maxd;

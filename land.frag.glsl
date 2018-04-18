@@ -12,7 +12,6 @@ layout (location = 2) out vec3 FragPosition;
 
 #define PI 3.14159265359
 #define EPS 0.01
-#define VERYFARAWAY  64.
 #define MAX_STEPS 128
 #define STEP_SIZE 1./float(MAX_STEPS)
 
@@ -156,7 +155,7 @@ void main() {
 	vec3 ro = origin; // plus a little ray? 
 	
 	float precis = EPS;
-	float maxd = VERYFARAWAY;
+	float maxd = uFarClip;
 	
 	vec3 color = vec3(0.);
 	float t = 0.0;

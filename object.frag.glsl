@@ -256,6 +256,7 @@ void main() {
 	} else {
 		// too many ray steps
 		FragColor = vec4(1.);
+		discard;
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:

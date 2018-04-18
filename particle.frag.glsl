@@ -41,7 +41,7 @@ float fBox(vec3 p, vec3 b) {
 }
 
 float fScene(vec3 p) {
-	float r = world_scale * 0.75;
+	float r = world_scale * 0.5;
 	float s = length(p)-r;
 	float b = fBox(p, vec3(r));
 	return b;

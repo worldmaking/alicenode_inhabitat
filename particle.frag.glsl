@@ -96,10 +96,10 @@ void main() {
 	
 	FragColor.rgb = ro/world_scale;
 
-	if (length(offset) > world_scale) {
+	if (length(offset) < world_scale) {
 		FragColor.rgb = normalize(offset);
 	} else {
-		FragColor.rgb = vec3(1);
+		FragColor.rgb = vec3(0);
 	}
 	
 	//FragColor.rgb = vec3(mod(length(offset), world_scale));

@@ -197,6 +197,7 @@ void main() {
 	} else {
 		// too many ray steps
 		FragColor.rgb = fogcolor; //vec3(1.);
+		FragNormal.xyz = -rd;
 	}
 	
     	

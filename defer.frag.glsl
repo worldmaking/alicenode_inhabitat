@@ -32,7 +32,7 @@ void main() {
 
 	
 
-	FragColor.rgb = color.rgb;
+	FragColor.rgb = eye_position.rgb;
 
 	
 }

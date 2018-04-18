@@ -8,8 +8,8 @@
 
 struct GBuffer {
 
-	unsigned int gBuffer;
-	unsigned int rboDepth;
+	unsigned int fbo;
+	unsigned int rbo;
 	unsigned int gColor, gNormal, gPosition;
 	unsigned int attachments[3];
 
@@ -17,9 +17,10 @@ struct GBuffer {
 	
 
 	void dest_changed() {
+		dest_closing();
 
-		glGenFramebuffers(1, &gBuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
 		// Buffer 0: color buffer
 		glGenTextures(1, &gColor);
@@ -51,10 +52,10 @@ struct GBuffer {
 		glDrawBuffers(3, attachments);
 
 		// create & attach depth buffer
-		glGenRenderbuffers(1, &rboDepth);
-		glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, dim.x, dim.y);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
 		// finally check if framebuffer is complete
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			std::cout << "Framebuffer not complete!" << std::endl;
@@ -64,6 +65,44 @@ struct GBuffer {
 
 	void dest_closing() {
 		// TODO
+		if (fbo) {
+			glDeleteFramebuffers(1, &fbo);
+			fbo = 0;
+		}
+		if (rbo) {
+			glDeleteRenderbuffers(1, &rbo);
+			rbo = 0;
+		}
+		if (gColor) {
+			glDeleteTextures(1, &gColor);
+			gColor = 0;
+		}
+		if (gNormal) {
+			glDeleteTextures(1, &gNormal);
+			gNormal = 0;
+		}
+		if (gPosition) {
+			glDeleteTextures(1, &gPosition);
+			gPosition = 0;
+		}
+	}
+
+	void bindTextures() {
+		glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gColor);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+	}
+
+	void unbindTextures() {
+		glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, 0);
 	}
 };
 
@@ -78,9 +117,17 @@ float particleSize = 1.f/64;
 
 Shader * particleShader;
 Shader * landShader;
+Shader * deferShader;
 QuadMesh quadMesh;
 SimpleFBO fbo;
 GBuffer gBuffer;
+
+glm::mat4 viewMat;
+glm::mat4 projMat;
+glm::mat4 viewProjMat;
+glm::mat4 viewMatInverse;
+glm::mat4 projMatInverse;
+glm::mat4 viewProjMatInverse;
 
 double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fluid_noise;
 Fluid3D<> fluid;
@@ -243,6 +290,10 @@ void onUnloadGPU() {
 	if (objectShader) {
 		delete objectShader;
 		objectShader = 0;
+	}
+	if (deferShader) {
+		delete deferShader;
+		deferShader = 0;
 	}	
 	
 	quadMesh.dest_closing();
@@ -280,6 +331,7 @@ void onReloadGPU() {
 	landShader = Shader::fromFiles("land.vert.glsl", "land.frag.glsl");
 	particleShader = Shader::fromFiles("particle.vert.glsl", "particle.frag.glsl");
 	objectShader = Shader::fromFiles("object.vert.glsl", "object.frag.glsl");
+	deferShader = Shader::fromFiles("defer.vert.glsl", "defer.frag.glsl");
 	
 	quadMesh.dest_changed();
 	fbo.dest_changed();
@@ -348,6 +400,46 @@ void onReloadGPU() {
 
 }
 
+
+void draw_scene(int width, int height) {
+	double t = Alice::Instance().simTime;
+	
+	landShader->use();
+	landShader->uniform("time", t);
+	landShader->uniform("uViewProjectionMatrix", viewProjMat);
+	landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+	quadMesh.draw();
+
+	objectShader->use();
+	objectShader->uniform("time", t);
+	objectShader->uniform("uViewMatrix", viewMat);
+	objectShader->uniform("uViewProjectionMatrix", viewProjMat);
+	//objectShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+
+	glBindVertexArray(objectVAO);
+	// draw instances:
+	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_OBJECTS);  
+
+	particleShader->use(); 
+	particleShader->uniform("time", t);
+	particleShader->uniform("uViewMatrix", viewMat);
+	particleShader->uniform("uViewMatrixInverse", viewMatInverse);
+	particleShader->uniform("uProjectionMatrix", projMat);
+	particleShader->uniform("uViewProjectionMatrix", viewProjMat);
+	particleShader->uniform("uViewPortHeight", (float)height);
+	particleShader->uniform("uPointSize", particleSize);
+
+	glBindVertexArray(particlesVAO);
+	// draw instances:
+	glEnable( GL_PROGRAM_POINT_SIZE );
+	glEnable(GL_POINT_SPRITE);
+	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+	glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);	
+	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glDisable(GL_POINT_SPRITE);
+	glBindVertexArray(0);
+}
+
 void onFrame(uint32_t width, uint32_t height) {
 	const Alice& alice = Alice::Instance();
 	double t = alice.simTime;
@@ -409,72 +501,69 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	// update nav
 	double a = M_PI * t / 30.;
-	glm::mat4 viewMat = glm::lookAt(
-	glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
-	glm::vec3(0., 0., 0.), 
-	glm::vec3(0., 1., 0.));
-	glm::mat4 projMat = glm::perspective(45.0f, aspect, 0.1f, 100.0f);
-	glm::mat4 viewProjMat = projMat * viewMat;
-	glm::mat4 viewMatInverse = glm::inverse(viewMat);
-	glm::mat4 viewProjMatInverse = glm::inverse(viewProjMat);
+	viewMat = glm::lookAt(
+		glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
+		glm::vec3(0., 0., 0.), 
+		glm::vec3(0., 1., 0.));
+	projMat = glm::perspective(45.0f, aspect, 0.1f, 100.0f);
+	viewProjMat = projMat * viewMat;
+
+	projMatInverse = glm::inverse(projMat);
+	viewMatInverse = glm::inverse(viewMat);
+	viewProjMatInverse = glm::inverse(viewProjMat);
 
 	// start rendering:
-	fbo.begin();
-	glEnable(GL_SCISSOR_TEST);
-	glScissor(0, 0, fbo.dim.x, fbo.dim.y);
-	glViewport(0, 0, fbo.dim.x, fbo.dim.y);
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	draw_scene();
+	
+	if (0) {
+		fbo.begin();
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
+		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glDisable(GL_SCISSOR_TEST);
-	fbo.end();
+		draw_scene(fbo.dim.x, fbo.dim.y);
 
-	glViewport(0, 0, width, height);
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	fbo.draw();
+		glDisable(GL_SCISSOR_TEST);
+		fbo.end();
+
+		glViewport(0, 0, width, height);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		fbo.draw();
+	} 
+
+	if (1) {
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
+
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
+		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
+        glEnable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
+
+		glDisable(GL_SCISSOR_TEST);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
+		//glGenerateMipmap(GL_TEXTURE_2D);
+
+		glViewport(0, 0, width, height);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(1.f, 0.f, 0.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		deferShader->use();
+		gBuffer.bindTextures();
+		quadMesh.draw();
+		gBuffer.unbindTextures();
+		deferShader->unuse();
+	}
 }
 
-void draw_scene() {
-	landShader->use();
-	landShader->uniform("time", t);
-	landShader->uniform("uViewProjectionMatrix", viewProjMat);
-	landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-	quadMesh.draw();
-
-	objectShader->use();
-	objectShader->uniform("time", t);
-	objectShader->uniform("uViewMatrix", viewMat);
-	objectShader->uniform("uViewProjectionMatrix", viewProjMat);
-	//objectShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-
-	glBindVertexArray(objectVAO);
-	// draw instances:
-	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_OBJECTS);  
-
-	particleShader->use(); 
-	particleShader->uniform("time", t);
-	particleShader->uniform("uViewMatrix", viewMat);
-	particleShader->uniform("uViewMatrixInverse", viewMatInverse);
-	particleShader->uniform("uProjectionMatrix", projMat);
-	particleShader->uniform("uViewProjectionMatrix", viewProjMat);
-	particleShader->uniform("uViewPortHeight", (float)height);
-	particleShader->uniform("uPointSize", particleSize);
-
-	glBindVertexArray(particlesVAO);
-	// draw instances:
-	glEnable( GL_PROGRAM_POINT_SIZE );
-	glEnable(GL_POINT_SPRITE);
-	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-	glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);	
-	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-	glDisable(GL_POINT_SPRITE);
-	glBindVertexArray(0);
-}
 
 void state_initialize() {
 	for (int i=0; i<NUM_OBJECTS; i++) {

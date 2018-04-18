@@ -61,6 +61,7 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 void main() {
 	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
+	
 	vec3 offset = mat3(uViewMatrixInverse) * world_scale * vec3(2.*gl_PointCoord.x-1.,1.-2.*gl_PointCoord.y, 0.);
 	vec3 vertex_position = point_position + offset;
 	vec3 rd = normalize(vertex_position - eye_position);

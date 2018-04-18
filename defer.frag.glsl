@@ -60,7 +60,7 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	float depth = dot(relative_position, rd)/far_clip;
+	float depth = length(relative_position)/far_clip;
 	color.rgb = vec3(depth);
 
 	

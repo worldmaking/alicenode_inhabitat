@@ -5,7 +5,7 @@ uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 
 in vec2 texCoord;
 in vec3 ray, origin, eyepos;
-out vec4 FragColor;
+layout (location = 0) out vec4 FragColor;
 
 #define PI 3.14159265359
 #define EPS 0.01

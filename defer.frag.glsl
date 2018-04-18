@@ -40,7 +40,5 @@ void main() {
 
 	
 
-	FragColor.rgb = rd.rgb;
-
 	
 }

@@ -94,7 +94,7 @@ void main() {
 	vec3 n = normalize(ro);// * world_scale;
 
 	
-	FragColor.rgb = ro;
+	FragColor.rgb = ro/world_scale;
 	
 
 	/*

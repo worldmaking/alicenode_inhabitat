@@ -75,8 +75,10 @@ void main() {
 	// this is also thus the normal of a sphere centered at the particle
 	vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
 
-	// the billboard vertex, rotated & scaled to the world:
-	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);
+	// the billboard vertex
+	vec3 plane = vec3(snorm, 0.);
+	// rotated & scaled to the world:
+	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * plane;
 	// this billboard located in world space:
 	vec3 billboard_position = point_position + billboard;
 	// use this to compute the ray direction from the eye:

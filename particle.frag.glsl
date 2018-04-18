@@ -212,7 +212,7 @@ void main() {
 		vec3 color;
 		
 		//color = sky(-n); 
-		color = sky(ref);
+		color = sky(-ref);
 		
 		// fog effect:
 		vec3 fogcolor = sky(ray);

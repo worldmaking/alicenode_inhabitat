@@ -312,9 +312,16 @@ void onFrame(uint32_t width, uint32_t height) {
 			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.05f));
 			
 
+
 			glm::vec3 flow;
 			fluid.velocities.front().read_interp(o.location, &flow.x);
+
+			glm::vec3 push = quat_uz(o.orientation);
+			fluid.velocities.front().add(o.location, &push.x);
+
 			o.location = wrap(o.location + flow * 1.f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
+
+
 
 			//state->particles[i].location = o.location;
 

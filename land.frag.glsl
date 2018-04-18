@@ -202,5 +202,5 @@ void main() {
     	
 	FragPosition.xyz = p;
 	// also write to depth buffer, so that landscape occludes other creatures:
-	//gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
+	gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
 }

@@ -261,8 +261,6 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	//gl_FragDepth = computeDepth(world_position + p, uViewProjectionMatrix);
-	gl_FragDepth = computeDepth(world_position + quat_rotate(world_orientation, p), uViewProjectionMatrix);
-	
-	//FragColor.rgb = mod(rd * 8., 1.);
+	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);
+	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

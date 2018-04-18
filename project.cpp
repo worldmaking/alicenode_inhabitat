@@ -10,7 +10,7 @@ struct GBuffer {
 
 	unsigned int fbo;
 	unsigned int rbo;
-	unsigned int gColor, gNormal, gPosition;
+	//unsigned int gColor, gNormal, gPosition;
 	unsigned int textures[3];
 	unsigned int attachments[3];
 
@@ -23,31 +23,30 @@ struct GBuffer {
 		glGenFramebuffers(1, &fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+		glGenTextures(3, textures);
+
 		// Buffer 0: color buffer
-		glGenTextures(1, &gColor);
-		glBindTexture(GL_TEXTURE_2D, gColor);
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dim.x, dim.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gColor, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textures[0], 0);
 		attachments[0] = GL_COLOR_ATTACHMENT0;
 		
 		// Buffer 1: normal
-		glGenTextures(1, &gNormal);
-		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glBindTexture(GL_TEXTURE_2D, textures[1]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, dim.x, dim.y, 0, GL_RGB, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, textures[1], 0);
 		attachments[1] = GL_COLOR_ATTACHMENT1;
 
 		// Buffer 2: position
-		glGenTextures(1, &gPosition);
-		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glBindTexture(GL_TEXTURE_2D, textures[2]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, dim.x, dim.y, 0, GL_RGB, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gPosition, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, textures[2], 0);
 		attachments[2] = GL_COLOR_ATTACHMENT2;
 		
 		glDrawBuffers(3, attachments);
@@ -74,27 +73,19 @@ struct GBuffer {
 			glDeleteRenderbuffers(1, &rbo);
 			rbo = 0;
 		}
-		if (gColor) {
-			glDeleteTextures(1, &gColor);
-			gColor = 0;
-		}
-		if (gNormal) {
-			glDeleteTextures(1, &gNormal);
-			gNormal = 0;
-		}
-		if (gPosition) {
-			glDeleteTextures(1, &gPosition);
-			gPosition = 0;
+		if (textures[0]) {
+			glDeleteTextures(3, textures);
+			textures[0] = 0;
 		}
 	}
 
 	void bindTextures() {
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, gPosition);
+        glBindTexture(GL_TEXTURE_2D, textures[2]);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glBindTexture(GL_TEXTURE_2D, textures[1]);
 		glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gColor);
+        glBindTexture(GL_TEXTURE_2D, textures[0]);
 	}
 
 	void unbindTextures() {

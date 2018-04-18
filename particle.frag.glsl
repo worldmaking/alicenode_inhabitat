@@ -70,9 +70,9 @@ void main() {
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	
 	// front face of a unit-radius sphere
+	vec3 sphere = normalize(vec3(snorm, 1.));
 	// rotated to face the camera just like the billboard itself
 	// this is also thus the normal of a sphere centered at the particle
-	vec3 sphere = normalize(vec3(snorm, 1.));
 	vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
 
 	// the billboard vertex, rotated & scaled to the world:

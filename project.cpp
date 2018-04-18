@@ -1,17 +1,116 @@
 #include "al/al_console.h"
 #include "al/al_math.h"
+#include "al/al_field3d.h"
 #include "al/al_gl.h"
 #include "al/al_mmap.h"
 #include "alice.h"
 #include "state.h"
 
 Shader * objectShader;
-unsigned int VAO;
-unsigned int VBO;
-unsigned int instanceVBO;
+unsigned int objectVAO;
+unsigned int objectVBO;
+unsigned int objectInstanceVBO;
 
+unsigned int particlesVAO;
+unsigned int particlesVBO;
+float particleSize = 0.1f;
+
+Shader * particleShader;
 Shader * landShader;
 QuadMesh quadMesh;
+
+
+double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fluid_noise;
+Fluid3D<> fluid;
+int fluid_passes = 14;
+int fluid_noise_count = 32;
+
+glm::vec4 boundary[FIELD_VOXELS];
+
+void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, const size_t dim0, const size_t dim1, const size_t dim2) {
+
+	const float influence_offset = -fluid_boundary_damping;
+	const float influence_scale = 1.f / fluid_boundary_damping;
+
+	// probably don't need the triple loop here -- could do it cell by cell.
+	int i = 0;
+	for (size_t z = 0; z<dim2; z++) {
+		for (size_t y = 0; y<dim1; y++) {
+			for (size_t x = 0; x<dim0; x++, i++) {
+
+				const glm::vec4 land = landscape[i];
+				const double distance = fabs(land.w);
+				//const float inside = sign(land.w);	// do we care?
+				const double influence = glm::clamp((distance + influence_offset) * influence_scale, 0., 1.);
+				
+
+				glm::vec3& vel = velocities[i];
+				glm::vec3 veln = safe_normalize(vel);
+				float speed = glm::length(vel);
+
+
+				const glm::vec3 normal = glm::vec3(land);	// already normalized.
+
+															// get the projection of vel onto normal axis
+															// i.e. the component of vel that points in either normal direction:
+				glm::vec3 normal_component = normal * (dot(vel, normal));
+
+				// remove this component from the original velocity:
+				glm::vec3 without_normal_component = vel - normal_component;
+
+				// and re-scale to original magnitude:
+				glm::vec3 rescaled = safe_normalize(without_normal_component) * speed;
+
+				// update:
+				vel = mix(rescaled, vel, influence);
+				
+			}
+		}
+	}
+}
+
+void fluid_update() {
+	// update fluid
+	Field3D<>& velocities = fluid.velocities;
+	const size_t stride0 = velocities.stride(0);
+	const size_t stride1 = velocities.stride(1);
+	const size_t stride2 = velocities.stride(2);
+	const size_t dim0 = velocities.dimx();
+	const size_t dim1 = velocities.dimy();
+	const size_t dim2 = velocities.dimz();
+	const size_t dimwrap0 = dim0 - 1;
+	const size_t dimwrap1 = dim1 - 1;
+	const size_t dimwrap2 = dim2 - 1;
+	glm::vec3 * data = (glm::vec3 *)velocities.front().ptr();
+	//float * boundary = boundary;
+
+	// and some turbulence:
+	for (int i=0; i < rnd::uni(fluid_noise_count); i++) {
+		// pick a cell at random:
+		glm::vec3 * cell = data + rnd::integer(dim0*dim1*dim2);
+		// add a random vector:
+		*cell = glm::sphericalRand(rnd::uni(fluid_noise));
+	}
+
+	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
+
+	velocities.diffuse(fluid_viscosity, fluid_passes);
+	// apply boundaries:
+	apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
+	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
+	// stabilize:
+	fluid.project(fluid_passes / 2);
+	// advect:
+	velocities.advect(velocities.back(), 1.);
+	// apply boundaries:
+	apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
+	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
+
+	// clear gradients:
+	fluid.gradient.front().zero();
+	fluid.gradient.back().zero();
+
+}
 
 float vertices[] = {
     -1.0f,-1.0f,-1.0f, 
@@ -69,6 +168,14 @@ Mmap<State> statemap;
 
 void onUnloadGPU() {
 	// free resources:
+	if (landShader) {
+		delete landShader;
+		landShader = 0;
+	}	
+	if (particleShader) {
+		delete particleShader;
+		particleShader = 0;
+	}	
 	if (objectShader) {
 		delete objectShader;
 		objectShader = 0;
@@ -76,18 +183,28 @@ void onUnloadGPU() {
 	
 	quadMesh.dest_closing();
 	
-	if (VAO) {
-		glDeleteVertexArrays(1, &VAO);
-		VAO = 0;
+	if (objectVAO) {
+		glDeleteVertexArrays(1, &objectVAO);
+		objectVAO = 0;
 	}
-	if (VBO) {
-		glDeleteBuffers(1, &VBO);
-		VBO = 0;
+	if (objectVBO) {
+		glDeleteBuffers(1, &objectVBO);
+		objectVBO = 0;
 	}
-	if (instanceVBO) {	
-		glDeleteBuffers(1, &instanceVBO);
-		instanceVBO = 0;
+	if (objectInstanceVBO) {	
+		glDeleteBuffers(1, &objectInstanceVBO);
+		objectInstanceVBO = 0;
 	}
+
+	if (particlesVAO) {
+		glDeleteVertexArrays(1, &particlesVAO);
+		particlesVAO = 0;
+	}
+	if (particlesVBO) {
+		glDeleteBuffers(1, &particlesVBO);
+		particlesVBO = 0;
+	}
+
 }
 
 void onReloadGPU() {
@@ -95,45 +212,71 @@ void onReloadGPU() {
 	onUnloadGPU();
 	
 	landShader = Shader::fromFiles("land.vert.glsl", "land.frag.glsl");
+	particleShader = Shader::fromFiles("particle.vert.glsl", "particle.frag.glsl");
+	objectShader = Shader::fromFiles("object.vert.glsl", "object.frag.glsl");
 	
 	quadMesh.dest_changed();
-	
-	objectShader = Shader::fromFiles("object.vert.glsl", "object.frag.glsl");
-	if (!objectShader) return;
-	console.log("shader loaded %p = %d", objectShader, (int)objectShader->program);
-	
-	// define the VAO 
-	// (a VAO stores attrib & buffer mappings in a re-usable way)
-	glGenVertexArrays(1, &VAO); 
-	glBindVertexArray(VAO);
-	// define the VBO while VAO is bound:
-	glGenBuffers(1, &VBO); 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);  
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	// attr location 
-	glEnableVertexAttribArray(0); 
-	// set the data layout
-	// attr location, element size & type, normalize?, source stride & offset
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); 
 
-	glGenBuffers(1, &instanceVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
+	{
+		// define the VAO 
+		// (a VAO stores attrib & buffer mappings in a re-usable way)
+		glGenVertexArrays(1, &objectVAO); 
+		glBindVertexArray(objectVAO);
+		// define the VBO while VAO is bound:
+		glGenBuffers(1, &objectVBO); 
+		glBindBuffer(GL_ARRAY_BUFFER, objectVBO);  
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		// attr location 
+		glEnableVertexAttribArray(0); 
+		// set the data layout
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); 
 
-	glEnableVertexAttribArray(2);
-	// attr location, element size & type, normalize?, source stride & offset
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, location));
-	// mark this attrib as being per-instance	
-	glVertexAttribDivisor(2, 1);  
-	
-	glEnableVertexAttribArray(3);
-	// attr location, element size & type, normalize?, source stride & offset
-	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, orientation));
-	// mark this attrib as being per-instance	
-	glVertexAttribDivisor(3, 1);  
-	
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+		glGenBuffers(1, &objectInstanceVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(2);
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, location));
+		// mark this attrib as being per-instance	
+		glVertexAttribDivisor(2, 1);  
+		
+		glEnableVertexAttribArray(3);
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, orientation));
+		// mark this attrib as being per-instance	
+		glVertexAttribDivisor(3, 1);  
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+
+	{
+		// define the VAO
+		// (a VAO stores attrib & buffer mappings in a re-usable way)
+		glGenVertexArrays(1, &particlesVAO);
+		glBindVertexArray(particlesVAO);
+
+		// define the VBO while VAO is bound:
+		glGenBuffers(1, &particlesVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
+		//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
+
+		// attr location 
+		glEnableVertexAttribArray(0);
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(offsetof(Particle, location)));
+		
+		//glEnableVertexAttribArray(1);
+		// attr location, element size & type, normalize?, source stride & offset
+		//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(offsetof(Particle, color)));
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+
 
 }
 
@@ -143,17 +286,44 @@ void onFrame(uint32_t width, uint32_t height) {
 	float aspect = width/float(height);
 
 	// update simulation:
+	fluid_update();
+
+	for (int i=0; i<NUM_PARTICLES; i++) {
+		Particle &o = state->particles[i];
+
+		glm::vec3 flow;
+		fluid.velocities.front().read_interp(o.location, &flow.x);
+		flow *= 2.f;
+
+		glm::vec3 noise = glm::sphericalRand(0.02f);
+
+		o.location = wrap(o.location + flow + noise, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
+	}
+
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		Object &o = state->objects[i];
+
+		
 		o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
 		//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
 		o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.05f));
+		
+
+		glm::vec3 flow;
+		fluid.velocities.front().read_interp(o.location, &flow.x);
+		o.location = wrap(o.location + flow * 1.f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));
+
+		state->particles[i].location = o.location;
 
 	}
 
+
 	// upload GPU;
-	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
 
 	// update nav
 	double a = M_PI * t / 30.;
@@ -163,6 +333,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	glm::vec3(0., 1., 0.));
 	glm::mat4 projMat = glm::perspective(45.0f, aspect, 0.1f, 100.0f);
 	glm::mat4 viewProjMat = projMat * viewMat;
+	glm::mat4 viewMatInverse = glm::inverse(viewMat);
 	glm::mat4 viewProjMatInverse = glm::inverse(viewProjMat);
 
 	// start rendering:
@@ -179,11 +350,28 @@ void onFrame(uint32_t width, uint32_t height) {
 	objectShader->uniform("uViewProjectionMatrix", viewProjMat);
 	//objectShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 
-	glBindVertexArray(VAO);
-	// offset, vertex count
-	//glDrawArrays(GL_TRIANGLES, 0, 3);
+	glBindVertexArray(objectVAO);
 	// draw instances:
-	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_OBJECTS);   
+	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_OBJECTS);  
+
+	particleShader->use(); 
+	particleShader->uniform("time", t);
+	particleShader->uniform("uViewMatrix", viewMat);
+	particleShader->uniform("uViewMatrixInverse", viewMatInverse);
+	particleShader->uniform("uProjectionMatrix", projMat);
+	particleShader->uniform("uViewPortHeight", (float)height);
+	particleShader->uniform("uPointSize", particleSize);
+
+	glBindVertexArray(particlesVAO);
+	// draw instances:
+	glEnable( GL_PROGRAM_POINT_SIZE );
+	glEnable(GL_POINT_SPRITE);
+	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+	glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);	
+	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glDisable(GL_POINT_SPRITE);
+	glBindVertexArray(0);
+
 }
 
 
@@ -276,6 +464,19 @@ extern "C" {
 		console.log("sim state %p should be size %d", state, sizeof(State));
 		//state_initialize();
 		console.log("initialized");
+
+
+		// TODO currently this is a memory leak on unload:
+		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
+		for (int i = 0; i<FIELD_VOXELS; i++) {
+			//glm::vec4 * n = (glm::vec4 *)noisefield[i];
+			//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
+			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
+		}
+		fluid_viscosity = 0.001;
+		fluid_boundary_damping = .2;
+		fluid_noise_count = 32;
+		fluid_noise = 8.;
 
 		// allocate on GPU:
 		onReloadGPU();

@@ -537,6 +537,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	} 
 
 	if (0) {
+		/*
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 
 		glEnable(GL_SCISSOR_TEST);
@@ -574,6 +575,7 @@ void onFrame(uint32_t width, uint32_t height) {
         // depth buffer in another shader stage (or somehow see to match the default framebuffer's internal format with the FBO's internal format).
         glBlitFramebuffer(0, 0, gBuffer.dim.x, gBuffer.dim.y, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		*/
 	}
 }
 

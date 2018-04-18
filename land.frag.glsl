@@ -218,10 +218,6 @@ void main() {
 		
 		color *= cheap_self_occlusion;
 		
-		
-		
-		
-		
 		// fog effect:
 		float fogmix = pow(count, 2.);
 		fogmix = max(fogmix, t/VERYFARAWAY);

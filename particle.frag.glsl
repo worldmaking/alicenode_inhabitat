@@ -72,7 +72,7 @@ void main() {
 	// front face of a unit-radius sphere
 	// rotated to face the camera just like the billboard itself
 	// this is also thus the normal of a sphere centered at the particle
-	vec3 spherenormal = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
+	vec3 spherenormal = (mat3(uViewMatrixInverse) * normalize(vec3(snorm, 1.)));
 
 	// the billboard vertex, rotated & scaled to the world:
 	vec3 billboard = world_scale * mat3(uViewMatrixInverse) * vec3(snorm, 0.);

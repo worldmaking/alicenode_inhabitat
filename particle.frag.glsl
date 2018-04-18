@@ -174,7 +174,7 @@ void main() {
 		float acute = abs(dot(n, ray)); // how much surface faces us
 		float oblique = 1.0 - acute; // how much surface is perpendicular to us
 		vec3 color = vec3(oblique);
-		/*
+		
 		//color += (n*1.)*0.1;
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
@@ -184,7 +184,7 @@ void main() {
 		color = mix(sky(n), sky(ref), metallic);
 		
 		color *= cheap_self_occlusion;
-		
+		/*
 		// fog effect:
 		vec3 fogcolor = sky(ray);
 		float fogmix = length(world_position)/VERYFARAWAY;

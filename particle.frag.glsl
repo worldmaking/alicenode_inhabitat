@@ -216,7 +216,7 @@ void main() {
 		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
 		
 		
-		float metallic = oblique;
+		float metallic = acute;
 		vec3 color = mix(sky(n), sky(ref), metallic);
 		
 		// fog effect:

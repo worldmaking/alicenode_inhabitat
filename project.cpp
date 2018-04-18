@@ -13,7 +13,7 @@ unsigned int objectInstanceVBO;
 
 unsigned int particlesVAO;
 unsigned int particlesVBO;
-float particleSize = 0.25f;
+float particleSize = 0.125f;
 
 Shader * particleShader;
 Shader * landShader;

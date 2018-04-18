@@ -90,6 +90,9 @@ void main() {
     }
 	FragColor.rgb = vec3(1.-count);
 
+	// override:
+	p = normalize(ro) * world_scale;
+
 	if (d < precis) {
 	//	FragColor.rgb = vec3(1.);
 	//} else if (t > maxd) {

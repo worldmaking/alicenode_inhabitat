@@ -13,13 +13,11 @@ unsigned int objectInstanceVBO;
 
 unsigned int particlesVAO;
 unsigned int particlesVBO;
-float particleSize = 1.f;
+float particleSize = 0.25f;
 
 Shader * particleShader;
 Shader * landShader;
 QuadMesh quadMesh;
-
-double simulationTime = 0.;
 
 double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fluid_noise;
 Fluid3D<> fluid;
@@ -282,14 +280,11 @@ void onReloadGPU() {
 }
 
 void onFrame(uint32_t width, uint32_t height) {
-
-	double t = simulationTime; //Alice::Instance().t;
+	const Alice& alice = Alice::Instance();
+	double t = alice.simTime;
 	float aspect = width/float(height);
 
 	if (Alice::Instance().isSimulating) {
-
-		simulationTime += Alice::Instance().dt;
-		t = simulationTime;
 
 		// update simulation:
 		fluid_update();
@@ -367,6 +362,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	particleShader->uniform("uViewMatrix", viewMat);
 	particleShader->uniform("uViewMatrixInverse", viewMatInverse);
 	particleShader->uniform("uProjectionMatrix", projMat);
+	particleShader->uniform("uViewProjectionMatrix", viewProjMat);
 	particleShader->uniform("uViewPortHeight", (float)height);
 	particleShader->uniform("uPointSize", particleSize);
 

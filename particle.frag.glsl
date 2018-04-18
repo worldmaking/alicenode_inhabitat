@@ -1,5 +1,5 @@
 #version 330 core
-uniform mat4 uViewMatrixInverse;
+uniform mat4 uViewMatrixInverse, uViewProjectionMatrix;
 uniform float time;
 
 
@@ -46,6 +46,18 @@ float fScene(vec3 p) {
 	return s;
 }
 
+// p is the vec3 position of the surface at the fragment.
+// viewProjectionMatrix would be typically passed in as a uniform
+// assign result to gl_FragDepth:
+float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
+	float dfar = gl_DepthRange.far;
+	float dnear = gl_DepthRange.near;
+	vec4 clip_space_pos = viewProjectionMatrix * vec4(p, 1.);
+	float ndc_depth = clip_space_pos.z / clip_space_pos.w;	
+	// standard perspective:
+	return (((dfar-dnear) * ndc_depth) + dnear + dfar) / 2.0;
+}
+
 void main() {
 	// point_position is uniform over the fragements; we need to displace this according to the gl_PointCoord
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
@@ -76,18 +88,20 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-
-	if (d < precis) {
-		FragColor.rgb = vec3(1.);
-	} else if (t > maxd) {
-		FragColor.rgb = vec3(0.);
-		discard;
-	} else {
-		FragColor.rgb = vec3(0.5);
-		discard;
-	}
 	FragColor.rgb = vec3(1.-count);
 
-	//FragColor = vec4(vec3(abs(d)), 0.5);
-	//FragColor.rgb = ro;
+	if (d < precis) {
+	//	FragColor.rgb = vec3(1.);
+	//} else if (t > maxd) {
+	//	FragColor.rgb = vec3(0.);
+	//	discard;
+	} else {
+		//FragColor.rgb = vec3(0.5);
+		discard;
+	}
+	
+	// place this fragment properly in the depth buffer
+	// if you don't do this, the depth will be at the billboard location
+	// but this is super-expensive; better to skip it if the particles are small enough
+	//gl_FragDepth = computeDepth(point_position + p, uViewProjectionMatrix);
 }

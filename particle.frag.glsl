@@ -79,7 +79,7 @@ void main() {
 	vertex_position = point_position + world_scale*spherenormal;
 	vec3 rd = normalize(vertex_position - eye_position);
 	vec3 ro = offset - rd * world_scale;
-	ro = spherenormal;
+	ro = worldscale*spherenormal;
 
 	float maxd = 2. * world_scale;
 	float d = maxd;

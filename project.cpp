@@ -489,7 +489,7 @@ extern "C" {
 			//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
 			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
 		}
-		fluid_viscosity = 0.00001;
+		fluid_viscosity = 0.0001;
 		fluid_boundary_damping = .2;
 		fluid_noise_count = 32;
 		fluid_noise = 8.;

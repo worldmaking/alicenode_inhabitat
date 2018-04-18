@@ -228,7 +228,7 @@ void main() {
 		color = mix(color, fogcolor, fogmix);
 		
 		FragColor.rgb = color;
-		FragNormal.xyz = n;
+		FragNormal.xyz = normalize(n);
 		
 	} else if (t >= maxd) {
     	// shot through to background

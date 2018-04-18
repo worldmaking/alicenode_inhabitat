@@ -109,7 +109,7 @@ void main() {
 	
 	FragColor.rgb = ro/world_scale;
 
-	FragColor.rgb = vec3(length(1. - frontface)); 
+	FragColor.rgb = vec3(1. - length(frontface)); 
 
 	if (length(offset) < world_scale) {
 		//frontface*0.5+0.5; //normalize(sphere);

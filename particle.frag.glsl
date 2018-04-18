@@ -98,7 +98,7 @@ void main() {
 	
 	FragColor.rgb = ro/world_scale;
 
-	if (length(sphere) < world_scale) {
+	if (length(offset) < world_scale) {
 		FragColor.rgb = normalize(sphere);
 	} else {
 		discard; //FragColor.rgb = vec3(0);
@@ -120,5 +120,5 @@ void main() {
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location
 	// but this is super-expensive; better to skip it if the particles are small enough
-	//gl_FragDepth = computeDepth(point_position + p, uViewProjectionMatrix);
+	gl_FragDepth = computeDepth(point_position + p, uViewProjectionMatrix);
 }

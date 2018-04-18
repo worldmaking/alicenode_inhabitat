@@ -189,7 +189,7 @@ void main() {
     	// shot through to background
     	p = ro+maxd*rd;
     	
-		discard;
+		//discard;
     	FragColor.rgb = fogcolor;
 		FragNormal.xyz = -rd;
     	

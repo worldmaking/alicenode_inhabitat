@@ -70,8 +70,9 @@ void main() {
 	// but this is screen aligned; also need to unrotate to get world coordinate of the sprite
 	
 	// front face of a unit-radius sphere at this particle's location,
-	// rotated to face the camera just like the billboard itself:
-	vec3 normal = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
+	// rotated to face the camera just like the billboard itself
+	// this is also thus the normal of a sphere centered at the particle
+	vec3 spherenormal = normalize(mat3(uViewMatrixInverse) * vec3(snorm, 1.));
 	
 	// spherebound:
 	//if (length(frontface) < 1.) discard;
@@ -107,7 +108,7 @@ void main() {
     }
 	FragColor.rgb = vec3(1.-count);
 
-	FragColor.rgb = normal;
+	FragColor.rgb = spherenormal;
 	
 	//FragColor.rgb = ro/world_scale;
 

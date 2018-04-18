@@ -56,11 +56,11 @@ void main() {
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// normal viz:
-	//color.rgb = normal*0.5+0.5;
+	color.rgb = normal*0.5+0.5;
 
 	// depth viz:
 	float depth = dot(position - eye_position, rd)/far_clip;
-	color.rgb = vec3(depth);
+	//color.rgb = vec3(depth);
 
 	
 

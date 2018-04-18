@@ -537,9 +537,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	} 
 
 	if (1) {
-		/*
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
-
+		/*
+		
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
 		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
@@ -549,9 +549,11 @@ void onFrame(uint32_t width, uint32_t height) {
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
 
 		glDisable(GL_SCISSOR_TEST);
+		*/
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
 		//glGenerateMipmap(GL_TEXTURE_2D);
 
+		/*
 		glViewport(0, 0, width, height);
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(1.f, 0.f, 0.f, 1.0f);

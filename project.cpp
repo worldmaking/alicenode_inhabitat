@@ -427,6 +427,19 @@ void onFrame(uint32_t width, uint32_t height) {
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	draw_scene();
+
+	glDisable(GL_SCISSOR_TEST);
+	fbo.end();
+
+	glViewport(0, 0, width, height);
+	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	fbo.draw();
+}
+
+void draw_scene() {
 	landShader->use();
 	landShader->uniform("time", t);
 	landShader->uniform("uViewProjectionMatrix", viewProjMat);
@@ -461,17 +474,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glDisable(GL_POINT_SPRITE);
 	glBindVertexArray(0);
-
-	glDisable(GL_SCISSOR_TEST);
-	fbo.end();
-
-	glViewport(0, 0, width, height);
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	fbo.draw();
 }
-
 
 void state_initialize() {
 	for (int i=0; i<NUM_OBJECTS; i++) {

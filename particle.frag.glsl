@@ -209,15 +209,10 @@ void main() {
 		// reflection vector 
 		vec3 ref = reflect(ray, n);
 		
-		float acute = abs(dot(n, ray)); // how much surface faces us
-		float oblique = 1.0 - acute; // how much surface is perpendicular to us
+		vec3 color;
 		
-		//color += (n*1.)*0.1;
-		//color += mix(color, vec3(0.8)*max(0., dot(n, vec3(1.))), 0.5);
-		
-		
-		float metallic = acute;
-		vec3 color = mix(sky(n), sky(ref), metallic);
+		color = sky(n); 
+		color = sky(ref);
 		
 		// fog effect:
 		vec3 fogcolor = sky(ray);

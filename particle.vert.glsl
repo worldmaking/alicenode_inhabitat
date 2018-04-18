@@ -5,6 +5,7 @@ uniform float uViewPortHeight, uPointSize, time;
 // object in world space:
 layout (location = 0) in vec3 vertex_position;
 
+out vec4 world_orientation;
 out vec3 point_position, eye_position;
 out float world_scale;
 //out vec3
@@ -12,6 +13,7 @@ out float world_scale;
 void main() {
 
 	world_scale = uPointSize;
+	world_orientation = vec4(0, 0, 0, 1);
 
 	// vertex in camera space:
 	vec4 view_position = uViewMatrix * vec4(vertex_position, 1.);

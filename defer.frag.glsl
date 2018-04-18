@@ -18,6 +18,8 @@ vec3 sky(vec3 dir) {
 }
 
 void main() {
+	vec3 rd = normalize(ray_direction);
+
 	vec4 color = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;

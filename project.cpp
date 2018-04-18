@@ -541,10 +541,10 @@ void onFrame(uint32_t width, uint32_t height) {
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
 		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
+		glEnable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
        /*
 		
-		 glEnable(GL_DEPTH_TEST);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
 

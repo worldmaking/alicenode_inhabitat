@@ -91,6 +91,7 @@ void main() {
 	vec3 rd = normalize(billboard_position - eye_position);
 	vec3 rd1 = normalize(billboard_position - eye_position);
 	vec3 rd2 = normalize(box_position - eye_position);
+	
 	vec3 rdiff = rd1 - rd;
 	// the ray origin (relative to the particle location)
 	// is computed by stepping back along the ray
@@ -124,7 +125,7 @@ void main() {
 	FragColor.rgb = spherenormal*0.5+0.5;
 	//FragColor.rgb = rd;
 
-	FragColor.rgb = 40.*abs(rdiff);
+	//FragColor.rgb = 40.*abs(rdiff);
 	
 	//FragColor.rgb = ro*0.5+0.5;
 	

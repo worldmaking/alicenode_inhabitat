@@ -58,7 +58,7 @@ void main() {
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// normal viz:
-	//color.rgb = normal*0.5+0.5;
+	color.rgb = normal*0.5+0.5;
 
 	// depth viz:
 	//color.rgb = vec3(normalized_depth);

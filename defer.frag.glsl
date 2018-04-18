@@ -34,7 +34,7 @@ void main() {
 
 	
 
-	FragColor.rgb = ray_direction.rgb;
+	FragColor.rgb = rd.rgb;
 
 	
 }

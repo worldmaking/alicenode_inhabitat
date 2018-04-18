@@ -88,20 +88,20 @@ struct GBuffer {
 	}
 
 	void bindTextures() {
-		glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gColor);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gPosition);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gColor);
 	}
 
 	void unbindTextures() {
-		glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
-        glActiveTexture(GL_TEXTURE2);
+		glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
 	}
 };
@@ -536,7 +536,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		fbo.draw();
 	} 
 
-	if (0) {
+	if (1) {
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);

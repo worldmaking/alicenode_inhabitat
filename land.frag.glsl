@@ -185,32 +185,11 @@ void main() {
 	vec3 fogcolor = sky(rd);
 	
 	if (d < precis) {
-		/*
-		vec3 matcolor = color; //vec3(0.7, 0.5, 0.3);
-	
-		vec3 n = normal4(p, .01);
-		color = sky(n) * matcolor;
-		//color *= vec3(0.5) * max(0., dot(n, vec3(1.)));
-		//color += texture2D(tex0, pos2texcoord(p)).rgb;
-		
-		vec3 ref = reflect(rd, n);
-		color = sky(ref) * matcolor;
-		*/
-		
-		// normal in object space:
-		vec3 n = normal4(p, .01);
-		// ray direction in world space
-		vec3 ray = rd;
-		
-		// reflection vector 
-		vec3 ref = reflect(ray, n);
-		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		color = vec3(cheap_self_occlusion);
 		
 		FragColor.rgb = color;
 		FragNormal.xyz = n;
-		
 		
 	} else if (t >= maxd) {
     	// shot through to background

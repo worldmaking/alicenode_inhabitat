@@ -557,6 +557,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		deferShader->use();
+		deferShader->uniform("gColor", 0);
 		gBuffer.bindTextures();
 		quadMesh.draw();
 		gBuffer.unbindTextures();

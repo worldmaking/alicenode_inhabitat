@@ -318,7 +318,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			fluid.velocities.front().read_interp(o.location, &flow.x);
 			flow *= 0.5f;
 
-			glm::vec3 push = quat_uf(o.orientation) * 0.25f;
+			glm::vec3 push = quat_uf(o.orientation) * 0.5f;
 			fluid.velocities.front().add(o.location, &push.x);
 
 			o.location = wrap(o.location + flow, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));

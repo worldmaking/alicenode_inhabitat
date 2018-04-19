@@ -43,34 +43,37 @@ void main() {
 	vec3 rd = normalize(ray_direction);
 
 	
-		vec3 color = basecolor.rgb;
+	vec3 color = basecolor.rgb;
+	
+	// reflection vector 
+	vec3 ref = reflect(rd, normal);
+	float acute = abs(dot(normal, rd)); // how much surface faces us
+	float oblique = 1.0 - acute; // how much surface is perpendicular to us
+
+	//color *= 1. - 0.5*oblique;	
+
+	//float metallic = acute;
+	float metallic = oblique;
+	color.rgb *= mix(sky(ref), sky(normal), metallic);
 		
-		// reflection vector 
-		vec3 ref = reflect(rd, normal);
-		float acute = abs(dot(normal, rd)); // how much surface faces us
-		float oblique = 1.0 - acute; // how much surface is perpendicular to us
+	// fog effect:
+	vec3 fogcolor = sky(rd);
+	float fogmix = clamp(normalized_depth, 0., 1.);
+	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
-		//color *= 1. - 0.5*oblique;	
+	// pos viz:
+	//color.rgb = position.xyz;
 
-		//float metallic = acute;
-		float metallic = oblique;
-		color.rgb *= mix(sky(ref), sky(normal), metallic);
-			
-		// fog effect:
-		vec3 fogcolor = sky(rd);
-		float fogmix = clamp(normalized_depth, 0., 1.);
-		color.rgb = mix(color.rgb, fogcolor, fogmix);
+	// viewspace:
+	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
 
-		// pos viz:
-		//color.rgb = position.xyz;
+	// normal viz:
+	//color.rgb = normal*0.5+0.5;
 
-		// normal viz:
-		//color.rgb = normal*0.5+0.5;
+	// depth viz:
+	//color.rgb = vec3(normalized_depth);
+	
 
-		// depth viz:
-		//color.rgb = vec3(normalized_depth);
-		
-
-		FragColor.rgb = color;	
+	FragColor.rgb = color;	
 
 }

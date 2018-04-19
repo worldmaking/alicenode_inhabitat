@@ -67,7 +67,7 @@ void main() {
 	float acute = abs(dot(normal, rd)); // how much surface faces us
 	float oblique = 1.0 - acute; // how much surface is perpendicular to us
 
-	//color *= 1. - 0.5*oblique;	
+	color *= 1. - 0.5*oblique;	
 
 	//float metallic = acute;
 	float metallic = oblique;

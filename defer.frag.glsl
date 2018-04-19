@@ -34,13 +34,6 @@ vec3 sky(vec3 dir) {
 	return mix(n, vec3(1.), 0.75);
 }
 
-// x should be
-// y = 0 at x = 0
-// y = 1 at x = 1
-// y decays to 0 as x > 1
-float curve(x) {
-	return 27.*x/pow(x + 2., 3.);
-}
 
 void main() {
 	vec2 inverseDim = 1./uDim;

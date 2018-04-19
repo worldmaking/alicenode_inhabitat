@@ -561,6 +561,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		deferShader->uniform("gPosition", 2);
 		deferShader->uniform("uNearClip", near_clip);
 		deferShader->uniform("uFarClip", far_clip);
+		deferShader->uniform("uDim", glm::vec2(gBuffer.dim));
 		gBuffer.bindTextures();
 		quadMesh.draw();
 		gBuffer.unbindTextures();

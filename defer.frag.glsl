@@ -79,7 +79,7 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	color.rgb = vec3(normalized_depth1);
+	color.rgb = vec3(uDim.x);
 	
 
 	FragColor.rgb = color;	

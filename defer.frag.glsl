@@ -7,6 +7,7 @@ base color RGB, alpha (opacity)
 self-AO
 material/shading model
 material properties: metallic, roughness
+subsurface color
 
 other inputs:
 depth (from position)
@@ -40,10 +41,7 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
-	bool isBackground = dot(normal, normal) == 0.;
-	if (isBackground) {
-		FragColor.rgb = sky(rd);
-	} else {
+	
 		vec3 color = basecolor.rgb;
 		
 		// reflection vector 
@@ -73,6 +71,5 @@ void main() {
 		
 
 		FragColor.rgb = color;	
-	}
 
 }

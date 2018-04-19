@@ -84,7 +84,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = texCoord.x;
+	color.r = smoothstep(0.2, 0.3, texCoord.x);
 	
 	//color = basecolor.rgb;
 	

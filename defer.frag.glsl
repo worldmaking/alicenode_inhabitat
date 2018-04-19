@@ -76,11 +76,12 @@ void main() {
 	// dot of the normal with the ray, scaled by pixel size?
 	float rayDotN = dot(rd, normal);
 	float expectedDepthl = depth + rayDotN*sides.x;
+	float diffl = depthl - expectedDepthl;
 
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = max(expectedDepthl - depthl, 0.)*4.;
+	color.r = max(depthl - expectedDepthl, 0.)*4.;
 	
 	//color = basecolor.rgb;
 	

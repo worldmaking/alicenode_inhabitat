@@ -87,7 +87,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = bump1;
+	color.r = bump1 * 8.;
 	
 	//color = basecolor.rgb;
 	

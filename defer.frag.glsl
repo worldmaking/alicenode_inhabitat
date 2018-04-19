@@ -83,7 +83,7 @@ void main() {
 	// set peak around 0.1, null around 1.
 	//color.r = bump1(diff1, 0.1, 1.);
 	
-	//color = basecolor.rgb;
+	color = basecolor.rgb;
 	
 	// reflection vector 
 	vec3 ref = reflect(rd, normal);

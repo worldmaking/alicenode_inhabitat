@@ -75,9 +75,9 @@ void main() {
 	float rayDotN = dot(ray_direction, normal);
 	float expectedDepthl = depth + rayDotN*sides.x;
 
-	color.r = depth;
 
 	vec3 color;
+	color.r = depth;
 	
 	//color = basecolor.rgb;
 	

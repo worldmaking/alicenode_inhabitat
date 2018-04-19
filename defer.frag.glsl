@@ -85,10 +85,10 @@ void main() {
 	//color.rgb = view_position;
 
 	// normal viz:
-	color.rgb = normal*0.5+0.5;
+	//color.rgb = normal*0.5+0.5;
 
 	// depth viz:
-	//color.rgb = vec3(normalized_depth);
+	color.rgb = vec3(normalized_depth);
 
 	// edge finding by depth difference:
 	float edges = abs(depth-depthn);

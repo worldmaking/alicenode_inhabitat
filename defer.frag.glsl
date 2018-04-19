@@ -87,8 +87,8 @@ void main() {
 	// normal viz:
 	//color.rgb = normal*0.5+0.5;
 
-
-	color.rgb = ref.xyz;
+	// reflection vectors
+	//color.rgb = ref.xyz;
 
 	// depth viz:
 	//color.rgb = vec3(normalized_depth);

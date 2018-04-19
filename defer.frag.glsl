@@ -36,6 +36,7 @@ vec3 sky(vec3 dir) {
 
 void main() {
 	vec2 inverseDim = 1./uDim;
+	vec3 sides = vec3(inverseDim, 0.);
 	vec4 basecolor = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
@@ -44,7 +45,8 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
-	vec3 sides = vec3(inverseDim, 0.);
+
+	vec3 color;
 
 	// compare with next point:
 	vec2 texCoordl = texCoord - sides.xz;
@@ -76,7 +78,6 @@ void main() {
 	float expectedDepthl = depth + rayDotN*sides.x;
 
 
-	vec3 color;
 	color.r = depth;
 	
 	//color = basecolor.rgb;

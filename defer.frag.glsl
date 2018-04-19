@@ -20,7 +20,7 @@ uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
 uniform float uFarClip;
-uniform vec3 uDim;
+uniform vec2 uDim;
 uniform mat4 uViewMatrix;
 
 in vec2 texCoord;

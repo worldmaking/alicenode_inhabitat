@@ -84,7 +84,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = max(depthl - expectedDepthl, 0.)*4.;
+	color.r = texCoord.x;
 	
 	//color = basecolor.rgb;
 	

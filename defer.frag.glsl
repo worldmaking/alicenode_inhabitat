@@ -71,7 +71,7 @@ void main() {
 	//color.rgb = position.xyz;
 
 	// viewspace:
-	color.rgb = view_position;
+	//color.rgb = view_position;
 
 	// normal viz:
 	//color.rgb = normal*0.5+0.5;

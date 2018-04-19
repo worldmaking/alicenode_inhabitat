@@ -35,6 +35,7 @@ vec3 sky(vec3 dir) {
 }
 
 void main() {
+	vec2 inverseDim = 1./uDim;
 	vec4 basecolor = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
@@ -43,7 +44,7 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
-	vec3 sides = vec3(1./uDim, 0.);
+	vec3 sides = vec3(inverseDim, 0.);
 
 	// compare with next point:
 	vec2 texCoordl = texCoord - sides.xz;
@@ -61,7 +62,8 @@ void main() {
 	float depthn = (depthl + depthr + depthu + depthd) / 4.;
 
 	// ao should kick in if the near pixels are closer (depthx is smaller)
-	float aol = max(depth - depthl, 0.);
+	// but this should also decay exponentially
+	float aol = max(depth - depthl, 0.) * inverseDim;
 
 	vec3 color = basecolor.rgb;
 	

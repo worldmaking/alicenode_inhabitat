@@ -195,7 +195,7 @@ void fluid_update() {
 	if (0) {
 		for (int i=0; i < rnd::integer(fluid_noise_count); i++) {
 			// pick a cell at random:
-			glm::vec3 * cell = data + rnd::integer(dim0*dim1*dim2);
+			glm::vec3 * cell = data + (size_t)rnd::integer(dim0*dim1*dim2);
 			// add a random vector:
 			*cell = glm::sphericalRand(rnd::uni(fluid_noise));
 		}

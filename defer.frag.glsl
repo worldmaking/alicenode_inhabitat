@@ -77,8 +77,10 @@ void main() {
 	float rayDotN = dot(rd, normal);
 	float expectedDepthl = depth + rayDotN*sides.x;
 
+	// except, that we should be ignoring them if they are too large
 
-	color.r = max(depthl - expectedDepthl, 0.)*4.;
+
+	color.r = max(expectedDepthl - depthl, 0.)*4.;
 	
 	//color = basecolor.rgb;
 	

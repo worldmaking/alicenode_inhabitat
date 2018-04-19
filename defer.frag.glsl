@@ -41,7 +41,7 @@ void main() {
 	vec3 rd = normalize(ray_direction);
 
 	bool isBackground = dot(normal, normal) == 0.;
-	if (hasNormal) {
+	if (isBackground) {
 		FragColor.rgb = sky(rd);
 	} else {
 		// reflection vector 
@@ -74,7 +74,5 @@ void main() {
 
 		FragColor.rgb = color;	
 	}
-
-	
 
 }

@@ -35,7 +35,7 @@ vec3 sky(vec3 dir) {
 }
 
 float bump(float x, float peak, float null) {
-	return smoothstep(0., peak, texCoord.x) * (1.-smoothstep(peak, null, texCoord.x));
+	return smoothstep(0., peak, x) * (1.-smoothstep(peak, null, x));
 }
 
 void main() {

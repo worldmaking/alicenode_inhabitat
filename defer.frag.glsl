@@ -34,7 +34,7 @@ vec3 sky(vec3 dir) {
 	return mix(n, vec3(1.), 0.75);
 }
 
-// x should be positive
+// x should be
 // y = 0 at x = 0
 // y = 1 at x = 1
 // y decays to 0 as x > 1
@@ -76,22 +76,22 @@ void main() {
 
 	// ao should kick in if the near pixels are closer (depthx is smaller)
 	// but this should also decay exponentially
-	//float aol = 1.-abs(max(depth - depthn, 0.) - inverseDim.y*20.);
+	float aol = 1.-abs(max(depth - depthn, 0.) - inverseDim.y*20.);
 
 	// what we are really looking for here is the curvature (convex or concave)
 	// and this depends on the normal
 	// that is, the normal should tell us what the expected depth would be
 	// dot of the normal with the ray, scaled by pixel size?
-	//float rayDotN = dot(rd, normal);
-	//float expectedDepthl = depth + rayDotN*sides.x;
-	//float diffl = depthl - expectedDepthl;
+	float rayDotN = dot(rd, normal);
+	float expectedDepthl = depth + rayDotN*sides.x;
+	float diffl = depthl - expectedDepthl;
 
 
 
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = 1.;
+	color.r = max(depthl - expectedDepthl, 0.)*4.;
 	
 	//color = basecolor.rgb;
 	
@@ -111,7 +111,7 @@ void main() {
 	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// pos viz:
-	color.rgb = basecolor.xyz;
+	//color.rgb = basecolor.xyz;
 
 
 	// pos viz:

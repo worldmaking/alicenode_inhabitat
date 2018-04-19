@@ -95,7 +95,7 @@ void main() {
 	//color.rgb = ref.xyz;
 
 	// depth viz:
-	//color.rgb = vec3(normalized_depth);
+	color.rgb = vec3(normalized_depth);
 
 	// edge finding by depth difference:
 	float edges = abs(depth-depthn)*4.;

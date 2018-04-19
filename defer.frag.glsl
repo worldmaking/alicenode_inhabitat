@@ -78,7 +78,7 @@ void main() {
 	float expectedDepthl = depth + rayDotN*sides.x;
 
 
-	color.r = (depthl - expectedDepthl)*400. + 0.5;
+	color.r = (depthl - expectedDepthl)*40. + 0.5;
 	
 	//color = basecolor.rgb;
 	

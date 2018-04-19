@@ -43,6 +43,8 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
+	vec3 neighbors = vec3(1./uDim, 0.);
+
 	// compare with next point:
 	vec2 texCoord1 = texCoord + vec2(1./uDim.x, 0.);
 	vec3 position1 = texture(gPosition, texCoord1).xyz;
@@ -83,7 +85,7 @@ void main() {
 
 	// depth differnce:
 	float d = abs(depth-depth1);
-	color.rgb -= vec3(d);
+	color.rgb - = vec3(d);
 	
 
 	FragColor.rgb = color;	

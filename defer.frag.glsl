@@ -81,8 +81,6 @@ void main() {
 	float rayDotN = dot(rd, normal);
 	float expectedDepthl = depth + rayDotN*sides.x;
 	float diffl = depthl - expectedDepthl;
-	float bumpl = bump(diffl, sides.x*4., sides.x*24.);
-
 
 	// except, that we should be ignoring them if they are too large
 

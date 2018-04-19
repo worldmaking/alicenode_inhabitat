@@ -73,7 +73,9 @@ void main() {
 	// but this should also decay exponentially
 	float aol = 1.-abs(max(depth - depthn, 0.) - inverseDim.y*20.);
 
-	vec3 color = basecolor.rgb;
+	vec3 color;
+	
+	color = basecolor.rgb;
 	
 	// reflection vector 
 	vec3 ref = reflect(rd, normal);

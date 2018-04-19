@@ -75,7 +75,7 @@ void main() {
 
 	vec3 color;
 	
-	color = basecolor.rgb;
+	//color = basecolor.rgb;
 	
 	// reflection vector 
 	vec3 ref = reflect(rd, normal);

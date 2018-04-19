@@ -90,9 +90,9 @@ void main() {
 	// depth viz:
 	color.rgb = vec3(normalized_depth);
 
-	// depth differnce:
-	float d = abs(depth-depthn);
-	color.rgb -= vec3(d);
+	// edge finding by depth difference:
+	float edges = abs(depth-depthn);
+	color.rgb -= vec3(edges);
 	
 
 	FragColor.rgb = color;	

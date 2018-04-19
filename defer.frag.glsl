@@ -68,7 +68,6 @@ void main() {
 	// but this should also decay exponentially
 	float aol = 1.-abs(max(depth - depthn, 0.) - inverseDim.y*20.);
 
-	
 	// what we are really looking for here is the curvature (convex or concave)
 	// and this depends on the normal
 	// that is, the normal should tell us what the expected depth would be

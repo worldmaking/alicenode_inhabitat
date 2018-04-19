@@ -50,8 +50,8 @@ void main() {
 	vec2 texCoordr = texCoord + sides.xz;
 	vec2 texCoordu = texCoord - sides.zy;
 	vec2 texCoordd = texCoord + sides.zy;
-	vec3 position1 = texture(gPosition, texCoordl).xyz;
-	float depth1 = length((uViewMatrix * vec4(position1, 1.)).xyz); 
+	vec3 positionl = texture(gPosition, texCoordl).xyz;
+	float depthl = length((uViewMatrix * vec4(position1, 1.)).xyz); 
 	
 
 	vec3 color = basecolor.rgb;
@@ -85,7 +85,7 @@ void main() {
 	color.rgb = vec3(normalized_depth);
 
 	// depth differnce:
-	float d = abs(depth-depth1);
+	float d = abs(depth-depthl);
 	color.rgb -= vec3(d);
 	
 

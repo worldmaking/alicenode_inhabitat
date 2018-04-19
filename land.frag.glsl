@@ -2,7 +2,7 @@
 uniform sampler2D tex;
 uniform float time;
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
-uniform float uFarClip;
+uniform float uNearClip, uFarClip;
 
 in vec2 texCoord;
 in vec3 ray, origin, eyepos;
@@ -155,7 +155,7 @@ void main() {
 	vec3 ro = origin; // plus a little ray? 
 	
 	float precis = EPS;
-	float maxd = uFarClip;
+	float maxd = uFarClip-uNearClip;
 	
 	vec3 color = vec3(0.);
 	float t = 0.0;

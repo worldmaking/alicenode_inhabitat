@@ -51,6 +51,11 @@ void main() {
 	vec2 texCoordr = texCoord + sides.xz;
 	vec2 texCoordu = texCoord - sides.zy;
 	vec2 texCoordd = texCoord + sides.zy;
+
+	// what we are really looking for here is the curvature (convex or concave)
+	// and this depends on the normal
+	// that is, the normal should tell us what the expected depth would be
+
 	vec3 positionl = texture(gPosition, texCoordl).xyz;
 	float depthl = length((uViewMatrix * vec4(positionl, 1.)).xyz); 
 	vec3 positionr = texture(gPosition, texCoordr).xyz;

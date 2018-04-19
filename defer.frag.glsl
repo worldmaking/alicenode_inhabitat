@@ -83,7 +83,7 @@ void main() {
 
 	// depth differnce:
 	float d = abs(depth-depth1);
-	color.rgb = vec3(d);
+	color.rgb += vec3(d);
 	
 
 	FragColor.rgb = color;	

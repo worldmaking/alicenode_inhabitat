@@ -75,7 +75,7 @@ void main() {
 	// that is, the normal should tell us what the expected depth would be
 	// dot of the normal with the ray, scaled by pixel size?
 	float rayDotN = dot(rd, normal);
-	float expectedDepthl = depth - rayDotN*sides.x;
+	float expectedDepthl = depth + rayDotN*sides.x;
 
 
 	color.r = (depth - expectedDepthl)*10.;

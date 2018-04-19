@@ -43,7 +43,7 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
-	vec3 neighbors = vec3(1./uDim, 0.);
+	//vec3 neighbors = vec3(1./uDim, 0.);
 
 	// compare with next point:
 	vec2 texCoord1 = texCoord + vec2(1./uDim.x, 0.);

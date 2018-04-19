@@ -34,8 +34,8 @@ vec3 sky(vec3 dir) {
 	return mix(n, vec3(1.), 0.75);
 }
 
-float curve(float x) {
-	return smoothstep(0., 0.3, texCoord.x) * (1.-smoothstep(0.3, 0.4, texCoord.x));
+float curve(float x, float peak, float null) {
+	return smoothstep(0., peak, texCoord.x) * (1.-smoothstep(peak, null, texCoord.x));
 }
 
 void main() {
@@ -87,7 +87,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = curve(texCoord.x);
+	color.r = curve(texCoord.x, 0.2, 0.4);
 	
 	//color = basecolor.rgb;
 	

@@ -1,4 +1,7 @@
 {
     "C_Cpp.intelliSenseEngineFallback": "Enabled",
-    "editor.insertSpaces": false
+    "editor.insertSpaces": false,
+    "files.associations": {
+        "iosfwd": "cpp"
+    }
 }

@@ -99,7 +99,7 @@ void main() {
 
 	// edge finding by depth difference:
 	float edges = abs(depth-depthn)*.5;
-	color.rgb -= vec3(edges);
+	//color.rgb -= vec3(edges);
 	
 
 	FragColor.rgb = color;	

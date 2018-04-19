@@ -582,9 +582,12 @@ void onFrame(uint32_t width, uint32_t height) {
 }
 
 
-void state_initialize() {
+void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		state->objects[i].location = glm::ballRand(1.f);
+	}
+	for (int i=0; i<NUM_PARTICLES; i++) {
+		state->particles[i].location = glm::ballRand(1.f);
 	}
 }
 
@@ -628,6 +631,7 @@ extern "C" {
 		// register event handlers 
 		alice.onFrame.connect(onFrame);
 		alice.onReloadGPU.connect(onReloadGPU);
+		alice.onReset.connect(onReset);
 
 		//test();
 
@@ -635,12 +639,15 @@ extern "C" {
     }
     
     AL_EXPORT int onunload() {
+		Alice& alice = Alice::Instance();
+
     	// free resources:
     	onUnloadGPU();
     	
     	// unregister handlers
-    	Alice::Instance().onFrame.disconnect(onFrame);
-    	Alice::Instance().onReloadGPU.disconnect(onReloadGPU);
+    	alice.onFrame.disconnect(onFrame);
+    	alice.onReloadGPU.disconnect(onReloadGPU);
+		alice.onReset.disconnect(onReset);
     	
     	// export/free state
     	statemap.destroy(true);

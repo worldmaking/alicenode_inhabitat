@@ -92,10 +92,10 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// reflection vectors
-	//color.rgb = ref.xyz;
+	color.rgb = ref.xyz;
 
 	// depth viz:
-	color.rgb = vec3(normalized_depth);
+	//color.rgb = vec3(normalized_depth);
 
 	// edge finding by depth difference:
 	float edges = abs(depth-depthn)*.5;

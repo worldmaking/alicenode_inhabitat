@@ -588,74 +588,8 @@ void state_initialize() {
 	}
 }
 
-typedef double t_sample;
-
-t_sample tapcubic(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
-	t_sample f0 = 1. + a; 
-	t_sample f1 = 1. - a; 
-	t_sample f2 = 2. - a; 
-	t_sample f3 = f1 * f2; 
-	t_sample f4 = f0 * a;
-	t_sample fw = -.1666667 * f3 * a; 
-	t_sample fx = .5 * f0 * f3; 
-	t_sample fy = .5 * f4 * f2; 
-	t_sample fz = -.1666667 * f4 * f1;
-	return w * fw + x * fx + y * fy + z * fz;
-}
-
-// worse performance :-(
-t_sample mspcubic(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
-    t_sample t0 = (a - a*a) * t_sample(0.5);
-    t_sample t1 = 1. + t0;
-    t_sample t2 = t0 * t_sample(-0.333333333333333);
-
-    t_sample fw = (t_sample (2.) - a) * t2; 
-    t_sample fx = (t_sample (1.) - a) * t1; 
-    t_sample fy = (                a) * t1; 
-    t_sample fz = (t_sample (1.) + a) * t2;
-    return w * fw + x * fx + y * fy + z * fz;
-}
-
-t_sample mspcubic1(t_sample a, t_sample w, t_sample x, t_sample y, t_sample z) {
-    t_sample t0 = (a - a*a) * t_sample(0.5);
-    t_sample t1 = t_sample(1.) + t0;
-    t_sample t2 = t0 * t_sample(-0.333333333333333);
-	return (x + a*(y-x))*t1 + 
-		   (t_sample(2.)*w + z + a*(z-w))*t2;
-}
-
 void test() {
-	int rounds = 1000000000;
-	int size = 512;
-	int wrap = size-1;
-	double buf[size];
-	for (int i=0; i<size; i++) {
-		buf[i]= glm::linearRand(0., 1.);
-	}
-
-	{
-		auto t1 = std::chrono::system_clock::now();
-		double r=0;
-		for (int i=0; i<rounds; i++) {
-			r += tapcubic(buf[(i) & wrap], buf[(i+1) & wrap], buf[(i+2) & wrap], buf[(i+3) & wrap], buf[(i+4) & wrap]);
-		}
-		auto t2 = std::chrono::system_clock::now();
-
-		auto duration = (double)std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
-		printf("tapcubic  %f (%f)\n", duration, r);
-	}
-
-	{
-		auto t1 = std::chrono::system_clock::now();
-		double r=0;
-		for (int i=0; i<rounds; i++) {
-			r += mspcubic1(buf[(i) & wrap], buf[(i+1) & wrap], buf[(i+2) & wrap], buf[(i+3) & wrap], buf[(i+4) & wrap]);
-		}
-		auto t2 = std::chrono::system_clock::now();
-
-		auto duration = (double)std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
-		printf("tapcubic1 %f (%f)\n", duration, r);
-	}
+	
 }
 
 extern "C" {

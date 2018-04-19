@@ -1,6 +1,7 @@
 @if "%_echo%"=="" echo off 
 @setlocal
 set ALICE_DIR=%1
+if not defined ALICE_DIR set ALICE_DIR="..\alicenode"
 SET VSCMD_START_DIR=%cd%
 SET VCVARS64=VC\Auxiliary\Build\vcvars64.bat
 if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Enterprise\%VCVARS64%" call "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Enterprise\%VCVARS64%"

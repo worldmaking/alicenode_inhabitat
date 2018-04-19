@@ -53,7 +53,6 @@ void main() {
 	vec3 position1 = texture(gPosition, texCoordl).xyz;
 	vec3 view_position1 = (uViewMatrix * vec4(position1, 1.)).xyz;
 	float depth1 = length(view_position1); 
-	float normalized_depth1 = depth1/uFarClip;
 	
 
 	vec3 color = basecolor.rgb;

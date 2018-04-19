@@ -86,8 +86,8 @@ void main() {
 
 	// except, that we should be ignoring them if they are too large
 
-	// set null around 1.
-	color.r = smoothstep(0.0, 0.1, abs(diffl));
+	// set peak around 0.1, null around 1.
+	color.r = smoothstep(0.0, 0.01, abs(diffl));
 	
 	//color = basecolor.rgb;
 	

@@ -87,7 +87,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = smoothstep(0.0, .5, abs(diffl));
+	color.r = smoothstep(0.0, .9, abs(diffl));
 	
 	//color = basecolor.rgb;
 	

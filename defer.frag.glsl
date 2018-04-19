@@ -46,7 +46,7 @@ void main() {
 	vec3 sides = vec3(1./uDim, 0.);
 
 	// compare with next point:
-	vec2 texCoord1 = texCoord + vec2(1./uDim.x, 0.);
+	vec2 texCoord1 = texCoord + sides.xz;
 	vec3 position1 = texture(gPosition, texCoord1).xyz;
 	vec3 view_position1 = (uViewMatrix * vec4(position1, 1.)).xyz;
 	float depth1 = length(view_position1); 

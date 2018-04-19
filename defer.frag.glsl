@@ -44,12 +44,13 @@ void main() {
 	vec3 rd = normalize(ray_direction);
 
 	// compare with next point:
-	vec2 tc1 = texCoord + vec2(1./uDim.x, 0.);
-	vec3 position1 = texture(gPosition, tc1).xyz;
+	vec2 texCoord1 = texCoord + vec2(1./uDim.x, 0.);
+	vec3 position1 = texture(gPosition, texCoord1).xyz;
 	vec3 view_position1 = (uViewMatrix * vec4(position1, 1.)).xyz;
 	float depth1 = length(view_position1); 
 	float normalized_depth1 = depth1/uFarClip;
 	
+
 	vec3 color = basecolor.rgb;
 	
 	// reflection vector 

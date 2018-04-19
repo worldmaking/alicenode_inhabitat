@@ -44,8 +44,8 @@ void main() {
 	vec3 rd = normalize(ray_direction);
 
 	vec2 tc1 = texcoord + vec2(1./uDim.x, 0.);
-	vec3 position1 = texture(gPosition, tc1).xyz;
-	vec3 view_position1 = (uViewMatrix * vec4(position, 1.)).xyz;
+	//vec3 position1 = texture(gPosition, tc1).xyz;
+	//vec3 view_position1 = (uViewMatrix * vec4(position, 1.)).xyz;
 	
 	vec3 color = basecolor.rgb;
 	

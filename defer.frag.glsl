@@ -37,6 +37,8 @@ void main() {
 	vec4 basecolor = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
+	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
+	
 	vec3 relative_position = position - eye_position;
 	float depth = length(relative_position);
 	float normalized_depth = depth/uFarClip;
@@ -65,7 +67,6 @@ void main() {
 	//color.rgb = position.xyz;
 
 	// viewspace:
-	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
 	color.rgb = view_position;
 
 	// normal viz:

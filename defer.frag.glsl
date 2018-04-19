@@ -61,7 +61,7 @@ void main() {
 	float depthn = (depthl + depthr + depthu + depthd) / 4.;
 
 	// ao should kick in if the near pixels are closer:
-	float aol = max(depthl - depth, 0.);
+	float aol = depthl; //max(depthl - depth, 0.);
 
 	vec3 color = basecolor.rgb;
 	

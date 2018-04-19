@@ -44,6 +44,8 @@ void main() {
 	if (isBackground) {
 		FragColor.rgb = sky(rd);
 	} else {
+		vec3 color = basecolor.rgb;
+		
 		// reflection vector 
 		vec3 ref = reflect(rd, normal);
 		float acute = abs(dot(normal, rd)); // how much surface faces us

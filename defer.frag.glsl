@@ -34,10 +34,6 @@ vec3 sky(vec3 dir) {
 	return mix(n, vec3(1.), 0.75);
 }
 
-float bump(float x, float peak, float null) {
-	return smoothstep(0., peak, x) * (1.-smoothstep(peak, null, x));
-}
-
 void main() {
 	vec2 inverseDim = 1./uDim;
 	vec3 sides = vec3(inverseDim, 0.);

@@ -55,6 +55,8 @@ void main() {
 	// what we are really looking for here is the curvature (convex or concave)
 	// and this depends on the normal
 	// that is, the normal should tell us what the expected depth would be
+	// dot of the normal with the ray, scaled by pixel size?
+
 
 	vec3 positionl = texture(gPosition, texCoordl).xyz;
 	float depthl = length((uViewMatrix * vec4(positionl, 1.)).xyz); 

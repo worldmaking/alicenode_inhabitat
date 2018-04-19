@@ -38,9 +38,7 @@ void main() {
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
 	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
-	
-	vec3 relative_position = position - eye_position;
-	float depth = length(view_position); //length(relative_position);
+	float depth = length(view_position); 
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 

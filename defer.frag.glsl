@@ -87,7 +87,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = bump(texCoord.x, sides.x, 0.4);
+	color.r = bump(texCoord.x, sides.x, sides.x*8.);
 	
 	//color = basecolor.rgb;
 	

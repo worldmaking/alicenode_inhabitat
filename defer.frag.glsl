@@ -91,7 +91,7 @@ void main() {
 	color.rgb = vec3(normalized_depth);
 
 	// depth differnce:
-	float d = abs(depth-depthl);
+	float d = abs(depth-depthn);
 	color.rgb -= vec3(d);
 	
 

@@ -60,6 +60,9 @@ void main() {
 	float depthd = length((uViewMatrix * vec4(positiond, 1.)).xyz); 
 	float depthn = (depthl + depthr + depthu + depthd) / 4.;
 
+	// ao should kick in if the near pixels are closer:
+	//float aol = depthl - depth
+
 	vec3 color = basecolor.rgb;
 	
 	// reflection vector 
@@ -98,7 +101,7 @@ void main() {
 	color.rgb = vec3(normalized_depth);
 
 	// edge finding by depth difference:
-	float edges = clamp(depthn-depth, 0., 1.)*.5;
+	float edges = clamp(depth-depthn, 0., 1.)*.5;
 	color.rgb = vec3(edges);
 	
 

@@ -43,6 +43,7 @@ void main() {
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
 
+	// compare with next point:
 	vec2 tc1 = texCoord + vec2(1./uDim.x, 0.);
 	vec3 position1 = texture(gPosition, tc1).xyz;
 	vec3 view_position1 = (uViewMatrix * vec4(position1, 1.)).xyz;

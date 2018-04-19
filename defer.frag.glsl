@@ -91,7 +91,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = texCoord.x;
+	color.rg = texCoord;
 	
 	//color = basecolor.rgb;
 	

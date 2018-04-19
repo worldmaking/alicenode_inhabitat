@@ -56,6 +56,7 @@ void main() {
 	// and this depends on the normal
 	// that is, the normal should tell us what the expected depth would be
 	// dot of the normal with the ray, scaled by pixel size?
+	float rayDotN = dot(ray_direction, normal);
 
 
 	vec3 positionl = texture(gPosition, texCoordl).xyz;

@@ -58,7 +58,7 @@ void main() {
 	float depthu = length((uViewMatrix * vec4(positionu, 1.)).xyz); 
 	vec3 positiond = texture(gPosition, texCoordd).xyz;
 	float depthd = length((uViewMatrix * vec4(positiond, 1.)).xyz); 
-	
+	float depthn = (depthl + depthr + depthu + depthd) / 4.;
 
 	vec3 color = basecolor.rgb;
 	

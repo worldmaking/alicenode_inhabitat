@@ -34,6 +34,14 @@ vec3 sky(vec3 dir) {
 	return mix(n, vec3(1.), 0.75);
 }
 
+// x should be positive
+// y = 0 at x = 0
+// y = 1 at x = 1
+// y decays to 0 as x > 1
+float curve(x) {
+	return 27.*x/pow(x + 2., 3.);
+}
+
 void main() {
 	vec2 inverseDim = 1./uDim;
 	vec3 sides = vec3(inverseDim, 0.);
@@ -78,10 +86,12 @@ void main() {
 	float expectedDepthl = depth + rayDotN*sides.x;
 	float diffl = depthl - expectedDepthl;
 
+
+
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = max(depthl - expectedDepthl, 0.)*4.;
+	color.r = texCoord.x;
 	
 	//color = basecolor.rgb;
 	

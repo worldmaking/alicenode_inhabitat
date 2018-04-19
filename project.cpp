@@ -104,6 +104,7 @@ unsigned int objectInstanceVBO;
 unsigned int particlesVAO;
 unsigned int particlesVBO;
 float particleSize = 1.f/64;
+float near_clip = 0.1f;
 float far_clip = 32.f;
 
 Shader * particleShader;
@@ -399,6 +400,7 @@ void draw_scene(int width, int height) {
 	landShader->uniform("time", t);
 	landShader->uniform("uViewProjectionMatrix", viewProjMat);
 	landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+	landShader->uniform("uNearClip", near_clip);
 	landShader->uniform("uFarClip", far_clip);
 	quadMesh.draw();
 
@@ -497,7 +499,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
 		glm::vec3(0., 0., 0.), 
 		glm::vec3(0., 1., 0.));
-	projMat = glm::perspective(45.0f, aspect, 0.1f, far_clip);
+	projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
 	viewProjMat = projMat * viewMat;
 
 	projMatInverse = glm::inverse(projMat);
@@ -551,6 +553,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		deferShader->uniform("gColor", 0);
 		deferShader->uniform("gNormal", 1);
 		deferShader->uniform("gPosition", 2);
+		deferShader->uniform("uNearClip", near_clip);
 		deferShader->uniform("uFarClip", far_clip);
 		gBuffer.bindTextures();
 		quadMesh.draw();

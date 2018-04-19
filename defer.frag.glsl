@@ -66,6 +66,7 @@ void main() {
 
 	// viewspace:
 	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
+	color.rgb = view_position;
 
 	// normal viz:
 	//color.rgb = normal*0.5+0.5;

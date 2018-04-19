@@ -35,7 +35,7 @@ vec3 sky(vec3 dir) {
 }
 
 float curve(float x) {
-	return smoothstep(0.2, 0.3, texCoord.x) * (1.-smoothstep(0.3, 0.4, texCoord.x));
+	return smoothstep(0., 0.3, texCoord.x) * (1.-smoothstep(0.3, 0.4, texCoord.x));
 }
 
 void main() {

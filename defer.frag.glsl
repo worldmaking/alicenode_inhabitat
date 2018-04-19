@@ -63,7 +63,7 @@ void main() {
 
 	// ao should kick in if the near pixels are closer (depthx is smaller)
 	// but this should also decay exponentially
-	float aol = inverseDim.y; //abs(max(depth - depthl, 0.) - inverseDim.y);
+	float aol = abs(max(depth - depthl, 0.) - inverseDim.y);
 
 	vec3 color = basecolor.rgb;
 	

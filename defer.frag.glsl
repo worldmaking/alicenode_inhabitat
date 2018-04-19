@@ -52,11 +52,6 @@ void main() {
 	vec2 texCoordu = texCoord - sides.zy;
 	vec2 texCoordd = texCoord + sides.zy;
 
-	// what we are really looking for here is the curvature (convex or concave)
-	// and this depends on the normal
-	// that is, the normal should tell us what the expected depth would be
-	// dot of the normal with the ray, scaled by pixel size?
-	float rayDotN = dot(ray_direction, normal);
 
 
 	vec3 positionl = texture(gPosition, texCoordl).xyz;
@@ -72,6 +67,13 @@ void main() {
 	// ao should kick in if the near pixels are closer (depthx is smaller)
 	// but this should also decay exponentially
 	float aol = 1.-abs(max(depth - depthn, 0.) - inverseDim.y*20.);
+
+	
+	// what we are really looking for here is the curvature (convex or concave)
+	// and this depends on the normal
+	// that is, the normal should tell us what the expected depth would be
+	// dot of the normal with the ray, scaled by pixel size?
+	float rayDotN = dot(ray_direction, normal);
 
 	vec3 color;
 	

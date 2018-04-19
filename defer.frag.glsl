@@ -61,7 +61,7 @@ void main() {
 	float depthn = (depthl + depthr + depthu + depthd) / 4.;
 
 	// ao should kick in if the near pixels are closer:
-	//float aol = depthl - depth
+	float aol = clamp(depthl - depth, 0., 1.);
 
 	vec3 color = basecolor.rgb;
 	
@@ -102,7 +102,7 @@ void main() {
 
 	// edge finding by depth difference:
 	float edges = clamp(depth-depthn, 0., 1.)*.5;
-	color.rgb = vec3(edges);
+	color.rgb = vec3(aol);
 	
 
 	FragColor.rgb = color;	

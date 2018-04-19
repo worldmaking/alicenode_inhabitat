@@ -51,7 +51,7 @@ void main() {
 	vec2 texCoordu = texCoord - sides.zy;
 	vec2 texCoordd = texCoord + sides.zy;
 	vec3 positionl = texture(gPosition, texCoordl).xyz;
-	float depthl = length((uViewMatrix * vec4(position1, 1.)).xyz); 
+	float depthl = length((uViewMatrix * vec4(positionl, 1.)).xyz); 
 	
 
 	vec3 color = basecolor.rgb;

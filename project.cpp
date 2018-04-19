@@ -136,7 +136,7 @@ glm::vec4 boundary[FIELD_VOXELS];
 
 void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, const size_t dim0, const size_t dim1, const size_t dim2) {
 
-	const float influence_offset = -fluid_boundary_damping;
+	const float influence_offset = (float)-fluid_boundary_damping;
 	const float influence_scale = 1.f / fluid_boundary_damping;
 
 	// probably don't need the triple loop here -- could do it cell by cell.

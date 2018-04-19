@@ -87,7 +87,7 @@ void main() {
 	// except, that we should be ignoring them if they are too large
 
 
-	color.r = expectedDepthl/uFarClip;
+	color.r = diffl;
 	
 	//color = basecolor.rgb;
 	

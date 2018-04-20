@@ -17,7 +17,7 @@ void main() {
 	world_orientation = vec4(0, 0, 0, 1);
 
 	// vertex in camera space:
-	vec4 view_position = uViewMatrix * vec4(vertex_position * 8., 1.);
+	vec4 view_position = uViewMatrix * vec4(vertex_position * 2., 1.);
 
 	// vertex in screen space:
 	gl_Position = uProjectionMatrix * view_position;

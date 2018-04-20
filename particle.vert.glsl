@@ -9,7 +9,7 @@ layout (location = 1) in vec3 vertex_color;
 out vec4 world_orientation;
 out vec3 world_position, eye_position;
 out float world_scale;
-//out vec3
+out vec3 color;
 
 void main() {
 
@@ -34,4 +34,6 @@ void main() {
 	// we want the raymarching to operate in object-local space:
 	world_position = vertex_position;
 	//ray_origin = scaledpos;
+
+	color = vertex_color;
 }  

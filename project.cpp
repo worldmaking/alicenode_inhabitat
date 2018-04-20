@@ -503,7 +503,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			if (rnd::uni() < 0.3f) {
 				uint64_t idx = i % max_camera_points;
 				glm::vec3 p = camera_points[idx];
-				glm::vec3 uv = uv_points[idx];
+				glm::vec2 uv = uv_points[idx];
 				// this is in meters, but that seems a bit limited for our world
 				glm::vec3 campos = glm::vec3(0., 1., 0.);
 				p = p + campos;

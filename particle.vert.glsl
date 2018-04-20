@@ -4,7 +4,7 @@ uniform float uViewPortHeight, uPointSize, time;
 
 // object in world space:
 layout (location = 0) in vec3 vertex_position;
-layout (location = 1 in vec3 vertex_color;
+layout (location = 1) in vec3 vertex_color;
 
 out vec4 world_orientation;
 out vec3 world_position, eye_position;

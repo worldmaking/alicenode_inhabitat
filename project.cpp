@@ -454,7 +454,9 @@ void draw_scene(int width, int height) {
 	particleShader->uniform("uViewProjectionMatrix", viewProjMat);
 	particleShader->uniform("uViewPortHeight", (float)height);
 	particleShader->uniform("uPointSize", particleSize);
+	particleShader->uniform("uColorTex", 0);
 
+	glBindTexture(GL_TEXTURE_2D, colorTex);
 	glBindVertexArray(particlesVAO);
 	// draw instances:
 	glEnable( GL_PROGRAM_POINT_SIZE );
@@ -464,6 +466,7 @@ void draw_scene(int width, int height) {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glDisable(GL_POINT_SPRITE);
 	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void onFrame(uint32_t width, uint32_t height) {

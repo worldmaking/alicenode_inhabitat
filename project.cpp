@@ -458,7 +458,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// update simulation:
 		fluid_update();
 
-		glm::vec3 * camera_points = alice.cloudDevice.captureFrame.xyz;
+		glm::vec3 * camera_points = (glm::vec3 *)alice.cloudDevice.captureFrame.xyz;
 		uint64_t max_camera_points = sizeof(alice.cloudDevice.captureFrame.xyz)/sizeof(glm::vec3);
 		console.log("max points %d", (int)max_camera_points);
 

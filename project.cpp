@@ -391,6 +391,11 @@ void onReloadGPU() {
 		glEnableVertexAttribArray(0);
 		// attr location, element size & type, normalize?, source stride & offset
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(offsetof(Particle, location)));
+
+		// attr location 
+		glEnableVertexAttribArray(1);
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(offsetof(Particle, color)));
 		
 		//glEnableVertexAttribArray(1);
 		// attr location, element size & type, normalize?, source stride & offset

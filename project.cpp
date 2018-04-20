@@ -2,6 +2,7 @@
 #include "al/al_math.h"
 #include "al/al_field3d.h"
 #include "al/al_gl.h"
+#include "al/al_kinect2_h"
 #include "al/al_mmap.h"
 #include "alice.h"
 #include "state.h"

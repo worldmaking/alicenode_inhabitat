@@ -530,7 +530,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			glm::vec3 flow;
 			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
 			
-			float creature_speed = 2.f*(float)alice.dt;
+			float creature_speed = 1.f*(float)alice.dt;
 			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
 			fluid.velocities.front().add(world2fluid * o.location, &push.x);
 

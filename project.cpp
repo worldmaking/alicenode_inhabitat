@@ -452,7 +452,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (Alice::Instance().isSimulating) {
 
 		// update simulation:
-		//fluid_update();
+		fluid_update();
 
 		if (1) {
 			for (int i=0; i<NUM_PARTICLES; i++) {

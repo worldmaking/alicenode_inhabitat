@@ -2,7 +2,7 @@
 #include "al/al_math.h"
 #include "al/al_field3d.h"
 #include "al/al_gl.h"
-#include "al/al_kinect2_h"
+#include "al/al_kinect2.h"
 #include "al/al_mmap.h"
 #include "alice.h"
 #include "state.h"
@@ -123,6 +123,7 @@ Shader * deferShader;
 QuadMesh quadMesh;
 SimpleFBO fbo;
 GBuffer gBuffer;
+
 
 glm::mat4 viewMat;
 glm::mat4 projMat;
@@ -456,6 +457,10 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		// update simulation:
 		fluid_update();
+
+		glm::vec3 * camera_points = alice.cloudDevice.captureFrame.xyz;
+		uint64_t max_camera_points = sizeof(alice.cloudDevice.captureFrame.xyz)/sizeof(glm::vec3);
+		console.log("max points %d", (int)max_camera_points);
 
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = state->particles[i];

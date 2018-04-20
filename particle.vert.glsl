@@ -1,7 +1,7 @@
 #version 330 core
 uniform mat4 uProjectionMatrix, uViewMatrix;
 uniform float uViewPortHeight, uPointSize, time;
-uniform sampler uColorTex;
+uniform sampler2D uColorTex;
 
 // object in world space:
 layout (location = 0) in vec3 vertex_position;

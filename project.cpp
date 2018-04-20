@@ -500,7 +500,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(-20.f, 0.f, -20.f), 
 				glm::vec3(20.f, 10.f, 20.f));
 
-			if (alice.cloudDevice.capturing && rnd::uni() < 0.5f) {
+			if (alice.cloudDevice.capturing && rnd::uni() < 0.25f) {
 				uint64_t idx = i % max_camera_points;
 				glm::vec3 p = camera_points[idx];
 				glm::vec2 uv = uv_points[idx];

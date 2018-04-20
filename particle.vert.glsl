@@ -36,5 +36,7 @@ void main() {
 	world_position = vertex_position;
 	//ray_origin = scaledpos;
 
+
 	color = vertex_color;
+	color = texture(uColorTex, vertex_color.xy).rgb;
 }  

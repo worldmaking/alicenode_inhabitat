@@ -575,6 +575,7 @@ void onReset() {
 	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		state->particles[i].location = glm::ballRand(1.f);
+		state->particles[i].color = glm::vec3(1.f);
 	}
 }
 

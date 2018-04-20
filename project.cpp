@@ -303,7 +303,12 @@ void onUnloadGPU() {
 	quadMesh.dest_closing();
 	fbo.dest_closing();
 	gBuffer.dest_closing();
-	
+
+	if (colorTex) {
+		glDeleteTextures(1, &colorTex);
+		colorTex = 0;
+	}
+
 	if (objectVAO) {
 		glDeleteVertexArrays(1, &objectVAO);
 		objectVAO = 0;

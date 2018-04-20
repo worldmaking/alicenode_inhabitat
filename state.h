@@ -13,6 +13,7 @@ struct Object {
 
 struct Particle {
 	glm::vec3 location;
+	glm::vec3 color;
 };
 
 struct State {

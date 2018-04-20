@@ -552,7 +552,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice.captureFrame.color);
 
 	// update nav
-	double a = M_PI * t / 3.;
+	double a = M_PI * t / 30.;
 	viewMat = glm::lookAt(
 		glm::vec3(8.*sin(a), 3.*(1.2+sin(2.*a)), 7.*cos(a)), 
 		glm::vec3(0., 2., 2.), 

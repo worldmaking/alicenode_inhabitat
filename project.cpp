@@ -480,7 +480,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(20.f, 10.f, 20.f));
 
 			o.location = camera_points[i % max_camera_points];
-			o.color = glm::sphericalRand(1.f);
+			o.color = o.location;
 			//camera_points[i % max_camera_points];
 		}
 

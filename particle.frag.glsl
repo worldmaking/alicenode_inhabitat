@@ -114,7 +114,7 @@ void main() {
 	// this might not be accurate when using very wide FOV
 	if (length(snorm) > 1.) discard; 
 
-	if (false) {
+	/*
 		// do this option for complex geometries:
 		
 		// front face of a unit-radius sphere on this particle
@@ -196,19 +196,20 @@ void main() {
 			FragColor.rgb = vec3(0.);
 			discard;
 		}
-	} else {
-		// this is a much simpler algorithm, for spheres only
+	*/
+	
+	// this is a much simpler algorithm, for spheres only
 
-		// front face of a unit-radius sphere on this particle
-		vec3 sphere = normalize(vec3(snorm, 1.));
-		// rotated to face the camera just like the billboard itself
-		// this is also thus the normal of a sphere centered at the particle
-		vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
-		
-		FragColor.rgb = color; 
-		FragNormal.xyz = spherenormal;
-		FragPosition.xyz = world_position + sphere;
-	}
+	// front face of a unit-radius sphere on this particle
+	vec3 sphere = normalize(vec3(snorm, 1.));
+	// rotated to face the camera just like the billboard itself
+	// this is also thus the normal of a sphere centered at the particle
+	vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
+	
+	FragColor.rgb = color; 
+	FragNormal.xyz = spherenormal;
+	FragPosition.xyz = world_position + sphere;
+
 	
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location

@@ -52,7 +52,7 @@ void main() {
 
 	// need to pass instance pose info to frag shader
 	world_position = iLocation;
-	world_scale = 0.5; 
+	world_scale = 0.15; 
 	world_orientation = iOrientation;
 
 	// converting vertex into world space:

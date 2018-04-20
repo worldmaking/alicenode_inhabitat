@@ -121,7 +121,7 @@ void main() {
 
 	// edge finding by depth difference:
 	float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
-	//color.rgb *= edges;
+	color.rgb *= edges;
 	
 
 	FragColor.rgb = color;	

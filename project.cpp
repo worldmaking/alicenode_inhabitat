@@ -445,6 +445,11 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float aspect = width/float(height);
 
+	if (alice.framecount % 60 == 0) {
+        //console.log("fps %f", alice.fpsAvg / 60.);
+        alice.fpsAvg = 0.;
+    }
+
 	if (Alice::Instance().isSimulating) {
 
 		// update simulation:

@@ -93,7 +93,7 @@ void main() {
 
 	//float metallic = acute;
 	float metallic = oblique;
-	//color.rgb *= mix(sky(ref), sky(normal), metallic);
+	color.rgb *= mix(sky(ref), sky(normal), metallic);
 		
 	// fog effect:
 	vec3 fogcolor = sky(rd);

@@ -484,6 +484,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		fluid_update();
 
 		const glm::vec3 * camera_points = alice.cloudDevice.captureFrame.xyz;
+		const glm::vec2 * uv_points = alice.cloudDevice.captureFrame.uv;
 		uint64_t max_camera_points = sizeof(alice.cloudDevice.captureFrame.xyz)/sizeof(glm::vec3);
 		
 		for (int i=0; i<NUM_PARTICLES; i++) {
@@ -500,13 +501,17 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(20.f, 10.f, 20.f));
 
 			if (rnd::uni() < 0.3f) {
-				glm::vec3 p = camera_points[i % max_camera_points];
+				uint64_t idx = i % max_camera_points;
+				glm::vec3 p = camera_points[idx];
+				glm::vec3 uv = uv_points[idx];
 				// this is in meters, but that seems a bit limited for our world
 				glm::vec3 campos = glm::vec3(0., 1., 0.);
 				p = p + campos;
 				o.location = p;
-				//o.color = glm::vec3(0.5f);//o.location;
+				o.color = glm::vec3(uv, 0.5f);//o.location;
 				//camera_points[i % max_camera_points];
+
+
 			}
 		}
 

@@ -473,6 +473,8 @@ void onFrame(uint32_t width, uint32_t height) {
 				o.location + flow + noise, 
 				glm::vec3(-20.f, 0.f, -20.f), 
 				glm::vec3(20.f, 10.f, 20.f));
+
+			o.location = camera_points[i % max_camera_points];
 		}
 
 		for (int i=0; i<NUM_OBJECTS; i++) {

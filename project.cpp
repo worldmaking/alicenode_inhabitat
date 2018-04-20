@@ -124,6 +124,7 @@ QuadMesh quadMesh;
 SimpleFBO fbo;
 GBuffer gBuffer;
 
+GLuint colorTex;
 
 glm::mat4 viewMat;
 glm::mat4 projMat;

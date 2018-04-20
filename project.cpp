@@ -414,7 +414,6 @@ void draw_scene(int width, int height) {
 	objectShader->uniform("time", t);
 	objectShader->uniform("uViewMatrix", viewMat);
 	objectShader->uniform("uViewProjectionMatrix", viewProjMat);
-	//objectShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 
 	glBindVertexArray(objectVAO);
 	// draw instances:
@@ -434,7 +433,7 @@ void draw_scene(int width, int height) {
 	glEnable( GL_PROGRAM_POINT_SIZE );
 	glEnable(GL_POINT_SPRITE);
 	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-	//glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);	
+	glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);	
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glDisable(GL_POINT_SPRITE);
 	glBindVertexArray(0);

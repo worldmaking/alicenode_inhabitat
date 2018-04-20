@@ -524,8 +524,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	// update nav
 	double a = M_PI * t / 30.;
 	viewMat = glm::lookAt(
-		glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
-		glm::vec3(0., 0., 0.), 
+		glm::vec3(8.*sin(a), 5.*(1.2+cos(a)), 16.*cos(a)), 
+		glm::vec3(0., 2., 0.), 
 		glm::vec3(0., 1., 0.));
 	projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
 	viewProjMat = projMat * viewMat;

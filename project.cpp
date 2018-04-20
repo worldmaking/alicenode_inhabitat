@@ -16,7 +16,7 @@ struct GBuffer {
 	unsigned int textures[numBuffers];
 	unsigned int attachments[numBuffers];
 
-	glm::ivec2 dim = glm::ivec2(64, 64);
+	glm::ivec2 dim = glm::ivec2(256, 256);
 	
 
 	void dest_changed() {

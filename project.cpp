@@ -408,7 +408,7 @@ void draw_scene(int width, int height) {
 	landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 	landShader->uniform("uNearClip", near_clip);
 	landShader->uniform("uFarClip", far_clip);
-	//quadMesh.draw();
+	quadMesh.draw();
 
 	objectShader->use();
 	objectShader->uniform("time", t);

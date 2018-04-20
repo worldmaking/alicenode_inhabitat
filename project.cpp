@@ -460,7 +460,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		const glm::vec3 * camera_points = alice.cloudDevice.captureFrame.xyz;
 		uint64_t max_camera_points = sizeof(alice.cloudDevice.captureFrame.xyz)/sizeof(glm::vec3);
-		console.log("max points %d", (int)max_camera_points);
+		printf("max points %d\n", (int)max_camera_points);
 
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = state->particles[i];

@@ -514,29 +514,6 @@ void onFrame(uint32_t width, uint32_t height) {
 	viewProjMatInverse = glm::inverse(viewProjMat);
 
 	// start rendering:
-
-	
-	if (0) {
-		fbo.begin();
-		glEnable(GL_SCISSOR_TEST);
-		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
-		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.f, 0.f, 0.f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		draw_scene(fbo.dim.x, fbo.dim.y);
-
-		glDisable(GL_SCISSOR_TEST);
-		fbo.end();
-
-		glViewport(0, 0, width, height);
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.f, 0.f, 0.f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		fbo.draw();
-	} 
-
 	if (1) {
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glEnable(GL_SCISSOR_TEST);
@@ -567,7 +544,6 @@ void onFrame(uint32_t width, uint32_t height) {
 		quadMesh.draw();
 		gBuffer.unbindTextures();
 		deferShader->unuse();
-
 
 		/*
 		// copy gBuffer depth the main depth buffer, 

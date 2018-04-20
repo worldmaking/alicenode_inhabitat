@@ -5,6 +5,7 @@ uniform float time;
 in vec4 world_orientation;
 in vec3 world_position, eye_position;
 in float world_scale;
+in vec3 color;
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;

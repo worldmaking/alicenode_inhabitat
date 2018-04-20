@@ -479,7 +479,10 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(-20.f, 0.f, -20.f), 
 				glm::vec3(20.f, 10.f, 20.f));
 
-			o.location = camera_points[i % max_camera_points];
+			glm::vec3 p = camera_points[i % max_camera_points];
+			// this is in meters, but that seems a bit limited for our world
+			p = p + glm::vec3(0., 1., 0.);
+			o.location = p;
 			o.color = o.location;
 			//camera_points[i % max_camera_points];
 		}

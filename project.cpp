@@ -119,7 +119,7 @@ float far_clip = 64.f;
 
 glm::vec3 world_min(-8.f, 0.f, -8.f);
 glm::vec3 world_max(8.f, 8.f, 8.f);
-float world2fluid = 0.5f; 
+float world2fluid = 0.25f; 
 
 Shader * particleShader;
 Shader * landShader;

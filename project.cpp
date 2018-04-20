@@ -534,7 +534,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
 			fluid.velocities.front().add(world2fluid * o.location, &push.x);
 
-			o.location = wrap(o.location + flow, , world_min, world_max);
+			o.location = wrap(o.location + flow, world_min, world_max);
 
 
 

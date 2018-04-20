@@ -115,7 +115,7 @@ unsigned int particlesVAO;
 unsigned int particlesVBO;
 float particleSize = 1.f/64;
 float near_clip = 0.1f;
-float far_clip = 32.f;
+float far_clip = 64.f;
 
 Shader * particleShader;
 Shader * landShader;

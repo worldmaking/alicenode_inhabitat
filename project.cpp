@@ -540,6 +540,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
 
+	glBindTexture(GL_TEXTURE_2D, colorTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dim.x, dim.y, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice.captureFrame.color);
+
 	// update nav
 	double a = M_PI * t / 30.;
 	viewMat = glm::lookAt(

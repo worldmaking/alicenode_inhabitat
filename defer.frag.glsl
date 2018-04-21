@@ -105,7 +105,7 @@ void main() {
 
 
 	// pos viz:
-	color.rgb = position.xyz;
+	//color.rgb = position.xyz;
 
 	// viewspace:
 	//color.rgb = view_position;

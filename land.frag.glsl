@@ -128,7 +128,7 @@ float fScene(vec3 p) {
 	
 	//float s = fSphere(pc, h); //
 	//float b = fBox(pc, vec3(0.3, h, 0.3));
-	float z = fCapsule(pc, 0.01, h);
+	float z = fCapsule(pc, 0.04, h);
 	return min(z, plane);
 }
 

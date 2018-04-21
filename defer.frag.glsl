@@ -94,12 +94,7 @@ void main() {
 	//float metallic = acute;
 	float metallic = oblique;
 	//color.rgb *= mix(sky(ref), sky(normal), metallic);
-		
-	// fog effect:
-	vec3 fogcolor = sky(rd);
-	float fogmix = clamp(normalized_depth, 0., 1.);
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
-
+	
 	// pos viz:
 	//color.rgb = basecolor.xyz;
 
@@ -118,11 +113,16 @@ void main() {
 
 	// depth viz:
 	//color.rgb = vec3(normalized_depth);
-
+	
 	// edge finding by depth difference:
 	float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
 	color.rgb *= edges;
 	
+	// fog effect:
+	vec3 fogcolor = sky(rd);
+	float fogmix = clamp(normalized_depth, 0., 1.);
+	color.rgb = mix(color.rgb, fogcolor, fogmix);
+
 
 	FragColor.rgb = color;	
 

@@ -113,7 +113,7 @@ unsigned int objectInstanceVBO;
 
 unsigned int particlesVAO;
 unsigned int particlesVBO;
-float particleSize = 1.f/64;
+float particleSize = 1.f/128;
 float near_clip = 0.1f;
 float far_clip = 32.f;
 
@@ -530,7 +530,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			glm::vec3 flow;
 			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
 			
-			float creature_speed = 0.5f*(float)alice.dt;
+			float creature_speed = 0.25f*(float)alice.dt;
 			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
 			fluid.velocities.front().add(world2fluid * o.location, &push.x);
 

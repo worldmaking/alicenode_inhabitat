@@ -115,7 +115,7 @@ unsigned int particlesVAO;
 unsigned int particlesVBO;
 float particleSize = 1.f/256;
 float near_clip = 0.1f;
-float far_clip = 16.f;
+float far_clip = 8.f;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 4.f, 8.f);

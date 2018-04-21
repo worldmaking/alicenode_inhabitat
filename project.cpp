@@ -113,7 +113,7 @@ unsigned int objectInstanceVBO;
 
 unsigned int particlesVAO;
 unsigned int particlesVBO;
-float particleSize = 1.f/256;
+float particleSize = 1.f/128;
 float near_clip = 0.1f;
 float far_clip = 12.f;
 

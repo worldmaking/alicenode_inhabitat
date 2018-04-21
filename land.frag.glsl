@@ -120,15 +120,15 @@ float fScene(vec3 p) {
 	
 	vec3 pc = p;
 	//vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));
-	vec2 c = pMod2(pc.xz, vec2(0.2));
+	vec2 c = pMod2(pc.xz, vec2(0.25));
 	float h = abs(sin(c.y*0.2)*sin(c.x*0.2));
 	
-	pR(pc.yx, h*0.1*sin(c.y+time*1.3));
-	pR(pc.yz, h*0.1*sin(c.x+time*3.7));
+	pR(pc.yx, h*0.2*sin(c.y+time*1.3));
+	pR(pc.yz, h*0.2*sin(c.x+time*3.7));
 	
 	//float s = fSphere(pc, h); //
 	//float b = fBox(pc, vec3(0.3, h, 0.3));
-	float z = fCapsule(pc, 0.02, 0.2*h);
+	float z = fCapsule(pc, 0.04, 0.3*h);
 	return min(z, plane);
 }
 

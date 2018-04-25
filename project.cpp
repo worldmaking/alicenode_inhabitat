@@ -543,16 +543,20 @@ void onFrame(uint32_t width, uint32_t height) {
 			glEnable(GL_DEPTH_TEST);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			viewMat = glm::lookAt(
-				glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
-				glm::vec3(0., 0., 0.), 
-				glm::vec3(0., 1., 0.));
-			projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
+			if (alice.hmd->connected) {
+				
+			} else {
+				viewMat = glm::lookAt(
+					glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
+					glm::vec3(0., 0., 0.), 
+					glm::vec3(0., 1., 0.));
+				projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
+			}
 			viewProjMat = projMat * viewMat;
-
 			projMatInverse = glm::inverse(projMat);
 			viewMatInverse = glm::inverse(viewMat);
 			viewProjMatInverse = glm::inverse(viewProjMat);
+
 
 			draw_scene(gBuffer.dim.x / 2, gBuffer.dim.y);
 

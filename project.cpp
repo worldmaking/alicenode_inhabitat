@@ -633,6 +633,7 @@ extern "C" {
 		// let Alice know we want to use an HMD
 		//alice.hmd.connect();
 
+
 		// register event handlers 
 		alice.onFrame.connect(onFrame);
 		alice.onReloadGPU.connect(onReloadGPU);

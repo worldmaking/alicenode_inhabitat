@@ -299,6 +299,7 @@ void onUnloadGPU() {
 	quadMesh.dest_closing();
 	fbo.dest_closing();
 	gBuffer.dest_closing();
+	Alice::Instance().hmd->dest_closing();
 	
 	if (objectVAO) {
 		glDeleteVertexArrays(1, &objectVAO);
@@ -336,6 +337,7 @@ void onReloadGPU() {
 	quadMesh.dest_changed();
 	fbo.dest_changed();
 	gBuffer.dest_changed();
+	Alice::Instance().hmd->dest_changed();
 
 	{
 		// define the VAO 
@@ -447,9 +449,6 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float aspect = width/float(height);
 
-	if (alice.hmd->connected) {
-		alice.hmd->update();
-	}
 
 	if (alice.isSimulating) {
 
@@ -505,6 +504,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
 
+	
+	alice.hmd->update();
+	
 	// update nav
 	double a = M_PI * t / 30.;
 	viewMat = glm::lookAt(
@@ -581,6 +583,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		glDisable(GL_SCISSOR_TEST);
 		fbo.end();
 
+		alice.hmd->submit(fbo);
+
 		glViewport(0, 0, width, height);
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -597,10 +601,6 @@ void onFrame(uint32_t width, uint32_t height) {
         glBlitFramebuffer(0, 0, gBuffer.dim.x, gBuffer.dim.y, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		*/
-
-		if (alice.hmd->connected){
-			//alice.hmd->submit(x);
-		}
 	}
 
 	
@@ -647,14 +647,15 @@ extern "C" {
 		fluid_noise_count = 32;
 		fluid_noise = 8.;
 
+
+		// let Alice know we want to use an HMD
+		alice.hmd->connect();
+
 		fbo.dim.x = 1920;
 		fbo.dim.y = 1080;
 
 		// allocate on GPU:
 		onReloadGPU();
-
-		// let Alice know we want to use an HMD
-		alice.hmd->connect();
 
 		// register event handlers 
 		alice.onFrame.connect(onFrame);

@@ -212,5 +212,5 @@ void main() {
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location
 	// but this is super-expensive; better to skip it if the particles are small enough
-	//gl_FragDepth = computeDepth(world_position + p, uViewProjectionMatrix);
+	gl_FragDepth = computeDepth(world_position + p, uViewProjectionMatrix);
 }

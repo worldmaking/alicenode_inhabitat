@@ -12,7 +12,7 @@ out float world_scale;
 
 void main() {
 
-	world_scale = uPointSize;
+	world_scale = uPointSize* 4.;
 	world_orientation = vec4(0, 0, 0, 1);
 
 	// vertex in camera space:

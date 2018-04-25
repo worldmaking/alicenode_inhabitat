@@ -555,7 +555,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 
 		// now defer-render into the fbo:
-		/*
+		
 		fbo.begin();
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
@@ -578,7 +578,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			gBuffer.unbindTextures();
 			deferShader->unuse();
 		}
-		/*glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_SCISSOR_TEST);
 		fbo.end();
 
 		glViewport(0, 0, width, height);
@@ -586,7 +586,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		glClearColor(0.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		fbo.draw();
-*/
+
 		/*
 		// copy gBuffer depth the main depth buffer, 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.fbo);

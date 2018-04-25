@@ -627,11 +627,11 @@ extern "C" {
 		fbo.dim.x = 1920;
 		fbo.dim.y = 1080;
 
-		// let Alice know we want to use an HMD
-		//alice.hmd.connect();
-
 		// allocate on GPU:
 		onReloadGPU();
+
+		// let Alice know we want to use an HMD
+		//alice.hmd.connect();
 
 		// register event handlers 
 		alice.onFrame.connect(onFrame);

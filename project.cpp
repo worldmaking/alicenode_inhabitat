@@ -506,7 +506,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	
 	alice.hmd->update();
-	
+
 	// update nav
 	double a = M_PI * t / 30.;
 	viewMat = glm::lookAt(
@@ -545,13 +545,19 @@ void onFrame(uint32_t width, uint32_t height) {
 	} 
 
 	if (1) {
+		
+		
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glEnable(GL_SCISSOR_TEST);
-		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-		glEnable(GL_DEPTH_TEST);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
+		for (int eye = 0; eye < 2; eye++) {
+
+			glScissor(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
+			glViewport(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
+			glEnable(GL_DEPTH_TEST);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			draw_scene(gBuffer.dim.x / 2, gBuffer.dim.y);
+
+		}
 		glDisable(GL_SCISSOR_TEST);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
 		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this

@@ -204,7 +204,7 @@ void main() {
 		// this is also thus the normal of a sphere centered at the particle
 		vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
 		
-		FragColor.rgb = vec3(0.5); 
+		FragColor.rgb = vec3(0.8); 
 		FragNormal.xyz = spherenormal;
 		FragPosition.xyz = world_position + sphere;
 	}

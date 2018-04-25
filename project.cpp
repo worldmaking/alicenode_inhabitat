@@ -544,9 +544,12 @@ void onFrame(uint32_t width, uint32_t height) {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 			if (alice.hmd->connected) {
-				const Hmd& vive = *alice.hmd;
+				Hmd& vive = *alice.hmd;
 				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition);
 				projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
+
+				near_clip = vive.near_clip;
+				vive.far_clip = far_clip;
 			} else {
 				viewMat = glm::lookAt(
 					glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 

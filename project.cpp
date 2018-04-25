@@ -447,8 +447,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float aspect = width/float(height);
 
-	//if (alice.hmd.connected) {
-	//	alice.hmd.update();
+	//if (alice.hmd->connected) {
+	//	alice.hmd->update();
 	//}
 
 	if (alice.isSimulating) {

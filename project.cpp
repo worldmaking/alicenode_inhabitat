@@ -3,6 +3,7 @@
 #include "al/al_field3d.h"
 #include "al/al_gl.h"
 #include "al/al_mmap.h"
+#include "al/al_hmd.h"
 #include "alice.h"
 #include "state.h"
 
@@ -108,6 +109,7 @@ unsigned int objectVBO;
 unsigned int objectInstanceVBO;
 
 unsigned int particlesVAO;
+
 unsigned int particlesVBO;
 float particleSize = 1.f/64;
 float near_clip = 0.1f;
@@ -624,6 +626,9 @@ extern "C" {
 
 		fbo.dim.x = 1920;
 		fbo.dim.y = 1080;
+
+		// let Alice know we want to use an HMD
+		//alice.hmd.connect();
 
 		// allocate on GPU:
 		onReloadGPU();

@@ -17,7 +17,7 @@ struct GBuffer {
 	unsigned int textures[numBuffers];
 	unsigned int attachments[numBuffers];
 
-	glm::ivec2 dim = glm::ivec2(2048*2, 1024*2);
+	glm::ivec2 dim = glm::ivec2(2048, 1024);
 	
 
 	void dest_changed() {
@@ -663,6 +663,7 @@ extern "C" {
 		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
+			gBuffer.dim = glm::ivec2(2048*2, 1024*2);
 		}
 
 		fbo.dim = gBuffer.dim;

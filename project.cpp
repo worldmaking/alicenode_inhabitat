@@ -598,10 +598,9 @@ void onFrame(uint32_t width, uint32_t height) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		*/
 
-		//if (alice.hmd.connected) 
-		//{
-			// alice.hmd.submit(x);
-		//}
+		if (alice.hmd->connected){
+			//alice.hmd->submit(x);
+		}
 	}
 
 	

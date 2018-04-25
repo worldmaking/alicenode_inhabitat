@@ -224,7 +224,7 @@ void main() {
 		
 	} else if (t >= maxd) {
     	// shot through to background
-    	discard;
+    	//discard;
     	
 	} else {
 		// too many ray steps

@@ -447,7 +447,11 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float aspect = width/float(height);
 
-	if (Alice::Instance().isSimulating) {
+	//if (alice.hmd.connected) {
+	//	alice.hmd.update();
+	//}
+
+	if (alice.isSimulating) {
 
 		// update simulation:
 		fluid_update();
@@ -550,26 +554,39 @@ void onFrame(uint32_t width, uint32_t height) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
 		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 
+		// now defer-render into the fbo:
+		/*
+		fbo.begin();
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
+		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);*/
+		{
+			deferShader->use();
+			deferShader->uniform("uViewMatrix", viewMat);
+			deferShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+			deferShader->uniform("gColor", 0);
+			deferShader->uniform("gNormal", 1);
+			deferShader->uniform("gPosition", 2);
+			deferShader->uniform("uNearClip", near_clip);
+			deferShader->uniform("uFarClip", far_clip);
+			deferShader->uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			gBuffer.bindTextures();
+			quadMesh.draw();
+			gBuffer.unbindTextures();
+			deferShader->unuse();
+		}
+		/*glDisable(GL_SCISSOR_TEST);
+		fbo.end();
+
 		glViewport(0, 0, width, height);
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(0.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		deferShader->use();
-		deferShader->uniform("uViewMatrix", viewMat);
-		deferShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		deferShader->uniform("gColor", 0);
-		deferShader->uniform("gNormal", 1);
-		deferShader->uniform("gPosition", 2);
-		deferShader->uniform("uNearClip", near_clip);
-		deferShader->uniform("uFarClip", far_clip);
-		deferShader->uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
-		gBuffer.bindTextures();
-		quadMesh.draw();
-		gBuffer.unbindTextures();
-		deferShader->unuse();
-
-
+		fbo.draw();
+*/
 		/*
 		// copy gBuffer depth the main depth buffer, 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.fbo);
@@ -580,7 +597,14 @@ void onFrame(uint32_t width, uint32_t height) {
         glBlitFramebuffer(0, 0, gBuffer.dim.x, gBuffer.dim.y, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		*/
+
+		//if (alice.hmd.connected) 
+		//{
+			// alice.hmd.submit(x);
+		//}
 	}
+
+	
 }
 
 
@@ -631,7 +655,7 @@ extern "C" {
 		onReloadGPU();
 
 		// let Alice know we want to use an HMD
-		alice.hmd.connect();
+		//alice.hmd.connect();
 
 		// register event handlers 
 		alice.onFrame.connect(onFrame);

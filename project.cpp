@@ -661,6 +661,9 @@ extern "C" {
 
 		// let Alice know we want to use an HMD
 		alice.hmd->connect();
+		if (alice.hmd->connected) {
+			alice.desiredFrameRate = 90;
+		}
 
 		fbo.dim = gBuffer.dim;
 

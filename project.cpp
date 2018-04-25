@@ -562,7 +562,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(0.f, 0.f, 0.f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);*/
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		{
 			deferShader->use();
 			deferShader->uniform("uViewMatrix", viewMat);

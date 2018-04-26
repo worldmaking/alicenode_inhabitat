@@ -3,5 +3,7 @@
     "editor.insertSpaces": false,
     "files.associations": {
         "iosfwd": "cpp"
-    }
+    },
+    "editor.wrappingIndent": "indent",
+    "editor.wordWrap": "on"
 }

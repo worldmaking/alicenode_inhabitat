@@ -200,6 +200,7 @@ void main() {
 	
 	// this is a much simpler algorithm, for spheres only
 
+
 	// front face of a unit-radius sphere on this particle
 	vec3 sphere = normalize(vec3(snorm, 1.));
 	// rotated to face the camera just like the billboard itself
@@ -210,7 +211,6 @@ void main() {
 	FragNormal.xyz = spherenormal;
 	FragPosition.xyz = world_position + sphere;
 
-	
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location
 	// but this is super-expensive; better to skip it if the particles are small enough

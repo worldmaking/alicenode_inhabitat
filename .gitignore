@@ -3,6 +3,7 @@
 worktrees
 state.bin
 
+?*
 *.d
 
 # Compiled Object files

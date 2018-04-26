@@ -4,6 +4,7 @@
 #include "al/al_gl.h"
 #include "al/al_kinect2.h"
 #include "al/al_mmap.h"
+#include "al/al_hmd.h"
 #include "alice.h"
 #include "state.h"
 
@@ -17,9 +18,8 @@ struct GBuffer {
 	unsigned int textures[numBuffers];
 	unsigned int attachments[numBuffers];
 
-	glm::ivec2 dim = glm::ivec2(1920, 1080);
+	glm::ivec2 dim = glm::ivec2(1024, 1024);
 	
-
 	void dest_changed() {
 		dest_closing();
 
@@ -112,6 +112,7 @@ unsigned int objectVBO;
 unsigned int objectInstanceVBO;
 
 unsigned int particlesVAO;
+
 unsigned int particlesVBO;
 float particleSize = 1.f/128;
 float near_clip = 0.1f;
@@ -307,12 +308,13 @@ void onUnloadGPU() {
 	quadMesh.dest_closing();
 	fbo.dest_closing();
 	gBuffer.dest_closing();
+	Alice::Instance().hmd->dest_closing();
 
 	if (colorTex) {
 		glDeleteTextures(1, &colorTex);
 		colorTex = 0;
 	}
-
+	
 	if (objectVAO) {
 		glDeleteVertexArrays(1, &objectVAO);
 		objectVAO = 0;
@@ -349,6 +351,7 @@ void onReloadGPU() {
 	quadMesh.dest_changed();
 	fbo.dest_changed();
 	gBuffer.dest_changed();
+	Alice::Instance().hmd->dest_changed();
 
 	{
 		glGenTextures(1, &colorTex);
@@ -478,11 +481,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float aspect = width/float(height);
 
-	if (alice.framecount % 60 == 0) {
-        console.log("fps %f", alice.fpsAvg);
-    }
+	if (alice.framecount % 60 == 0) console.log("fps %f", alice.fpsAvg);
 
-	if (Alice::Instance().isSimulating) {
+	if (alice.isSimulating) {
 
 		// update simulation:
 		fluid_update();
@@ -520,13 +521,10 @@ void onFrame(uint32_t width, uint32_t height) {
 		for (int i=0; i<NUM_OBJECTS; i++) {
 			Object &o = state->objects[i];
 
-			
 			//o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
 			//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
 			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.05f));
 			
-
-
 			glm::vec3 flow;
 			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
 			
@@ -536,10 +534,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			o.location = wrap(o.location + world2fluid * flow, world_min, world_max);
 
-
-
 			//state->particles[i].location = o.location;
-
 		}
 	}
 
@@ -553,64 +548,94 @@ void onFrame(uint32_t width, uint32_t height) {
 	glBindTexture(GL_TEXTURE_2D, colorTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice.captureFrame.color);
 
-	// update nav
-	double a = M_PI * t / 30.;
-	viewMat = glm::lookAt(
-		glm::vec3(4.*sin(a), 1.*(1.5+sin(2.*a)), 3. + 4.*cos(a)), 
-		glm::vec3(0., 1., 4.), 
-		glm::vec3(0., 1., 0.));
-	projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
-	viewProjMat = projMat * viewMat;
+	alice.hmd->update();
 
-	projMatInverse = glm::inverse(projMat);
-	viewMatInverse = glm::inverse(viewMat);
-	viewProjMatInverse = glm::inverse(viewProjMat);
-
-	// start rendering:
-	if (1) {
+	{
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glEnable(GL_SCISSOR_TEST);
-		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-		glEnable(GL_DEPTH_TEST);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
+
+		if (alice.hmd->connected) {		
+			Hmd& vive = *alice.hmd;	
+			vive.near_clip = near_clip;
+			vive.far_clip = far_clip;
+			for (int eye = 0; eye < 2; eye++) {
+				glScissor(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
+				glViewport(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
+				glEnable(GL_DEPTH_TEST);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				// update nav
+				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition);
+				projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
+
+				viewProjMat = projMat * viewMat;
+				projMatInverse = glm::inverse(projMat);
+				viewMatInverse = glm::inverse(viewMat);
+				viewProjMatInverse = glm::inverse(viewProjMat);
+
+				draw_scene(gBuffer.dim.x / 2, gBuffer.dim.y);
+			}
+		} else {
+			// No HMD:
+			glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
+			glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
+			glEnable(GL_DEPTH_TEST);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			// update nav
+			double a = M_PI * t / 30.;
+			viewMat = glm::lookAt(
+				glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
+				glm::vec3(0., 0., 0.), 
+				glm::vec3(0., 1., 0.));
+			projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
+			
+			viewProjMat = projMat * viewMat;
+			projMatInverse = glm::inverse(projMat);
+			viewMatInverse = glm::inverse(viewMat);
+			viewProjMatInverse = glm::inverse(viewProjMat);
+
+			draw_scene(gBuffer.dim.x, gBuffer.dim.y);
+		}
 		glDisable(GL_SCISSOR_TEST);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
 		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+
+		// now defer-render into the fbo:
+		fbo.begin();
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
+		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		{
+			deferShader->use();
+			deferShader->uniform("uViewMatrix", viewMat);
+			deferShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+			deferShader->uniform("gColor", 0);
+			deferShader->uniform("gNormal", 1);
+			deferShader->uniform("gPosition", 2);
+			deferShader->uniform("uNearClip", near_clip);
+			deferShader->uniform("uFarClip", far_clip);
+			deferShader->uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			gBuffer.bindTextures();
+			quadMesh.draw();
+			gBuffer.unbindTextures();
+			deferShader->unuse();
+		}
+		glDisable(GL_SCISSOR_TEST);
+		fbo.end();
+
+		alice.hmd->submit(fbo);
 
 		glViewport(0, 0, width, height);
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(0.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		deferShader->use();
-		deferShader->uniform("uViewMatrix", viewMat);
-		deferShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		deferShader->uniform("gColor", 0);
-		deferShader->uniform("gNormal", 1);
-		deferShader->uniform("gPosition", 2);
-		deferShader->uniform("uNearClip", near_clip);
-		deferShader->uniform("uFarClip", far_clip);
-		deferShader->uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
-		gBuffer.bindTextures();
-		quadMesh.draw();
-		gBuffer.unbindTextures();
-		deferShader->unuse();
-
-		/*
-		// copy gBuffer depth the main depth buffer, 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.fbo);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
-        // blit to default framebuffer. Note that this may or may not work as the internal formats of both the FBO and default framebuffer have to match.
-        // the internal formats are implementation defined. This works on all of my systems, but if it doesn't on yours you'll likely have to write to the 		
-        // depth buffer in another shader stage (or somehow see to match the default framebuffer's internal format with the FBO's internal format).
-        glBlitFramebuffer(0, 0, gBuffer.dim.x, gBuffer.dim.y, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		*/
-	}
+		fbo.draw();
+	} 
 }
-
 
 void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
@@ -653,8 +678,17 @@ extern "C" {
 		fluid_noise_count = 32;
 		fluid_noise = 8.;
 
-		fbo.dim.x = 1920;
-		fbo.dim.y = 1080;
+
+		// let Alice know we want to use an HMD
+		alice.hmd->connect();
+		if (alice.hmd->connected) {
+			alice.desiredFrameRate = 90;
+			gBuffer.dim = glm::ivec2(2048*2, 1024*2);
+		} else {
+			alice.desiredFrameRate = 30;
+			gBuffer.dim = glm::ivec2(512, 512);
+		}
+		fbo.dim = gBuffer.dim;
 
 		// allocate on GPU:
 		onReloadGPU();

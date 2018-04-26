@@ -5,6 +5,7 @@
 #include "al/al_kinect2.h"
 #include "al/al_mmap.h"
 #include "al/al_hmd.h"
+#include "al/al_time.h"
 #include "alice.h"
 #include "state.h"
 
@@ -127,7 +128,6 @@ Shader * particleShader;
 Shader * landShader;
 Shader * deferShader;
 QuadMesh quadMesh;
-SimpleFBO fbo;
 GBuffer gBuffer;
 
 GLuint colorTex;
@@ -143,8 +143,12 @@ double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fl
 Fluid3D<> fluid;
 int fluid_passes = 14;
 int fluid_noise_count = 32;
+double fluid_sleep_s = 0.01;
 
 glm::vec4 boundary[FIELD_VOXELS];
+
+std::thread fluidThread;
+bool isRunning = 1;
 
 void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, const size_t dim0, const size_t dim1, const size_t dim2) {
 
@@ -233,6 +237,16 @@ void fluid_update() {
 
 }
 
+void fluid_run() {
+	console.log("fluid thread started");
+	while(isRunning) {
+		fluid_update();
+		al_sleep(fluid_sleep_s);
+		console.log("~");
+	}
+	console.log("fluid thread ending");
+}
+
 float vertices[] = {
     -1.0f,-1.0f,-1.0f, 
     -1.0f,-1.0f, 1.0f,
@@ -307,7 +321,6 @@ void onUnloadGPU() {
 	}	
 	
 	quadMesh.dest_closing();
-	fbo.dest_closing();
 	gBuffer.dest_closing();
 	Alice::Instance().hmd->dest_closing();
 
@@ -350,7 +363,6 @@ void onReloadGPU() {
 	deferShader = Shader::fromFiles("defer.vert.glsl", "defer.frag.glsl");
 	
 	quadMesh.dest_changed();
-	fbo.dest_changed();
 	gBuffer.dest_changed();
 	Alice::Instance().hmd->dest_changed();
 
@@ -486,37 +498,37 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	if (alice.isSimulating) {
 
-		// update simulation:
-		fluid_update();
+	
+		// updates from simulation:
+		const glm::vec3 * camera_points = alice.cloudDevice->captureFrame.xyz;
+		const glm::vec2 * uv_points = alice.cloudDevice->captureFrame.uv;
+		uint64_t max_camera_points = sizeof(alice.cloudDevice->captureFrame.xyz)/sizeof(glm::vec3);
+	
+		{
+			for (int i=0; i<NUM_PARTICLES; i++) {
+				Particle &o = state->particles[i];
 
-		const glm::vec3 * camera_points = alice.cloudDevice.captureFrame.xyz;
-		const glm::vec2 * uv_points = alice.cloudDevice.captureFrame.uv;
-		uint64_t max_camera_points = sizeof(alice.cloudDevice.captureFrame.xyz)/sizeof(glm::vec3);
-		
-		for (int i=0; i<NUM_PARTICLES; i++) {
-			Particle &o = state->particles[i];
+				glm::vec3 flow;
+				fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
+				
+				glm::vec3 noise;// = glm::sphericalRand(0.02f);
 
-			glm::vec3 flow;
-			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
-			
-			glm::vec3 noise;// = glm::sphericalRand(0.02f);
+				o.location = wrap(
+					o.location + world2fluid * flow + noise, world_min, world_max);
 
-			o.location = wrap(
-				o.location + world2fluid * flow + noise, world_min, world_max);
-
-			if (alice.cloudDevice.capturing && rnd::uni() < 0.125f) {
-				uint64_t idx = i % max_camera_points;
-				glm::vec3 p = camera_points[idx];
-				glm::vec2 uv = uv_points[idx];
-				// this is in meters, but that seems a bit limited for our world
-				glm::vec3 campos = glm::vec3(0., 0.55, 0.);
-				p = p + campos;
-				o.location = p;
-				o.color = glm::vec3(uv, 0.5f);//o.location;
-				//camera_points[i % max_camera_points];
+				if (alice.cloudDevice->capturing && rnd::uni() < 0.125f) {
+					uint64_t idx = i % max_camera_points;
+					glm::vec3 p = camera_points[idx];
+					glm::vec2 uv = uv_points[idx];
+					// this is in meters, but that seems a bit limited for our world
+					glm::vec3 campos = glm::vec3(0., 0.55, 0.);
+					p = p + campos;
+					o.location = p;
+					o.color = glm::vec3(uv, 0.5f);
+				}
 			}
 		}
-
+		
 		for (int i=0; i<NUM_OBJECTS; i++) {
 			Object &o = state->objects[i];
 
@@ -535,8 +547,8 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			//state->particles[i].location = o.location;
 		}
-	}
 
+	}
 	// upload GPU;
 	glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
@@ -545,7 +557,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
 
 	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice.captureFrame.color);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice->captureFrame.color);
 
 	alice.hmd->update();
 
@@ -601,6 +613,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 
 		// now defer-render into the fbo:
+		SimpleFBO& fbo = alice.hmd->fbo;
+
 		fbo.begin();
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
@@ -626,13 +640,18 @@ void onFrame(uint32_t width, uint32_t height) {
 		glDisable(GL_SCISSOR_TEST);
 		fbo.end();
 
-		alice.hmd->submit(fbo);
-
 		glViewport(0, 0, width, height);
 		glEnable(GL_DEPTH_TEST);
 		glClearColor(0.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		fbo.draw();
+
+		alice.hmd->submit();
+
+		
+		// openvr header recommends this after submit:
+		//glFlush();
+		//glFinish();
 	} 
 }
 
@@ -662,8 +681,10 @@ extern "C" {
 		state = statemap.create("state.bin", true);
 		console.log("sim state %p should be size %d", state, sizeof(State));
 		//state_initialize();
-		console.log("initialized");
+		console.log("onload state initialized");
 
+		// allow threads to run
+		isRunning = true;
 
 		// TODO currently this is a memory leak on unload:
 		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
@@ -677,20 +698,26 @@ extern "C" {
 		fluid_noise_count = 32;
 		fluid_noise = 8.;
 
+		fluidThread = std::move(std::thread(fluid_run));
+
+		console.log("onload fluid initialized");
+
 
 		// let Alice know we want to use an HMD
 		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
-			gBuffer.dim = glm::ivec2(2048*2, 1024*2);
+			gBuffer.dim = alice.hmd->fbo.dim;
 		} else {
 			alice.desiredFrameRate = 30;
 			gBuffer.dim = glm::ivec2(512, 512);
 		}
-		fbo.dim = gBuffer.dim;
+		console.log("gBuffer dim %d x %d", gBuffer.dim.x, gBuffer.dim.y);
 
 		// allocate on GPU:
 		onReloadGPU();
+		
+		console.log("onload onReloadGPU ran");
 
 		// register event handlers 
 		alice.onFrame.connect(onFrame);
@@ -704,6 +731,11 @@ extern "C" {
     
     AL_EXPORT int onunload() {
 		Alice& alice = Alice::Instance();
+
+		// release threads:
+		isRunning = false;
+		console.log("joining threads");
+		if (fluidThread.joinable()) fluidThread.join();
 
     	// free resources:
     	onUnloadGPU();

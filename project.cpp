@@ -120,6 +120,7 @@ float far_clip = 12.f;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 4.f, 8.f);
+glm::vec3 world_centre(0.f, 1.8f, 6.f);
 float world2fluid = 8.f; 
 
 Shader * particleShader;
@@ -503,7 +504,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			o.location = wrap(
 				o.location + world2fluid * flow + noise, world_min, world_max);
 
-			if (alice.cloudDevice.capturing && rnd::uni() < 0.25f) {
+			if (alice.cloudDevice.capturing && rnd::uni() < 0.125f) {
 				uint64_t idx = i % max_camera_points;
 				glm::vec3 p = camera_points[idx];
 				glm::vec2 uv = uv_points[idx];
@@ -513,8 +514,6 @@ void onFrame(uint32_t width, uint32_t height) {
 				o.location = p;
 				o.color = glm::vec3(uv, 0.5f);//o.location;
 				//camera_points[i % max_camera_points];
-
-
 			}
 		}
 
@@ -585,8 +584,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			// update nav
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
-				glm::vec3(16.*sin(a), 10.*(1.2+cos(a)), 32.*cos(a)), 
-				glm::vec3(0., 0., 0.), 
+				world_centre + glm::vec3(4.*sin(a), 0.5*cos(0.5*a), 6.*cos(a)), 
+				world_centre, 
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
 			
@@ -639,10 +638,10 @@ void onFrame(uint32_t width, uint32_t height) {
 
 void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
-		state->objects[i].location = glm::ballRand(1.f);
+		state->objects[i].location = world_centre+glm::ballRand(1.f);
 	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
-		state->particles[i].location = glm::ballRand(1.f);
+		state->particles[i].location = world_centre+glm::ballRand(1.f);
 		state->particles[i].color = glm::vec3(1.f);
 	}
 }

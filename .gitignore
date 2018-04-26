@@ -1,9 +1,14 @@
 *.DS_Store
 
-worktrees
+
 state.bin
 
+#worktrees
++*
 ?*
+worktrees.js
+
+
 *.d
 
 # Compiled Object files

@@ -520,7 +520,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				o.location = wrap(
 					o.location + world2fluid * flow + noise, world_min, world_max);
 
-				if (alice.cloudDevice->capturing && rnd::uni() < 1.125f) {
+				if (alice.cloudDevice->capturing && rnd::uni() < .125f) {
 					uint64_t idx = i % max_camera_points;
 					glm::vec3 p = camera_points[idx];
 					glm::vec2 uv = uv_points[idx];
@@ -552,16 +552,16 @@ void onFrame(uint32_t width, uint32_t height) {
 			//state->particles[i].location = o.location;
 		}
 
+		// upload GPU;
+		glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
+
+		glBindTexture(GL_TEXTURE_2D, colorTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice->captureFrame.color);
 	}
-	// upload GPU;
-	glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
-
-	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice->captureFrame.color);
 
 	alice.hmd->update();
 

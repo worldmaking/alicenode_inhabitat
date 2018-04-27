@@ -238,11 +238,15 @@ void fluid_update() {
 }
 
 void fluid_run() {
+	static FPS fps;
 	console.log("fluid thread started");
 	while(isRunning) {
 		fluid_update();
 		al_sleep(fluid_sleep_s);
-		console.log("~");
+
+		if (fps.measure()) {
+			console.log("sim fps %f", fps.fps);
+		}
 	}
 	console.log("fluid thread ending");
 }
@@ -516,7 +520,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				o.location = wrap(
 					o.location + world2fluid * flow + noise, world_min, world_max);
 
-				if (alice.cloudDevice->capturing && rnd::uni() < 0.125f) {
+				if (alice.cloudDevice->capturing && rnd::uni() < 1.125f) {
 					uint64_t idx = i % max_camera_points;
 					glm::vec3 p = camera_points[idx];
 					glm::vec2 uv = uv_points[idx];
@@ -665,8 +669,37 @@ void onReset() {
 	}
 }
 
+template <typename T>
+void printRatio(){ 
+    std::cout << "  precision: " << T::num << "/" << T::den << " second " << std::endl;
+    typedef typename std::ratio_multiply<T,std::kilo>::type MillSec;
+    typedef typename std::ratio_multiply<T,std::mega>::type MicroSec;
+    std::cout << std::fixed;
+    std::cout << "             " << static_cast<double>(MillSec::num)/MillSec::den << " milliseconds " << std::endl;
+    std::cout << "             " << static_cast<double>(MicroSec::num)/MicroSec::den << " microseconds " << std::endl;
+}
+
 void test() {
-	
+	/*
+	std::cout << "std::chrono::system_clock: " << std::endl;
+    std::cout << "  is steady: " << std::chrono::system_clock::is_steady << std::endl;
+    printRatio<std::chrono::system_clock::period>();
+    
+    std::cout << std::endl;
+    
+    std::cout << "std::chrono::steady_clock: " << std::endl;
+    std::cout << "  is steady: " << std::chrono::steady_clock::is_steady << std::endl;
+    printRatio<std::chrono::steady_clock::period>();
+    
+    std::cout << std::endl;
+    
+    std::cout << "std::chrono::high_resolution_clock: " << std::endl;
+    std::cout << "  is steady: " << std::chrono::high_resolution_clock::is_steady << std::endl;
+    printRatio<std::chrono::high_resolution_clock::period>();
+    
+    
+    std::cout << std::endl;
+	*/
 }
 
 extern "C" {
@@ -702,6 +735,10 @@ extern "C" {
 
 		console.log("onload fluid initialized");
 
+		alice.cloudDevice->use_colour = 1;
+		alice.cloudDevice->use_uv = 1;
+		alice.cloudDevice->open();
+
 
 		// let Alice know we want to use an HMD
 		alice.hmd->connect();
@@ -724,7 +761,7 @@ extern "C" {
 		alice.onReloadGPU.connect(onReloadGPU);
 		alice.onReset.connect(onReset);
 
-		//test();
+		test();
 
 		return 0;
     }

@@ -2,7 +2,9 @@
     "C_Cpp.intelliSenseEngineFallback": "Enabled",
     "editor.insertSpaces": false,
     "files.associations": {
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "chrono": "cpp",
+        "ratio": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

@@ -122,7 +122,9 @@ float far_clip = 12.f;
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 4.f, 8.f);
 glm::vec3 world_centre(0.f, 1.8f, 6.f);
-float world2fluid = 8.f; 
+float world2fluid = 8.f;
+
+glm::mat4 kinect2world; 
 
 Shader * particleShader;
 Shader * landShader;
@@ -498,10 +500,16 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float aspect = width/float(height);
 
-	if (alice.framecount % 60 == 0) console.log("fps %f", alice.fpsAvg);
+	if (alice.framecount % 60 == 0) console.log("fps %f at %f", alice.fpsAvg, t);
 
 	if (alice.isSimulating) {
 
+		if (0) {
+			glm::mat4 tr = glm::translate(glm::mat4(1.f), glm::vec3(-2.f, -2.f, -2.7f));
+			float a = t;
+			glm::mat4 ro = glm::rotate(glm::mat4(1.f), 1.8f, glm::vec3(1.f, 0.f, 0.f));
+			kinect2world = ro * tr;
+		}
 	
 		// updates from simulation:
 		const glm::vec3 * camera_points = alice.cloudDevice->captureFrame.xyz;
@@ -520,9 +528,12 @@ void onFrame(uint32_t width, uint32_t height) {
 				o.location = wrap(
 					o.location + world2fluid * flow + noise, world_min, world_max);
 
-				if (alice.cloudDevice->capturing && rnd::uni() < .125f) {
+				if (alice.cloudDevice->capturing && rnd::uni() < 1.125f) {
 					uint64_t idx = i % max_camera_points;
 					glm::vec3 p = camera_points[idx];
+
+					p = glm::vec3(kinect2world * glm::vec4(p, 1.f));
+
 					glm::vec2 uv = uv_points[idx];
 					// this is in meters, but that seems a bit limited for our world
 					glm::vec3 campos = glm::vec3(0., 0.55, 0.);
@@ -739,6 +750,7 @@ extern "C" {
 		alice.cloudDevice->use_uv = 1;
 		alice.cloudDevice->open();
 
+		
 
 		// let Alice know we want to use an HMD
 		alice.hmd->connect();

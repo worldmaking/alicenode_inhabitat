@@ -123,7 +123,7 @@ void main() {
 	// fog effect:
 	vec3 fogcolor = sky(rd);
 	float fogmix = clamp(normalized_depth, 0., 1.);
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
+	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 
 	FragColor.rgb = color;	

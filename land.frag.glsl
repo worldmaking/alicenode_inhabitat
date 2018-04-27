@@ -189,13 +189,13 @@ void main() {
     	// shot through to background
     	p = ro+maxd*rd;
     	
-		//discard;
-    	FragColor.rgb = fogcolor;
-		FragNormal.xyz = -rd;
+		discard;
+    	//FragColor.rgb = fogcolor;
+		//FragNormal.xyz = -rd;
     	
 	} else {
 		// too many ray steps
-		FragColor.rgb = fogcolor; //vec3(1.);
+		FragColor.rgb = vec3(1.);
 		FragNormal.xyz = -rd;
 	}
 	

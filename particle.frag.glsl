@@ -207,9 +207,10 @@ void main() {
 	// this is also thus the normal of a sphere centered at the particle
 	vec3 spherenormal = mat3(uViewMatrixInverse) * sphere;
 	
-	FragColor.rgb = color; 
+	
+	FragColor.rgb = color;
 	FragNormal.xyz = spherenormal;
-	FragPosition.xyz = world_position + sphere;
+	FragPosition.xyz = world_position + sphere * world_scale;
 
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location

@@ -121,7 +121,7 @@ float far_clip = 12.f;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 4.f, 8.f);
-glm::vec3 world_centre(0.f, 1.8f, 6.f);
+glm::vec3 world_centre(0.f, 1.8f, 4.f);
 float world2fluid = 8.f;
 
 glm::mat4 kinect2world; 
@@ -141,11 +141,12 @@ glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 
-double fluid_viscosity, fluid_diffusion, fluid_decay, fluid_boundary_damping, fluid_noise;
+double fluid_viscosity, fluid_diffusion, fluid_boundary_damping, fluid_noise;
 Fluid3D<> fluid;
 int fluid_passes = 14;
 int fluid_noise_count = 32;
 double fluid_sleep_s = 0.01;
+float fluid_decay = 0.9999f;
 
 glm::vec4 boundary[FIELD_VOXELS];
 
@@ -232,6 +233,7 @@ void fluid_update() {
 	// apply boundaries:
 	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
 	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
+	velocities.front().scale(fluid_decay);
 
 	// clear gradients:
 	fluid.gradient.front().zero();
@@ -510,11 +512,19 @@ void onFrame(uint32_t width, uint32_t height) {
 			glm::mat4 ro = glm::rotate(glm::mat4(1.f), 1.8f, glm::vec3(1.f, 0.f, 0.f));
 			kinect2world = ro * tr;
 		}
+
+		// get the most recent complete frame:
+		const CloudFrame& cloudFrame = alice.cloudDevice->cloudFrame();
+		//console.log("cloud frame %d", alice.cloudDevice->lastCloudFrame);
 	
 		// updates from simulation:
-		const glm::vec3 * camera_points = alice.cloudDevice->captureFrame.xyz;
-		const glm::vec2 * uv_points = alice.cloudDevice->captureFrame.uv;
-		uint64_t max_camera_points = sizeof(alice.cloudDevice->captureFrame.xyz)/sizeof(glm::vec3);
+		const uint16_t * depth_points = cloudFrame.depth;
+		const glm::vec3 * camera_points = cloudFrame.xyz;
+		const glm::vec2 * uv_points = cloudFrame.uv;
+		uint64_t max_camera_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
+
+		const int midpoint = cDepthWidth*cDepthHeight * rnd::uni();
+		//console.log("midpoint depth %d z %f", (int)(depth_points[midpoint]), camera_points[midpoint].z);
 	
 		{
 			for (int i=0; i<NUM_PARTICLES; i++) {
@@ -528,18 +538,20 @@ void onFrame(uint32_t width, uint32_t height) {
 				o.location = wrap(
 					o.location + world2fluid * flow + noise, world_min, world_max);
 
-				if (alice.cloudDevice->capturing && rnd::uni() < 1.125f) {
+				if (alice.cloudDevice->capturing) {
 					uint64_t idx = i % max_camera_points;
 					glm::vec3 p = camera_points[idx];
 
-					p = glm::vec3(kinect2world * glm::vec4(p, 1.f));
+					if (p.z > 1.f) {
 
-					glm::vec2 uv = uv_points[idx];
-					// this is in meters, but that seems a bit limited for our world
-					glm::vec3 campos = glm::vec3(0., 0.55, 0.);
-					p = p + campos;
-					o.location = p;
-					o.color = glm::vec3(uv, 0.5f);
+						p = glm::vec3(kinect2world * glm::vec4(p, 1.f));
+						glm::vec2 uv = uv_points[idx];
+						// this is in meters, but that seems a bit limited for our world
+						glm::vec3 campos = glm::vec3(0., 1.30, 0.);
+						p = p + campos;
+						o.location = p;
+						o.color = glm::vec3(uv, 0.5f);
+					}
 				}
 			}
 		}
@@ -549,7 +561,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			//o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
 			//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
-			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.05f));
+			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
 			
 			glm::vec3 flow;
 			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
@@ -570,8 +582,12 @@ void onFrame(uint32_t width, uint32_t height) {
 		glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
 
+		
+		const ColourFrame& image = alice.cloudDevice->colourFrame();
+		//console.log("colour frame %d; colour is %d ms later than depth", alice.cloudDevice->lastColourFrame, image.timeStamp - cloudFrame.timeStamp);
+
 		glBindTexture(GL_TEXTURE_2D, colorTex);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, alice.cloudDevice->captureFrame.color);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image.color);
 	}
 
 	alice.hmd->update();
@@ -611,7 +627,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			// update nav
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
-				world_centre + glm::vec3(4.*sin(a), 0.5*cos(0.5*a), 6.*cos(a)), 
+				world_centre + 
+				glm::vec3(3.*sin(a), 0.85*cos(0.5*a), 4.*cos(a)), 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
@@ -646,6 +663,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader->uniform("gPosition", 2);
 			deferShader->uniform("uNearClip", near_clip);
 			deferShader->uniform("uFarClip", far_clip);
+			deferShader->uniform("time", Alice::Instance().simTime);
 			deferShader->uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
 			gBuffer.bindTextures();
 			quadMesh.draw();
@@ -745,21 +763,23 @@ extern "C" {
 		fluidThread = std::move(std::thread(fluid_run));
 
 		console.log("onload fluid initialized");
-
-		alice.cloudDevice->use_colour = 1;
-		alice.cloudDevice->use_uv = 1;
+		
+		//alice.cloudDevice->record(1);
 		alice.cloudDevice->open();
 
-		
+		alice.desiredFrameRate = 30;
+		gBuffer.dim = glm::ivec2(512, 512);
 
 		// let Alice know we want to use an HMD
-		alice.hmd->connect();
+		//alice.hmd->connect();
+		
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;
-		} else {
-			alice.desiredFrameRate = 30;
-			gBuffer.dim = glm::ivec2(512, 512);
+		} else if (isPlatformWindows()) {
+			gBuffer.dim.x = 1920;
+			gBuffer.dim.y = 1080;
+			//alice.streamer->init(gBuffer.dim);
 		}
 		console.log("gBuffer dim %d x %d", gBuffer.dim.x, gBuffer.dim.y);
 

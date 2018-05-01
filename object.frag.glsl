@@ -53,7 +53,7 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 				);
 }
 
-#define EPS 0.01
+#define EPS 0.001
 #define VERYFARAWAY  64.
 #define MAX_STEPS 64
 #define STEP_SIZE 1./float(MAX_STEPS)
@@ -141,7 +141,109 @@ float computeDepth(vec3 p, mat4 viewProjectionMatrix) {
 	return (((dfar-dnear) * ndc_depth) + dnear + dfar) / 2.0;
 }
 
+vec3 closest_point_on_line_segment(vec3 P, vec3 A, vec3 B) {
+	vec3 AB = B-A;
+	float l2 = dot(AB, AB);	// length squared
+	
+	if (l2 < EPS) {
+		// line is too short, just use an endpoint
+		return A;
+	}
+	
+	// Consider the line extending the segment,
+	// parameterized as A + t (AB).
+	// We find projection of point p onto the line.
+	// It falls where t = [(AP) . (AB)] / |AB|^2
+	
+	vec3 AP = P-A;
+	float t = dot(AP, AB) / l2;
+	
+	if (t < 0.0) {
+		return A; 	// off A end
+	} else if (t > 1.0) {
+		return B; 	// off B end
+	} else {
+		return A + t * AB; // on segment
+	}
+}
+
+// i.e. distance to line segment, with smoothness r
+float sdCapsule1(vec3 p, vec3 a, vec3 b, float r) {
+	vec3 p1 = closest_point_on_line_segment(p, a, b);
+	return distance(p, p1) - r;
+}
+
+float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
+	vec3 pa = p - a, ba = b - a;
+	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
+	float h = clamp( t, 0.0, 1.0 );
+	
+	// add some ripple:
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + time* 0.3));
+	
+	// basic distance:
+	vec3 rel = pa - ba*h;
+	float d = length(rel);
+	
+	d = d - mix(ra, rb, h1);
+	
+	return d;
+}
+
+// iq has this version, which seems a lot simpler?
+float sdEllipsoid1( in vec3 p, in vec3 r ) {
+	return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
+}
+
+// polynomial smooth min (k = 0.1);
+float smin( float a, float b, float k ) {
+	float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+	return mix( b, a, h ) - k*h*(1.0-h);
+}
+
+float smax( float a, float b, float k )
+{
+	float k1 = k*k;
+	float k2 = 1./k1;
+	return log( exp(k2*a) + exp(k2*b) )*k1;
+}
+
+float ssub(in float A, in float B, float k) {
+	return smax(A, -B, k);
+}
+
+// NOTE scale := f(p/s)*s
+
 float fScene(vec3 p) {
+
+	float scl = world_scale;
+
+	p /= scl;
+
+	//p = p.yxz;
+	// basic symmetry:
+	p.y = abs(p.y);
+
+	// blobbies
+	
+	vec3 A = vec3(0., 0., -0.5);
+	vec3 B = vec3(0., 0., 0.5);
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*time));
+	//float w = 0.4;
+	float z = 0.25;
+	float y = 0.5;
+
+	float a = sdCapsule1(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
+	float b = sdCapsule2(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
+	//float a = 0.7;
+	//float b = 0.7;
+	float d = smin(a, b, 0.5);
+
+	//return d * world_scale;
+	return scl * ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
+}
+ 
+float fScene1(vec3 p) {
 	float osc = (0.3+abs(sin(time*7.)));
 	float s = fSphere(p, world_scale*osc);
 	float b = fBox(p, vec3(world_scale));
@@ -215,10 +317,10 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    
+    FragColor = vec4(1.);
     
     if (d < precis) {
-		float cheap_self_occlusion = 1.-pow(count, 0.75);
+		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
 		
@@ -228,8 +330,10 @@ void main() {
     	
 	} else {
 		// too many ray steps
-		FragColor = vec4(1.);
-		discard;
+		
+		//FragNormal.xyz = rd;
+		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
+		//discard;
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:

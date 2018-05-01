@@ -121,7 +121,7 @@ float fScene(vec3 p) {
 	vec3 pc = p;
 	//vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));
 	vec2 c = pMod2(pc.xz, vec2(0.25));
-	float h = abs(sin(c.y*0.2)*sin(c.x*0.2));
+	float h = abs(sin(c.y*0.12)*sin(c.x*0.12));
 	
 	pR(pc.yx, h*0.1*sin(c.y+time*1.3));
 	pR(pc.yz, h*0.1*sin(c.x+time*3.7));
@@ -188,15 +188,22 @@ void main() {
 	} else if (t >= maxd) {
     	// shot through to background
     	p = ro+maxd*rd;
+
+		// ray direction to far clip
+		vec3 rd1 = normalize(p - eyepos);
     	
-		discard;
-    	//FragColor.rgb = fogcolor;
-		//FragNormal.xyz = -rd;
+		//discard;
+    	FragColor.rgb = vec3(1.);
+		FragNormal.xyz = -rd1;
     	
 	} else {
+
+		// ray direction to point
+		vec3 rd1 = normalize(p - eyepos);
+
 		// too many ray steps
 		FragColor.rgb = vec3(1.);
-		FragNormal.xyz = -rd;
+		FragNormal.xyz = -rd1;
 	}
 	
     	

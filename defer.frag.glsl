@@ -22,15 +22,24 @@ uniform sampler2D gPosition;
 uniform float uFarClip;
 uniform vec2 uDim;
 uniform mat4 uViewMatrix;
+uniform float time;
 
 in vec2 texCoord;
 in vec3 ray_direction, ray_origin, eye_position;
 
 out vec4 FragColor;
 
+#define PI 3.14159265359
+
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;
+	float a = time * 0.3;
+	// detail
+	n.r = sin(2.*PI* n.r*n.g + a)*0.5+0.5;
+	n.g = cos(2.*PI* n.r*n.g - a)*0.5+0.5;
+	// simplify
 	n.g = mix(n.g, n.r, 0.5);
+	// lighten
 	return mix(n, vec3(1.), 0.75);
 }
 
@@ -55,7 +64,7 @@ void main() {
 	vec2 texCoordd = texCoord + sides.zy;
 
 
-
+/*
 	vec3 positionl = texture(gPosition, texCoordl).xyz;
 	float depthl = length((uViewMatrix * vec4(positionl, 1.)).xyz); 
 	vec3 positionr = texture(gPosition, texCoordr).xyz;
@@ -77,7 +86,7 @@ void main() {
 	float rayDotN = dot(rd, normal);
 	float expectedDepthl = depth + rayDotN*sides.x;
 	float diffl = depthl - expectedDepthl;
-
+*/
 	// except, that we should be ignoring them if they are too large
 
 	// set peak around 0.1, null around 1.
@@ -93,11 +102,19 @@ void main() {
 
 	//float metallic = acute;
 	float metallic = oblique;
-	//color.rgb *= mix(sky(ref), sky(normal), metallic);
+	color.rgb *= mix(sky(ref), sky(normal), metallic);
 	
-	// pos viz:
-	//color.rgb = basecolor.xyz;
+	// edge finding by depth difference:
+	//float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
+	//color.rgb *= edges;
+	
+	// fog effect:
+	vec3 fogcolor = sky(rd);
+	float fogmix = clamp(normalized_depth, 0., 1.);
+	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
+	// base viz:
+	//color.rgb = basecolor.xyz;
 
 	// pos viz:
 	//color.rgb = position.xyz;
@@ -113,19 +130,7 @@ void main() {
 
 	// depth viz:
 	//color.rgb = vec3(normalized_depth);
-
-	color.rgb *= basecolor.rgb;
-	
-	// edge finding by depth difference:
-	float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
-	//color.rgb *= edges;
-	
-	// fog effect:
-	vec3 fogcolor = sky(rd);
-	float fogmix = clamp(normalized_depth, 0., 1.);
-	//color.rgb = mix(color.rgb, fogcolor, fogmix);
-
+	//color.rgb = vec3(mod(normalized_depth * vec3(1., 8., 64.), 1.));
 
 	FragColor.rgb = color;	
-
 }

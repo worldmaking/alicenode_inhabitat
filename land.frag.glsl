@@ -196,7 +196,7 @@ void main() {
     	FragColor.rgb = vec3(1.);
 		FragNormal.xyz = -rd1;
     	
-	} else {
+	} else { 
 
 		// ray direction to point
 		vec3 rd1 = normalize(p - eyepos);

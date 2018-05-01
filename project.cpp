@@ -112,6 +112,11 @@ unsigned int objectVAO;
 unsigned int objectVBO;
 unsigned int objectInstanceVBO;
 
+Shader * segmentShader;
+unsigned int segmentVAO;
+unsigned int segmentVBO;
+unsigned int segmentInstanceVBO;
+
 unsigned int particlesVAO;
 
 unsigned int particlesVBO;
@@ -319,6 +324,10 @@ void onUnloadGPU() {
 		delete particleShader;
 		particleShader = 0;
 	}	
+	if (segmentShader) {
+		delete segmentShader;
+		segmentShader = 0;
+	}
 	if (objectShader) {
 		delete objectShader;
 		objectShader = 0;
@@ -350,6 +359,19 @@ void onUnloadGPU() {
 		objectInstanceVBO = 0;
 	}
 
+	if (segmentVAO) {
+		glDeleteVertexArrays(1, &segmentVAO);
+		segmentVAO = 0;
+	}
+	if (segmentVBO) {
+		glDeleteBuffers(1, &segmentVBO);
+		segmentVBO = 0;
+	}
+	if (segmentInstanceVBO) {	
+		glDeleteBuffers(1, &segmentInstanceVBO);
+		segmentInstanceVBO = 0;
+	}
+
 	if (particlesVAO) {
 		glDeleteVertexArrays(1, &particlesVAO);
 		particlesVAO = 0;
@@ -368,6 +390,7 @@ void onReloadGPU() {
 	landShader = Shader::fromFiles("land.vert.glsl", "land.frag.glsl");
 	particleShader = Shader::fromFiles("particle.vert.glsl", "particle.frag.glsl");
 	objectShader = Shader::fromFiles("object.vert.glsl", "object.frag.glsl");
+	segmentShader = Shader::fromFiles("segment.vert.glsl", "segment.frag.glsl");
 	deferShader = Shader::fromFiles("defer.vert.glsl", "defer.frag.glsl");
 	
 	quadMesh.dest_changed();
@@ -383,6 +406,41 @@ void onReloadGPU() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);  
 		//glTexParameteri( GL_TEXTURE_3D, GL_GENERATE_MIPMAP, GL_TRUE ); 
 		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	{
+		// define the VAO 
+		// (a VAO stores attrib & buffer mappings in a re-usable way)
+		glGenVertexArrays(1, &segmentVAO); 
+		glBindVertexArray(segmentVAO);
+		// define the VBO while VAO is bound:
+		glGenBuffers(1, &segmentVBO); 
+		glBindBuffer(GL_ARRAY_BUFFER, segmentVBO);  
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		// attr location 
+		glEnableVertexAttribArray(0); 
+		// set the data layout
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); 
+
+		glGenBuffers(1, &segmentInstanceVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, segmentInstanceVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Segment) * NUM_SEGMENTS, &state->segments[0], GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(2);
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Segment), (void*)offsetof(Segment, location));
+		// mark this attrib as being per-instance	
+		glVertexAttribDivisor(2, 1);  
+		
+		glEnableVertexAttribArray(3);
+		// attr location, element size & type, normalize?, source stride & offset
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Segment), (void*)offsetof(Segment, orientation));
+		// mark this attrib as being per-instance	
+		glVertexAttribDivisor(3, 1);  
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
 	}
 
 	{
@@ -473,6 +531,16 @@ void draw_scene(int width, int height) {
 	glBindVertexArray(objectVAO);
 	// draw instances:
 	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_OBJECTS);  
+
+	segmentShader->use();
+	segmentShader->uniform("time", t);
+	segmentShader->uniform("uViewMatrix", viewMat);
+	segmentShader->uniform("uViewProjectionMatrix", viewProjMat);
+
+	glBindVertexArray(segmentVAO);
+	// draw instances:
+	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_SEGMENTS);  
+
 
 	particleShader->use(); 
 	particleShader->uniform("time", t);
@@ -575,9 +643,32 @@ void onFrame(uint32_t width, uint32_t height) {
 			//state->particles[i].location = o.location;
 		}
 
+		for (int i=0; i<NUM_SEGMENTS; i++) {
+			Segment &o = state->segments[i];
+
+			//o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
+			//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
+			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
+			
+			glm::vec3 flow;
+			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
+			
+			float creature_speed = 0.02f*(float)alice.dt;
+			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
+			fluid.velocities.front().add(world2fluid * o.location, &push.x);
+
+			o.location = wrap(o.location + world2fluid * flow, world_min, world_max);
+
+			//state->particles[i].location = o.location;
+		}
+
+
 		// upload GPU;
 		glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, segmentInstanceVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Segment) * NUM_SEGMENTS, &state->segments[0], GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
@@ -691,6 +782,11 @@ void onFrame(uint32_t width, uint32_t height) {
 void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		state->objects[i].location = world_centre+glm::ballRand(1.f);
+		state->objects[i].phase = glm::linearRand(0.f, 1.f);
+	}
+	for (int i=0; i<NUM_SEGMENTS; i++) {
+		state->segments[i].location = world_centre+glm::ballRand(1.f);
+		state->segments[i].phase = glm::linearRand(0.f, 1.f);
 	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		state->particles[i].location = world_centre+glm::ballRand(1.f);
@@ -763,16 +859,13 @@ extern "C" {
 		fluidThread = std::move(std::thread(fluid_run));
 
 		console.log("onload fluid initialized");
-		
-		//alice.cloudDevice->record(1);
-		alice.cloudDevice->open();
-
+	
 		alice.desiredFrameRate = 30;
 		gBuffer.dim = glm::ivec2(512, 512);
 
 		// let Alice know we want to use an HMD
 		//alice.hmd->connect();
-		
+
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;
@@ -805,18 +898,36 @@ extern "C" {
 		isRunning = false;
 		console.log("joining threads");
 		if (fluidThread.joinable()) fluidThread.join();
+		console.log("joined threads");
 
     	// free resources:
     	onUnloadGPU();
+		console.log("unloaded GPU");
     	
     	// unregister handlers
     	alice.onFrame.disconnect(onFrame);
     	alice.onReloadGPU.disconnect(onReloadGPU);
 		alice.onReset.disconnect(onReset);
+		console.log("disconnected events");
     	
     	// export/free state
     	statemap.destroy(true);
+		console.log("let go of map");
+	
+		console.log("onunload done.");
     
         return 0;
     }
 }
+
+#ifdef AL_WIN
+extern "C" BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD     fdwReason,LPVOID    lpvReserved) {
+	switch(fdwReason) {
+		case 0: fprintf(stderr, "DLLMAIN detach process\n"); break;
+		case 1: fprintf(stderr, "DLLMAIN attach process\n"); break;
+		case 2: fprintf(stderr, "DLLMAIN attach thread\n"); break;
+		case 3: fprintf(stderr, "DLLMAIN detach thread\n"); break;
+	}
+	return TRUE;
+}
+#endif

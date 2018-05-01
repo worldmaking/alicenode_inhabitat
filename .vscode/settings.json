@@ -4,7 +4,9 @@
     "files.associations": {
         "iosfwd": "cpp",
         "chrono": "cpp",
-        "ratio": "cpp"
+        "ratio": "cpp",
+        "cmath": "cpp",
+        "thread": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

@@ -6,6 +6,7 @@ in vec3 ray_direction, ray_origin;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
+in float phase;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -174,12 +175,13 @@ float sdCapsule1(vec3 p, vec3 a, vec3 b, float r) {
 }
 
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
+	float timephase = time+phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
 	
 	// add some ripple:
-	float h1 = h + 0.2*sin(PI * 4. * (t*t + time* 0.3));
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
 	
 	// basic distance:
 	vec3 rel = pa - ba*h;
@@ -215,7 +217,7 @@ float ssub(in float A, in float B, float k) {
 // NOTE scale := f(p/s)*s
 
 float fScene(vec3 p) {
-
+	float timephase = time + phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -228,7 +230,7 @@ float fScene(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*time));
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;

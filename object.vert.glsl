@@ -7,10 +7,13 @@ layout (location = 0) in vec3 aPos;
 // object in world space:
 layout (location = 2) in vec3 iLocation;
 layout (location = 3) in vec4 iOrientation;
+layout (location = 4) in float iScale;
+layout (location = 5) in float iPhase;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
 out float world_scale;
+out float phase;
 out vec4 world_orientation;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
@@ -52,8 +55,9 @@ void main() {
 
 	// need to pass instance pose info to frag shader
 	world_position = iLocation;
-	world_scale = 0.25; 
+	world_scale = iScale;
 	world_orientation = iOrientation;
+	phase = iPhase;
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;

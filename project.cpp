@@ -403,16 +403,6 @@ void draw_scene(int width, int height) {
 	segmentShader->uniform("uViewProjectionMatrix", viewProjMat);
 	segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
 
-	segmentShader->use();
-	segmentShader->uniform("time", t);
-	segmentShader->uniform("uViewMatrix", viewMat);
-	segmentShader->uniform("uViewProjectionMatrix", viewProjMat);
-
-	glBindVertexArray(segmentVAO);
-	// draw instances:
-	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_SEGMENTS);  
-
-
 	particleShader->use(); 
 	particleShader->uniform("time", t);
 	particleShader->uniform("uViewMatrix", viewMat);

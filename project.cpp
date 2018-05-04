@@ -9,13 +9,14 @@
 #include "alice.h"
 #include "state.h"
 
+
+Shader objectShader, segmentShader, particleShader, landShader, deferShader; 
+
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
-Shader * objectShader;
 VAO objectVAO;
 VBO objectInstancesVBO(sizeof(State::objects));
 
-Shader * segmentShader;
 VAO segmentVAO;
 VBO segmentInstancesVBO(sizeof(State::segments));
 
@@ -33,9 +34,6 @@ float world2fluid = 8.f;
 
 glm::mat4 kinect2world; 
 
-Shader * particleShader;
-Shader * landShader;
-Shader * deferShader;
 QuadMesh quadMesh;
 GLuint colorTex;
 
@@ -187,7 +185,7 @@ void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, 
 				
 
 				glm::vec3& vel = velocities[i];
-				glm::vec3 veln = safe_normalize(vel);
+				//glm::vec3 veln = safe_normalize(vel);
 				float speed = glm::length(vel);
 
 
@@ -214,15 +212,9 @@ void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, 
 void fluid_update() {
 	// update fluid
 	Field3D<>& velocities = fluid.velocities;
-	const size_t stride0 = velocities.stride(0);
-	const size_t stride1 = velocities.stride(1);
-	const size_t stride2 = velocities.stride(2);
 	const size_t dim0 = velocities.dimx();
 	const size_t dim1 = velocities.dimy();
 	const size_t dim2 = velocities.dimz();
-	const size_t dimwrap0 = dim0 - 1;
-	const size_t dimwrap1 = dim1 - 1;
-	const size_t dimwrap2 = dim2 - 1;
 	glm::vec3 * data = (glm::vec3 *)velocities.front().ptr();
 	//float * boundary = boundary;
 
@@ -277,31 +269,11 @@ Mmap<State> statemap;
 
 void onUnloadGPU() {
 	// free resources:
-	if (landShader) {
-		delete landShader;
-		landShader = 0;
-	}	
-	if (particleShader) {
-		delete particleShader;
-		particleShader = 0;
-	}	
-	if (segmentShader) {
-		delete segmentShader;
-		segmentShader = 0;
-	}
-	if (objectShader) {
-		delete objectShader;
-		objectShader = 0;
-	}
-	if (segmentShader) {
-		delete segmentShader;
-		segmentShader = 0;
-	}
-	if (deferShader) {
-		delete deferShader;
-		deferShader = 0;
-	}	
-	
+	landShader.dest_closing();
+	particleShader.dest_closing();
+	objectShader.dest_closing();
+	segmentShader.dest_closing();
+	deferShader.dest_closing();
 	quadMesh.dest_closing();
 	cubeVBO.dest_closing();
 	objectInstancesVBO.dest_closing();
@@ -331,12 +303,12 @@ void onUnloadGPU() {
 void onReloadGPU() {
 
 	onUnloadGPU();
-	
-	landShader = Shader::fromFiles("land.vert.glsl", "land.frag.glsl");
-	particleShader = Shader::fromFiles("particle.vert.glsl", "particle.frag.glsl");
-	objectShader = Shader::fromFiles("object.vert.glsl", "object.frag.glsl");
-	segmentShader = Shader::fromFiles("segment.vert.glsl", "segment.frag.glsl");
-	deferShader = Shader::fromFiles("defer.vert.glsl", "defer.frag.glsl");
+
+	objectShader.readFiles("object.vert.glsl", "object.frag.glsl");
+	segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
+	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
+	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
+	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
 	
 	quadMesh.dest_changed();
 
@@ -383,35 +355,35 @@ void onReloadGPU() {
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
 	
-	landShader->use();
-	landShader->uniform("time", t);
-	landShader->uniform("uViewProjectionMatrix", viewProjMat);
-	landShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-	landShader->uniform("uNearClip", near_clip);
-	landShader->uniform("uFarClip", far_clip);
+	landShader.use();
+	landShader.uniform("time", t);
+	landShader.uniform("uViewProjectionMatrix", viewProjMat);
+	landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+	landShader.uniform("uNearClip", near_clip);
+	landShader.uniform("uFarClip", far_clip);
 	quadMesh.draw();
 
-	objectShader->use();
-	objectShader->uniform("time", t);
-	objectShader->uniform("uViewMatrix", viewMat);
-	objectShader->uniform("uViewProjectionMatrix", viewProjMat);
+	objectShader.use();
+	objectShader.uniform("time", t);
+	objectShader.uniform("uViewMatrix", viewMat);
+	objectShader.uniform("uViewProjectionMatrix", viewProjMat);
 	objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
 
-	segmentShader->use();
-	segmentShader->uniform("time", t);
-	segmentShader->uniform("uViewMatrix", viewMat);
-	segmentShader->uniform("uViewProjectionMatrix", viewProjMat);
+	segmentShader.use();
+	segmentShader.uniform("time", t);
+	segmentShader.uniform("uViewMatrix", viewMat);
+	segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
 	segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
 
-	particleShader->use(); 
-	particleShader->uniform("time", t);
-	particleShader->uniform("uViewMatrix", viewMat);
-	particleShader->uniform("uViewMatrixInverse", viewMatInverse);
-	particleShader->uniform("uProjectionMatrix", projMat);
-	particleShader->uniform("uViewProjectionMatrix", viewProjMat);
-	particleShader->uniform("uViewPortHeight", (float)height);
-	particleShader->uniform("uPointSize", particleSize);
-	particleShader->uniform("uColorTex", 0);
+	particleShader.use(); 
+	particleShader.uniform("time", t);
+	particleShader.uniform("uViewMatrix", viewMat);
+	particleShader.uniform("uViewMatrixInverse", viewMatInverse);
+	particleShader.uniform("uProjectionMatrix", projMat);
+	particleShader.uniform("uViewProjectionMatrix", viewProjMat);
+	particleShader.uniform("uViewPortHeight", (float)height);
+	particleShader.uniform("uPointSize", particleSize);
+	particleShader.uniform("uColorTex", 0);
 
 	glBindTexture(GL_TEXTURE_2D, colorTex);
 	glEnable( GL_PROGRAM_POINT_SIZE );
@@ -434,7 +406,6 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		if (0) {
 			glm::mat4 tr = glm::translate(glm::mat4(1.f), glm::vec3(-2.f, -2.f, -2.7f));
-			float a = t;
 			glm::mat4 ro = glm::rotate(glm::mat4(1.f), 1.8f, glm::vec3(1.f, 0.f, 0.f));
 			kinect2world = ro * tr;
 		}
@@ -444,12 +415,12 @@ void onFrame(uint32_t width, uint32_t height) {
 		//console.log("cloud frame %d", alice.cloudDevice->lastCloudFrame);
 	
 		// updates from simulation:
-		const uint16_t * depth_points = cloudFrame.depth;
+		//const uint16_t * depth_points = cloudFrame.depth;
 		const glm::vec3 * camera_points = cloudFrame.xyz;
 		const glm::vec2 * uv_points = cloudFrame.uv;
 		uint64_t max_camera_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
 
-		const int midpoint = cDepthWidth*cDepthHeight * rnd::uni();
+		//const int midpoint = cDepthWidth*cDepthHeight * rnd::uni();
 		//console.log("midpoint depth %d z %f", (int)(depth_points[midpoint]), camera_points[midpoint].z);
 	
 		{
@@ -610,20 +581,20 @@ void onFrame(uint32_t width, uint32_t height) {
 		glClearColor(0.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		{
-			deferShader->use();
-			deferShader->uniform("uViewMatrix", viewMat);
-			deferShader->uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-			deferShader->uniform("gColor", 0);
-			deferShader->uniform("gNormal", 1);
-			deferShader->uniform("gPosition", 2);
-			deferShader->uniform("uNearClip", near_clip);
-			deferShader->uniform("uFarClip", far_clip);
-			deferShader->uniform("time", Alice::Instance().simTime);
-			deferShader->uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			deferShader.use();
+			deferShader.uniform("uViewMatrix", viewMat);
+			deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+			deferShader.uniform("gColor", 0);
+			deferShader.uniform("gNormal", 1);
+			deferShader.uniform("gPosition", 2);
+			deferShader.uniform("uNearClip", near_clip);
+			deferShader.uniform("uFarClip", far_clip);
+			deferShader.uniform("time", Alice::Instance().simTime);
+			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
 			gBuffer.bindTextures();
 			quadMesh.draw();
 			gBuffer.unbindTextures();
-			deferShader->unuse();
+			deferShader.unuse();
 		}
 		glDisable(GL_SCISSOR_TEST);
 		fbo.end();
@@ -705,7 +676,7 @@ extern "C" {
 		fluid_noise_count = 32;
 		fluid_noise = 8.;
 
-		fluidThread = std::move(std::thread(fluid_run));
+		fluidThread = std::thread(fluid_run);
 
 		console.log("onload fluid initialized");
 	

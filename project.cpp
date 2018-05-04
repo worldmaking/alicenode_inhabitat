@@ -9,117 +9,19 @@
 #include "alice.h"
 #include "state.h"
 
-struct GBuffer {
-
-	static const int numBuffers = 3;
-
-	unsigned int fbo;
-	unsigned int rbo;
-	//unsigned int gColor, gNormal, gPosition;
-	unsigned int textures[numBuffers];
-	unsigned int attachments[numBuffers];
-
-	glm::ivec2 dim = glm::ivec2(1024, 1024);
-	
-	void dest_changed() {
-		dest_closing();
-
-		GLint min_filter = GL_LINEAR; //GL_NEAREST;
-		GLint mag_filter = GL_LINEAR; //GL_NEAREST;
-
-		glGenFramebuffers(1, &fbo);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-		glGenTextures(numBuffers, textures);
-
-		// Buffer 0: color buffer
-		glBindTexture(GL_TEXTURE_2D, textures[0]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dim.x, dim.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textures[0], 0);
-		attachments[0] = GL_COLOR_ATTACHMENT0;
-		
-		// Buffer 1: normal
-		glBindTexture(GL_TEXTURE_2D, textures[1]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, dim.x, dim.y, 0, GL_RGB, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, textures[1], 0);
-		attachments[1] = GL_COLOR_ATTACHMENT1;
-
-		// Buffer 2: position
-		glBindTexture(GL_TEXTURE_2D, textures[2]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, dim.x, dim.y, 0, GL_RGB, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);  
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, textures[2], 0);
-		attachments[2] = GL_COLOR_ATTACHMENT2;
-		
-		// set up the draw buffer attachments:
-		glDrawBuffers(numBuffers, attachments);
-		// create & attach depth buffer
-		glGenRenderbuffers(1, &rbo);
-		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, dim.x, dim.y);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
-		// finally check if framebuffer is complete
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			std::cout << "Framebuffer not complete!" << std::endl;
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	}
-
-	void dest_closing() {
-		// TODO
-		if (fbo) {
-			glDeleteFramebuffers(1, &fbo);
-			fbo = 0;
-		}
-		if (rbo) {
-			glDeleteRenderbuffers(1, &rbo);
-			rbo = 0;
-		}
-		if (textures[0]) {
-			glDeleteTextures(3, textures);
-			textures[0] = 0;
-		}
-	}
-
-	void bindTextures() {
-		for (int i=numBuffers-1; i>=0; i--) {
-        	glActiveTexture(GL_TEXTURE0+i);
-        	glBindTexture(GL_TEXTURE_2D, textures[i]);
-		}
-	}
-
-	void unbindTextures() {
-        for (int i=numBuffers-1; i>=0; i--) {
-        	glActiveTexture(GL_TEXTURE0+i);
-        	glBindTexture(GL_TEXTURE_2D, 0);
-		}
-	}
-};
+VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
 Shader * objectShader;
-unsigned int objectVAO;
-unsigned int objectVBO;
-unsigned int objectInstanceVBO;
+VAO objectVAO;
+VBO objectInstancesVBO(sizeof(State::objects));
 
 Shader * segmentShader;
-unsigned int segmentVAO;
-unsigned int segmentVBO;
-unsigned int segmentInstanceVBO;
+VAO segmentVAO;
+VBO segmentInstancesVBO(sizeof(State::segments));
 
-unsigned int particlesVAO;
+VAO particlesVAO;
+VBO particlesVBO(sizeof(State::particles));
 
-unsigned int particlesVBO;
 float particleSize = 1.f/128;
 float near_clip = 0.1f;
 float far_clip = 12.f;
@@ -135,8 +37,6 @@ Shader * particleShader;
 Shader * landShader;
 Shader * deferShader;
 QuadMesh quadMesh;
-GBuffer gBuffer;
-
 GLuint colorTex;
 
 glm::mat4 viewMat;
@@ -157,6 +57,117 @@ glm::vec4 boundary[FIELD_VOXELS];
 
 std::thread fluidThread;
 bool isRunning = 1;
+
+/*
+	A helper for deferred rendering
+*/
+struct GBuffer {
+
+	static const int numBuffers = 3;
+
+	unsigned int fbo;
+	unsigned int rbo;
+	std::vector<unsigned int> textures;
+	std::vector<unsigned int> attachments;
+
+	//GLint min_filter = GL_LINEAR; 
+	//GLint mag_filter = GL_LINEAR;
+	GLint min_filter = GL_NEAREST;
+	GLint mag_filter = GL_NEAREST;
+
+	glm::ivec2 dim = glm::ivec2(1024, 1024);
+
+	GBuffer(int numbuffers = 3) {
+		textures.resize(numbuffers);
+		attachments.resize(numbuffers);
+	}
+
+	void configureTexture(int attachment=0, GLint internalFormat = GL_RGBA, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
+		attachments[attachment] = GL_COLOR_ATTACHMENT0+attachment;
+		glBindTexture(GL_TEXTURE_2D, textures[attachment]);
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, dim.x, dim.y, 0, format, type, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	
+	void dest_changed() {
+		dest_closing();
+
+		// create the GPU objects:
+		glGenFramebuffers(1, &fbo);
+		glGenRenderbuffers(1, &rbo);
+		glGenTextures(textures.size(), &textures[0]);
+
+		// configure textures:
+		// color buffer
+		configureTexture(0, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
+		// normal buffer
+		configureTexture(1, GL_RGB16F, GL_RGB, GL_FLOAT);
+		// position buffer
+		configureTexture(2, GL_RGB16F, GL_RGB, GL_FLOAT);
+		
+		// configure RBO:
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, dim.x, dim.y);
+		// configure FBO:
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		// specify RBO:
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		// specify drawbuffers:
+		glDrawBuffers(attachments.size(), &attachments[0]);
+		// specify colour attachments:
+		for (int i=0; i<textures.size(); i++) {
+			glFramebufferTexture2D(GL_FRAMEBUFFER, attachments[i], GL_TEXTURE_2D, textures[i], 0);
+		}
+		// check if framebuffer is complete
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			std::cout << "Framebuffer not complete!" << std::endl;
+			dest_closing();
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	void dest_closing() {
+		// TODO
+		if (fbo) {
+			glDeleteFramebuffers(1, &fbo);
+			fbo = 0;
+		}
+		if (rbo) {
+			glDeleteRenderbuffers(1, &rbo);
+			rbo = 0;
+		}
+		if (textures[0]) {
+			glDeleteTextures(textures.size(), &textures[0]);
+			textures[0] = 0;
+		}
+	}
+
+	void begin() { glBindFramebuffer(GL_FRAMEBUFFER, fbo); }
+	static void end() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+
+	void bindTextures() {
+		for (int i=textures.size()-1; i>=0; i--) {
+        	glActiveTexture(GL_TEXTURE0+i);
+        	glBindTexture(GL_TEXTURE_2D, textures[i]);
+		}
+	}
+
+	void unbindTextures() {
+        for (int i=textures.size()-1; i>=0; i--) {
+        	glActiveTexture(GL_TEXTURE0+i);
+        	glBindTexture(GL_TEXTURE_2D, 0);
+		}
+	}
+};
+
+
+GBuffer gBuffer;
+
+
 
 void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, const size_t dim0, const size_t dim1, const size_t dim2) {
 
@@ -260,56 +271,6 @@ void fluid_run() {
 	console.log("fluid thread ending");
 }
 
-float vertices[] = {
-    -1.0f,-1.0f,-1.0f, 
-    -1.0f,-1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f, 
-    
-    1.0f, 1.0f,-1.0f, 
-    -1.0f,-1.0f,-1.0f,
-    -1.0f, 1.0f,-1.0f, 
-    
-    1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f,-1.0f,
-    1.0f,-1.0f,-1.0f,
-    
-    1.0f, 1.0f,-1.0f,
-    1.0f,-1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
-    
-    -1.0f,-1.0f,-1.0f,
-    -1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-    
-    1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f,-1.0f,
-    
-    -1.0f, 1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-    1.0f,-1.0f, 1.0f,
-    
-    1.0f, 1.0f, 1.0f,
-    1.0f,-1.0f,-1.0f,
-    1.0f, 1.0f,-1.0f,
-    
-    1.0f,-1.0f,-1.0f,
-    1.0f, 1.0f, 1.0f,
-    1.0f,-1.0f, 1.0f,
-    
-    1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f,-1.0f,
-    -1.0f, 1.0f,-1.0f,
-    
-    1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-    -1.0f, 1.0f, 1.0f,
-    
-    1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f,
-    1.0f,-1.0f, 1.0f
-};
-
 State * state;
 Mmap<State> statemap;
 
@@ -332,12 +293,23 @@ void onUnloadGPU() {
 		delete objectShader;
 		objectShader = 0;
 	}
+	if (segmentShader) {
+		delete segmentShader;
+		segmentShader = 0;
+	}
 	if (deferShader) {
 		delete deferShader;
 		deferShader = 0;
 	}	
 	
 	quadMesh.dest_closing();
+	cubeVBO.dest_closing();
+	objectInstancesVBO.dest_closing();
+	objectVAO.dest_closing();
+	segmentInstancesVBO.dest_closing();
+	segmentVAO.dest_closing();
+	particlesVAO.dest_closing();
+	particlesVAO.dest_closing();
 	gBuffer.dest_closing();
 	Alice::Instance().hmd->dest_closing();
 
@@ -345,42 +317,15 @@ void onUnloadGPU() {
 		glDeleteTextures(1, &colorTex);
 		colorTex = 0;
 	}
-	
-	if (objectVAO) {
-		glDeleteVertexArrays(1, &objectVAO);
-		objectVAO = 0;
-	}
-	if (objectVBO) {
-		glDeleteBuffers(1, &objectVBO);
-		objectVBO = 0;
-	}
-	if (objectInstanceVBO) {	
-		glDeleteBuffers(1, &objectInstanceVBO);
-		objectInstanceVBO = 0;
-	}
 
-	if (segmentVAO) {
-		glDeleteVertexArrays(1, &segmentVAO);
-		segmentVAO = 0;
-	}
-	if (segmentVBO) {
-		glDeleteBuffers(1, &segmentVBO);
-		segmentVBO = 0;
-	}
-	if (segmentInstanceVBO) {	
-		glDeleteBuffers(1, &segmentInstanceVBO);
-		segmentInstanceVBO = 0;
-	}
-
-	if (particlesVAO) {
+	/*if (particlesVAO) {
 		glDeleteVertexArrays(1, &particlesVAO);
 		particlesVAO = 0;
 	}
 	if (particlesVBO) {
 		glDeleteBuffers(1, &particlesVBO);
 		particlesVBO = 0;
-	}
-
+	}*/
 }
 
 void onReloadGPU() {
@@ -394,8 +339,29 @@ void onReloadGPU() {
 	deferShader = Shader::fromFiles("defer.vert.glsl", "defer.frag.glsl");
 	
 	quadMesh.dest_changed();
-	gBuffer.dest_changed();
-	Alice::Instance().hmd->dest_changed();
+
+	objectVAO.bind();
+	cubeVBO.bind();
+	objectVAO.attr(0, 3, GL_FLOAT, sizeof(glm::vec3), 0);
+	objectInstancesVBO.bind();
+	objectVAO.attr(2, &Object::location, true);
+	objectVAO.attr(3, &Object::orientation, true);
+	objectVAO.attr(4, &Object::scale, true);
+	objectVAO.attr(5, &Object::phase, true);
+		
+	segmentVAO.bind();
+	cubeVBO.bind();
+	segmentVAO.attr(0, 3, GL_FLOAT, sizeof(glm::vec3), 0);
+	segmentInstancesVBO.bind();
+	segmentVAO.attr(2, &Segment::location, true);
+	segmentVAO.attr(3, &Segment::orientation, true);
+	segmentVAO.attr(4, &Segment::scale, true);
+	segmentVAO.attr(5, &Segment::phase, true);
+
+	particlesVAO.bind();
+	particlesVBO.bind();
+	particlesVAO.attr(0, &Particle::location);
+	particlesVAO.attr(1, &Particle::color);
 
 	{
 		glGenTextures(1, &colorTex);
@@ -408,107 +374,9 @@ void onReloadGPU() {
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	{
-		// define the VAO 
-		// (a VAO stores attrib & buffer mappings in a re-usable way)
-		glGenVertexArrays(1, &segmentVAO); 
-		glBindVertexArray(segmentVAO);
-		// define the VBO while VAO is bound:
-		glGenBuffers(1, &segmentVBO); 
-		glBindBuffer(GL_ARRAY_BUFFER, segmentVBO);  
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		// attr location 
-		glEnableVertexAttribArray(0); 
-		// set the data layout
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); 
-
-		glGenBuffers(1, &segmentInstanceVBO);
-		glBindBuffer(GL_ARRAY_BUFFER, segmentInstanceVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Segment) * NUM_SEGMENTS, &state->segments[0], GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(2);
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Segment), (void*)offsetof(Segment, location));
-		// mark this attrib as being per-instance	
-		glVertexAttribDivisor(2, 1);  
-		
-		glEnableVertexAttribArray(3);
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Segment), (void*)offsetof(Segment, orientation));
-		// mark this attrib as being per-instance	
-		glVertexAttribDivisor(3, 1);  
-		
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-	}
-
-	{
-		// define the VAO 
-		// (a VAO stores attrib & buffer mappings in a re-usable way)
-		glGenVertexArrays(1, &objectVAO); 
-		glBindVertexArray(objectVAO);
-		// define the VBO while VAO is bound:
-		glGenBuffers(1, &objectVBO); 
-		glBindBuffer(GL_ARRAY_BUFFER, objectVBO);  
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		// attr location 
-		glEnableVertexAttribArray(0); 
-		// set the data layout
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); 
-
-		glGenBuffers(1, &objectInstanceVBO);
-		glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(2);
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, location));
-		// mark this attrib as being per-instance	
-		glVertexAttribDivisor(2, 1);  
-		
-		glEnableVertexAttribArray(3);
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Object), (void*)offsetof(Object, orientation));
-		// mark this attrib as being per-instance	
-		glVertexAttribDivisor(3, 1);  
-		
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-	}
-
-	{
-		// define the VAO
-		// (a VAO stores attrib & buffer mappings in a re-usable way)
-		glGenVertexArrays(1, &particlesVAO);
-		glBindVertexArray(particlesVAO);
-
-		// define the VBO while VAO is bound:
-		glGenBuffers(1, &particlesVBO);
-		glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
-		//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
-
-		// attr location 
-		glEnableVertexAttribArray(0);
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(offsetof(Particle, location)));
-
-		// attr location 
-		glEnableVertexAttribArray(1);
-		// attr location, element size & type, normalize?, source stride & offset
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(offsetof(Particle, color)));
-		
-		//glEnableVertexAttribArray(1);
-		// attr location, element size & type, normalize?, source stride & offset
-		//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)(offsetof(Particle, color)));
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-	}
-
-
+	gBuffer.dest_changed();
+	
+	Alice::Instance().hmd->dest_changed();
 }
 
 
@@ -527,10 +395,13 @@ void draw_scene(int width, int height) {
 	objectShader->uniform("time", t);
 	objectShader->uniform("uViewMatrix", viewMat);
 	objectShader->uniform("uViewProjectionMatrix", viewProjMat);
+	objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
 
-	glBindVertexArray(objectVAO);
-	// draw instances:
-	glDrawArraysInstanced(GL_TRIANGLES, 0, sizeof(vertices) / (sizeof(float) * 3), NUM_OBJECTS);  
+	segmentShader->use();
+	segmentShader->uniform("time", t);
+	segmentShader->uniform("uViewMatrix", viewMat);
+	segmentShader->uniform("uViewProjectionMatrix", viewProjMat);
+	segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
 
 	segmentShader->use();
 	segmentShader->uniform("time", t);
@@ -553,15 +424,12 @@ void draw_scene(int width, int height) {
 	particleShader->uniform("uColorTex", 0);
 
 	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glBindVertexArray(particlesVAO);
-	// draw instances:
 	glEnable( GL_PROGRAM_POINT_SIZE );
 	glEnable(GL_POINT_SPRITE);
 	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-	glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);	
+	particlesVAO.draw(NUM_PARTICLES, GL_POINTS);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glDisable(GL_POINT_SPRITE);
-	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -625,7 +493,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 		
 		for (int i=0; i<NUM_OBJECTS; i++) {
-			Object &o = state->objects[i];
+			auto &o = state->objects[i];
 
 			//o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
 			//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
@@ -644,39 +512,43 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 
 		for (int i=0; i<NUM_SEGMENTS; i++) {
-			Segment &o = state->segments[i];
+			auto &o = state->segments[i];
 
-			//o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
-			//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
-			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
+			if (i % 8 == 0) {
+				// a root;
+				//o.location = wrap(o.location + quat_uf(o.orientation)*0.05f, glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
+				//o.location = glm::clamp(o.location + glm::ballRand(0.1f), glm::vec3(-20.f, 0.f, -20.f), glm::vec3(20.f, 10.f, 20.f));	
+				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
+				
+				glm::vec3 flow;
+				fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
+				
+				float creature_speed = 0.02f*(float)alice.dt;
+				glm::vec3 push = quat_uf(o.orientation) * creature_speed;
+				fluid.velocities.front().add(world2fluid * o.location, &push.x);
+
+				o.location = wrap(o.location + world2fluid * flow, world_min, world_max);
+
+				//state->particles[i].location = o.location;
+			} else {
+				auto& p = state->segments[i-1];
+
+				o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
+				glm::vec3 uz = quat_uz(p.orientation);
+				o.location = p.location + uz*o.scale;
+				o.phase = p.phase + 0.1f;
+				o.scale = p.scale * 0.9f;
+			}
+
 			
-			glm::vec3 flow;
-			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
-			
-			float creature_speed = 0.02f*(float)alice.dt;
-			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
-			fluid.velocities.front().add(world2fluid * o.location, &push.x);
-
-			o.location = wrap(o.location + world2fluid * flow, world_min, world_max);
-
-			//state->particles[i].location = o.location;
 		}
 
-
-		// upload GPU;
-		glBindBuffer(GL_ARRAY_BUFFER, objectInstanceVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Object) * NUM_OBJECTS, &state->objects[0], GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ARRAY_BUFFER, segmentInstanceVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Segment) * NUM_SEGMENTS, &state->segments[0], GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Particle) * NUM_PARTICLES, &state->particles[0], GL_STATIC_DRAW);
-
-		
+		// upload VBO data to GPU:
+		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
+		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
+		particlesVBO.submit(&state->particles[0], sizeof(state->particles));
+		// upload texture data to GPU:
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
-		//console.log("colour frame %d; colour is %d ms later than depth", alice.cloudDevice->lastColourFrame, image.timeStamp - cloudFrame.timeStamp);
-
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image.color);
 	}
@@ -684,7 +556,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	alice.hmd->update();
 
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
+		// draw the scene into the GBuffer:
+		gBuffer.begin();
 		glEnable(GL_SCISSOR_TEST);
 
 		if (alice.hmd->connected) {		
@@ -719,7 +592,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
 				world_centre + 
-				glm::vec3(3.*sin(a), 0.85*cos(0.5*a), 4.*cos(a)), 
+				glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
@@ -732,10 +605,11 @@ void onFrame(uint32_t width, uint32_t height) {
 			draw_scene(gBuffer.dim.x, gBuffer.dim.y);
 		}
 		glDisable(GL_SCISSOR_TEST);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0); // end
+		gBuffer.end();
+		
 		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 
-		// now defer-render into the fbo:
+		// now process the GBuffer and render the result into the fbo
 		SimpleFBO& fbo = alice.hmd->fbo;
 
 		fbo.begin();
@@ -771,7 +645,6 @@ void onFrame(uint32_t width, uint32_t height) {
 		fbo.draw();
 
 		alice.hmd->submit();
-
 		
 		// openvr header recommends this after submit:
 		//glFlush();
@@ -781,16 +654,21 @@ void onFrame(uint32_t width, uint32_t height) {
 
 void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
-		state->objects[i].location = world_centre+glm::ballRand(1.f);
-		state->objects[i].phase = glm::linearRand(0.f, 1.f);
+		auto& o = state->objects[i];
+		o.location = world_centre+glm::ballRand(1.f);
+		o.phase = rnd::uni();
+		o.scale = 0.25;
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
-		state->segments[i].location = world_centre+glm::ballRand(1.f);
-		state->segments[i].phase = glm::linearRand(0.f, 1.f);
+		auto& o = state->segments[i];
+		o.location = world_centre+glm::ballRand(1.f);
+		o.phase = rnd::uni();
+		o.scale = 0.25;
 	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
-		state->particles[i].location = world_centre+glm::ballRand(1.f);
-		state->particles[i].color = glm::vec3(1.f);
+		auto& o = state->particles[i];
+		o.location = world_centre+glm::ballRand(1.f);
+		o.color = glm::vec3(1.f);
 	}
 }
 
@@ -805,26 +683,7 @@ void printRatio(){
 }
 
 void test() {
-	/*
-	std::cout << "std::chrono::system_clock: " << std::endl;
-    std::cout << "  is steady: " << std::chrono::system_clock::is_steady << std::endl;
-    printRatio<std::chrono::system_clock::period>();
-    
-    std::cout << std::endl;
-    
-    std::cout << "std::chrono::steady_clock: " << std::endl;
-    std::cout << "  is steady: " << std::chrono::steady_clock::is_steady << std::endl;
-    printRatio<std::chrono::steady_clock::period>();
-    
-    std::cout << std::endl;
-    
-    std::cout << "std::chrono::high_resolution_clock: " << std::endl;
-    std::cout << "  is steady: " << std::chrono::high_resolution_clock::is_steady << std::endl;
-    printRatio<std::chrono::high_resolution_clock::period>();
-    
-    
-    std::cout << std::endl;
-	*/
+
 }
 
 extern "C" {

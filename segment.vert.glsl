@@ -13,8 +13,8 @@ layout (location = 5) in float iPhase;
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
 out float world_scale;
-out float phase;
 out vec4 world_orientation;
+out float phase;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
 

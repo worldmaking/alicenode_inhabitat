@@ -217,14 +217,13 @@ float ssub(in float A, in float B, float k) {
 // NOTE scale := f(p/s)*s
 
 float fScene(vec3 p) {
-	float timephase = time + phase;
 	float scl = world_scale;
+	float timephase = time + phase;
 
 	p /= scl;
 
-	//p = p.yxz;
-	// basic symmetry:
-	p.y = abs(p.y);
+	// cheap symmetry:
+	p.xy = abs(p.xy);
 
 	// blobbies
 	
@@ -234,15 +233,16 @@ float fScene(vec3 p) {
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
+	float fz = sin(timephase*5.)*0.5+0.5;
 
-	float a = sdCapsule1(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
-	float b = sdCapsule2(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
+	float w2 = w*w;
+	float a = sdCapsule1(p, vec3(0., 0., 1.-w2), vec3(0., 0., -1.+w2), w*w);
+	float b = sdCapsule2(p, vec3(fz, fz, y), vec3(0., -0., -0.25), 0.125, 0.1);
 	//float a = 0.7;
 	//float b = 0.7;
 	float d = smin(a, b, 0.5);
 
-	//return d * world_scale;
-	return scl * ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
+	return scl * d; //ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
 }
  
 float fScene1(vec3 p) {

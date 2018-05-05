@@ -12,6 +12,7 @@ struct Object {
 	float scale;
 	glm::quat orientation;
 	float phase;
+	glm::vec3 velocity;
 };
 
 struct Segment {
@@ -19,11 +20,14 @@ struct Segment {
 	float scale;
 	glm::quat orientation;
 	float phase;
+	glm::vec3 velocity;
 };
 
 struct Particle {
 	glm::vec3 location;
 	glm::vec3 color;
+
+	glm::vec3 velocity;
 };
 
 struct State {

@@ -13,6 +13,7 @@ Shader objectShader, segmentShader, particleShader, landShader, deferShader;
 
 QuadMesh quadMesh;
 GLuint colorTex;
+FloatTexture3D fluidTex;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -27,12 +28,16 @@ VBO particlesVBO(sizeof(State::particles));
 
 float near_clip = 0.1f;
 float far_clip = 12.f;
-float particleSize = 1.f/128;
+float particleSize = 1.f/196;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 4.f, 8.f);
 glm::vec3 world_centre(0.f, 1.8f, 4.f);
-float world2fluid = 8.f;
+
+// how to convert world positions into fluid texture coordinates:
+glm::mat4 world2fluid;
+glm::mat4 fluid2world;
+
 glm::mat4 kinect2world; 
 glm::mat4 viewMat;
 glm::mat4 projMat;
@@ -48,13 +53,15 @@ Fluid3D<> fluid;
 int fluid_passes = 14;
 int fluid_noise_count = 32;
 float fluid_decay = 0.9999f;
-double fluid_viscosity = 0.00001;
+double fluid_viscosity = 0.0000000001; //0.00001;
 double fluid_boundary_damping = .2;
 double fluid_noise = 8.;
 
+
 glm::vec4 boundary[FIELD_VOXELS];
 
-std::thread simThread, fluidThread;
+MetroThread simThread(30);
+MetroThread fluidThread(10);
 bool isRunning = 1;
 
 /*
@@ -189,11 +196,11 @@ void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, 
 				//glm::vec3 veln = safe_normalize(vel);
 				float speed = glm::length(vel);
 
+				// already normalized.
+				const glm::vec3 normal = glm::vec3(land);	
 
-				const glm::vec3 normal = glm::vec3(land);	// already normalized.
-
-															// get the projection of vel onto normal axis
-															// i.e. the component of vel that points in either normal direction:
+				// get the projection of vel onto normal axis
+				// i.e. the component of vel that points in either normal direction:
 				glm::vec3 normal_component = normal * (dot(vel, normal));
 
 				// remove this component from the original velocity:
@@ -210,7 +217,7 @@ void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, 
 	}
 }
 
-void fluid_update() {
+void fluid_update(double dt) {
 	// update fluid
 	Field3D<>& velocities = fluid.velocities;
 	const size_t dim0 = velocities.dimx();
@@ -230,7 +237,6 @@ void fluid_update() {
 	}
 
 	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
-
 	velocities.diffuse(fluid_viscosity, fluid_passes);
 	// apply boundaries:
 	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
@@ -247,10 +253,13 @@ void fluid_update() {
 	// clear gradients:
 	fluid.gradient.front().zero();
 	fluid.gradient.back().zero();
-
 }
 
 void sim_update(double dt) {
+
+	// inverse dt gives rate (per second)
+	float idt = 1.f/dt;
+
 	const Alice& alice = Alice::Instance();
 	if (!alice.isSimulating) return;
 
@@ -271,10 +280,10 @@ void sim_update(double dt) {
 		Particle &o = state->particles[i];
 
 		glm::vec3 flow;
-		fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
+		fluid.velocities.front().readnorm(transform(world2fluid, o.location), &flow.x);
 		
 		//glm::vec3 noise;// = glm::sphericalRand(0.02f);
-		o.velocity = world2fluid * flow;
+		o.velocity = flow * idt;
 			// + noise;
 
 		if (alice.cloudDevice->capturing) {
@@ -291,69 +300,43 @@ void sim_update(double dt) {
 				o.location = p;
 				o.color = glm::vec3(uv, 0.5f);
 			}
-		}
+		} 
+
 	}
 
 	// simulate creatures:
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = state->objects[i];
+
+		glm::vec3 fluidloc = transform(world2fluid, o.location);
 		
 		glm::vec3 flow;
-		fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
+		fluid.velocities.front().readnorm(fluidloc, &flow.x);
 		
 		float creature_speed = 0.02f*(float)dt;
 		glm::vec3 push = quat_uf(o.orientation) * creature_speed;
-		fluid.velocities.front().add(world2fluid * o.location, &push.x);
+		fluid.velocities.front().addnorm(fluidloc, &push.x);
 
-		o.velocity = world2fluid * flow;
+		o.velocity = flow * idt;
 	}
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto &o = state->segments[i];
 		if (i % 8 == 0) {
 			// a root;
+			glm::vec3 fluidloc = transform(world2fluid, o.location);
 			glm::vec3 flow;
-			fluid.velocities.front().read_interp(world2fluid * o.location, &flow.x);
+			fluid.velocities.front().readnorm(fluidloc, &flow.x);
 			float creature_speed = 0.02f*(float)dt;
 			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
-			fluid.velocities.front().add(world2fluid * o.location, &push.x);
-			o.velocity = world2fluid * flow;
+			fluid.velocities.front().addnorm(fluidloc, &push.x);
+			o.velocity = flow * idt;
 
 		} else {
 			auto& p = state->segments[i-1];
 			o.scale = p.scale * 0.9f;
 		}
 	}
-}
-
-void fluid_thread_routine() {
-	FPS fps(10);
-	console.log("fluid thread started");
-	while(isRunning) {
-		fluid_update();
-		
-		double performance = fps.sleep();
-		if (fps.measure()) {
-			console.log("fluid fps %f, @perf %f%% theoretically %ffps", fps.fps, performance * 100., fps.fpsIdeal / performance);
-		}
-	}
-	console.log("fluid thread ending");
-}
-
-void sim_thread_routine() {
-	FPS fps(30);
-	console.log("sim thread started");
-	while(isRunning) {
-
-		// TODO: fps.dt or fps.dtActual ?
-		sim_update(fps.dt); 
-		
-		double performance = fps.sleep();
-		if (fps.measure()) {
-			console.log("sim fps %f, @perf %f%% theoretically %ffps", fps.fps, performance * 100., fps.fpsIdeal / performance);
-		}
-	}
-	console.log("sim thread ending");
 }
 
 
@@ -372,6 +355,9 @@ void onUnloadGPU() {
 	segmentVAO.dest_closing();
 	particlesVAO.dest_closing();
 	particlesVAO.dest_closing();
+
+	fluidTex.dest_closing();
+
 	gBuffer.dest_closing();
 	Alice::Instance().hmd->dest_closing();
 
@@ -380,14 +366,7 @@ void onUnloadGPU() {
 		colorTex = 0;
 	}
 
-	/*if (particlesVAO) {
-		glDeleteVertexArrays(1, &particlesVAO);
-		particlesVAO = 0;
-	}
-	if (particlesVBO) {
-		glDeleteBuffers(1, &particlesVBO);
-		particlesVBO = 0;
-	}*/
+	
 }
 
 void onReloadGPU() {
@@ -410,6 +389,7 @@ void onReloadGPU() {
 	objectVAO.attr(3, &Object::orientation, true);
 	objectVAO.attr(4, &Object::scale, true);
 	objectVAO.attr(5, &Object::phase, true);
+	objectVAO.attr(6, &Object::velocity, true);
 		
 	segmentVAO.bind();
 	cubeVBO.bind();
@@ -419,6 +399,7 @@ void onReloadGPU() {
 	segmentVAO.attr(3, &Segment::orientation, true);
 	segmentVAO.attr(4, &Segment::scale, true);
 	segmentVAO.attr(5, &Segment::phase, true);
+	segmentVAO.attr(6, &Segment::velocity, true);
 
 	particlesVAO.bind();
 	particlesVBO.bind();
@@ -488,9 +469,10 @@ void draw_scene(int width, int height) {
 void onFrame(uint32_t width, uint32_t height) {
 	const Alice& alice = Alice::Instance();
 	double t = alice.simTime;
+	float dt = alice.dt;
 	float aspect = width/float(height);
 
-	if (alice.framecount % 60 == 0) console.log("fps %f at %f", alice.fpsAvg, t);
+	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f)", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS());
 
 	if (alice.isSimulating) {
 		// keep the simulation in here to absolute minimum
@@ -500,14 +482,14 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = state->particles[i];
-			o.location = wrap(o.location + o.velocity, world_min, world_max);
+			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
 		}
 	
 		for (int i=0; i<NUM_OBJECTS; i++) {
 			auto &o = state->objects[i];
 			// TODO: dt-ify this:	
 			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-			o.location = wrap(o.location + o.velocity, world_min, world_max);
+			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
 		}
 
 		for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -516,7 +498,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				// a root;
 				// TODO: dt-ify
 				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-				o.location = wrap(o.location + o.velocity, world_min, world_max);
+				o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
 			} else {
 				auto& p = state->segments[i-1];
 				o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
@@ -530,10 +512,13 @@ void onFrame(uint32_t width, uint32_t height) {
 		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
 		particlesVBO.submit(&state->particles[0], sizeof(state->particles));
+		
 		// upload texture data to GPU:
+		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image.color);
+
 	}
 
 	alice.hmd->update();
@@ -578,7 +563,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
-			projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
+			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 			
 			viewProjMat = projMat * viewMat;
 			projMatInverse = glm::inverse(projMat);
@@ -604,17 +589,22 @@ void onFrame(uint32_t width, uint32_t height) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		{
 			deferShader.use();
-			deferShader.uniform("uViewMatrix", viewMat);
-			deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 			deferShader.uniform("gColor", 0);
 			deferShader.uniform("gNormal", 1);
 			deferShader.uniform("gPosition", 2);
+			deferShader.uniform("uFluidTex", 7);
+
+			deferShader.uniform("uViewMatrix", viewMat);
+			deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 			deferShader.uniform("uNearClip", near_clip);
 			deferShader.uniform("uFarClip", far_clip);
+			deferShader.uniform("uFluidMatrix", world2fluid);
 			deferShader.uniform("time", Alice::Instance().simTime);
 			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			fluidTex.bind(7);
 			gBuffer.bindTextures();
 			quadMesh.draw();
+			fluidTex.unbind(7);
 			gBuffer.unbindTextures();
 			deferShader.unuse();
 		}
@@ -704,8 +694,17 @@ extern "C" {
 			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
 		}
 
-		simThread = std::thread(sim_thread_routine);
-		fluidThread = std::thread(fluid_thread_routine);
+		world2fluid = glm::scale(glm::vec3(0.1f));
+		// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
+		// this effectively defines the bounds of the fluid in the world:
+		// from transform(fluid2world(glm::vec3(0.)))
+		// to   transform(fluid2world(glm::vec3(1.)))
+		fluid2world = glm::scale(glm::vec3(16.));
+		// how to convert world positions into normalized texture coordinates in the fluid field:
+		world2fluid = glm::inverse(fluid2world);
+
+		simThread.begin(sim_update);
+		fluidThread.begin(fluid_update);
 
 		console.log("onload fluid initialized");
 	
@@ -735,6 +734,8 @@ extern "C" {
 		alice.onReloadGPU.connect(onReloadGPU);
 		alice.onReset.connect(onReset);
 
+		alice.window.position(45, 45);
+
 		return 0;
     }
     
@@ -744,8 +745,8 @@ extern "C" {
 		// release threads:
 		isRunning = false;
 		console.log("joining threads");
-		if (simThread.joinable()) simThread.join();
-		if (fluidThread.joinable()) fluidThread.join();
+		simThread.end();
+		fluidThread.end();
 		console.log("joined threads");
 
     	// free resources:

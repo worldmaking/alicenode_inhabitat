@@ -9,6 +9,7 @@ layout (location = 2) in vec3 iLocation;
 layout (location = 3) in vec4 iOrientation;
 layout (location = 4) in float iScale;
 layout (location = 5) in float iPhase;
+layout (location = 6) in vec3 iVelocity;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
@@ -17,6 +18,7 @@ out float phase;
 out vec4 world_orientation;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
+out vec3 velocity;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
@@ -58,6 +60,7 @@ void main() {
 	world_scale = iScale;
 	world_orientation = iOrientation;
 	phase = iPhase;
+	velocity = iVelocity+0.5;
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;

@@ -18,7 +18,7 @@ void main() {
 	world_orientation = vec4(0, 0, 0, 1);
 
 	// vertex in camera space:
-	vec4 view_position = uViewMatrix * vec4(vertex_position * 2., 1.);
+	vec4 view_position = uViewMatrix * vec4(vertex_position, 1.);
 
 	// vertex in screen space:
 	gl_Position = uProjectionMatrix * view_position;
@@ -38,5 +38,5 @@ void main() {
 
 
 	color = vertex_color;
-	color = texture(uColorTex, vertex_color.xy).rgb;
+	//color = texture(uColorTex, vertex_color.xy).rgb;
 }  

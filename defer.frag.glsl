@@ -19,9 +19,12 @@ bloom, colour correction, antialiasing
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform sampler3D uFluidTex;
+
 uniform float uFarClip;
 uniform vec2 uDim;
 uniform mat4 uViewMatrix;
+uniform mat4 uFluidMatrix;
 uniform float time;
 
 in vec2 texCoord;
@@ -49,6 +52,12 @@ void main() {
 	vec4 basecolor = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
+
+	// TODO: fluid scale / transform?
+	vec3 fluidtexcoord = (uFluidMatrix * vec4(position, 1.)).xyz;
+	//vec3 fluidtexcoord = position; //
+	vec3 fluid = texture(uFluidTex, fluidtexcoord).xyz;
+
 	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
 	float depth = length(view_position); 
 	float normalized_depth = depth/uFarClip;
@@ -62,7 +71,6 @@ void main() {
 	vec2 texCoordr = texCoord + sides.xz;
 	vec2 texCoordu = texCoord - sides.zy;
 	vec2 texCoordd = texCoord + sides.zy;
-
 
 /*
 	vec3 positionl = texture(gPosition, texCoordl).xyz;
@@ -102,6 +110,7 @@ void main() {
 
 	//float metallic = acute;
 	float metallic = oblique;
+	//color.rgb = mix(vec3(0.5), normal*0.5+0.5, 0.2);
 	color.rgb *= mix(sky(ref), sky(normal), metallic);
 	
 	// edge finding by depth difference:
@@ -110,7 +119,8 @@ void main() {
 	
 	// fog effect:
 	vec3 fogcolor = sky(rd);
-	float fogmix = clamp(normalized_depth, 0., 1.);
+	//float fogmix = clamp(normalized_depth, 0., 1.);
+	float fogmix = smoothstep(uFarClip*0.25, uFarClip, depth);
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// base viz:
@@ -118,6 +128,7 @@ void main() {
 
 	// pos viz:
 	//color.rgb = position.xyz;
+	//color.rgb = mod(position.xyz * vec3(1., 0.5, 0.1), 1.);
 
 	// viewspace:
 	//color.rgb = view_position;
@@ -132,5 +143,17 @@ void main() {
 	//color.rgb = vec3(normalized_depth);
 	//color.rgb = vec3(mod(normalized_depth * vec3(1., 8., 64.), 1.));
 
+	// fluid viz:
+	//color.rgb = mod(fluidtexcoord * 32., 1);
+	color.rgb += fluid.xyz*50. - 0.25;
+	//color.rgb = 0.5 + fluid.xyz*100;
+
+	// paint bright when normals point in the same direction as fluid:
+	float sameness =  dot(fluid.xyz * 100., normal);
+	//color.rgb = mix(vec3(0.25), color.rgb, sameness);
+
+	float gamma = 1.4;
+	color = pow(color, vec3(gamma));
+	
 	FragColor.rgb = color;	
 }

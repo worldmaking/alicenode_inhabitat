@@ -128,7 +128,7 @@ void main() {
 
 	// pos viz:
 	//color.rgb = position.xyz;
-	//color.rgb = mod(position.xyz * vec3(1., 0.5, 0.1), 1.);
+	//color.rgb = mod(position.xyz * vec3(1.), 1.);
 
 	// viewspace:
 	//color.rgb = view_position;
@@ -153,7 +153,7 @@ void main() {
 	//color.rgb = mix(vec3(0.25), color.rgb, sameness);
 
 	float gamma = 1.4;
-	color = pow(color, vec3(gamma));
+	//color = pow(color, vec3(gamma));
 	
 	FragColor.rgb = color;	
 }

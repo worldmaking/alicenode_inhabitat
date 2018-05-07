@@ -116,7 +116,8 @@ float fCapsule(vec3 p, float r, float c) {
 
 float fScene(vec3 p) {
 	
-	float plane = fPlane(p, vec3(0.,1.,0.), 0.0);
+	float x1 = min(0., sin(p.x * 4.)*sin(p.z* 4.));
+	float plane = fPlane(p, vec3(0.,1.,0.), x1* .3);
 	
 	vec3 pc = p;
 	//vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));

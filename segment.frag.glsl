@@ -217,11 +217,13 @@ float ssub(in float A, in float B, float k) {
 
 // NOTE scale := f(p/s)*s
 
-float fScene(vec3 p) {
+float fScene(vec3 p0) {
 	float scl = world_scale;
 	float timephase = time + phase;
 
-	p /= scl;
+	p0 /= scl;
+
+	vec3 p = p0;	
 
 	// cheap symmetry:
 	p.xy = abs(p.xy);
@@ -234,7 +236,7 @@ float fScene(vec3 p) {
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
-	float fz = sin(timephase*5.)*0.5+0.5;
+	float fz = sin(timephase*5.) * sign(p0.x)*0.5+0.5;
 
 	float w2 = w*w;
 	float a = sdCapsule1(p, vec3(0., 0., 1.-w2), vec3(0., 0., -1.+w2), w*w);

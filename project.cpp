@@ -295,7 +295,7 @@ void sim_update(double dt) {
 				p = glm::vec3(kinect2world * glm::vec4(p, 1.f));
 				glm::vec2 uv = uv_points[idx];
 				// this is in meters, but that seems a bit limited for our world
-				glm::vec3 campos = glm::vec3(0., 1.30, 0.);
+				glm::vec3 campos = glm::vec3(0., 1.20, 0.);
 				p = p + campos;
 				o.location = p;
 				o.color = glm::vec3(uv, 0.5f);
@@ -708,7 +708,6 @@ extern "C" {
 
 		console.log("onload fluid initialized");
 	
-		alice.desiredFrameRate = 30;
 		gBuffer.dim = glm::ivec2(512, 512);
 
 		// let Alice know we want to use an HMD

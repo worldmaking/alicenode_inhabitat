@@ -242,11 +242,13 @@ float fScene(vec3 p) {
 	//float b = 0.7;
 	float d = smin(a, b, 0.5);
 
+	float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
+
 	//return d * world_scale;
-	return scl * ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
+	return scl * ssub(d, mouth, 0.125);
 }
  
-float fScene1(vec3 p) {
+float fScene_old(vec3 p) {
 	float osc = (0.3+abs(sin(time*7.)));
 	float s = fSphere(p, world_scale*osc);
 	float b = fBox(p, vec3(world_scale));
@@ -335,8 +337,8 @@ void main() {
 		// too many ray steps
 		
 		//FragNormal.xyz = rd;
-		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
-		//discard;
+		//FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
+		discard;
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:

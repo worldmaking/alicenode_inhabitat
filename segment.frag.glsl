@@ -7,6 +7,7 @@ in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
 in float phase;
+in vec3 velocity;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;

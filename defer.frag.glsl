@@ -129,7 +129,7 @@ void main() {
 	// pos viz:
 	//color.rgb = position.xyz;
 	//color.rgb = mod(position.xyz * vec3(1.), 1.);
-
+	
 	// viewspace:
 	//color.rgb = view_position;
 
@@ -145,7 +145,7 @@ void main() {
 
 	// fluid viz:
 	//color.rgb = mod(fluidtexcoord * 32., 1);
-	color.rgb += fluid.xyz*50. - 0.25;
+	//color.rgb += fluid.xyz*50. - 0.25;
 	//color.rgb = 0.5 + fluid.xyz*100;
 
 	// paint bright when normals point in the same direction as fluid:

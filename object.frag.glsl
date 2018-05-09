@@ -206,6 +206,12 @@ vec3 sdCapsule1_tex(vec3 p, vec3 a, vec3 b, float r) {
 	return vec3(0., p1.w, distance(p, p1.xyz) - r);
 }
 
+
+/*p = position of ray
+* a and b = endpoints of the line (capsule)
+* ra = radius of a
+* rb = radius of b
+*/
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 	float timephase = time+phase;
 	vec3 pa = p - a, ba = b - a;
@@ -242,10 +248,46 @@ vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 	return vec3(1., 0., d);
 }
 
+//Rotate function by:
+// http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/
+mat4 rotateY(float theta) {
+    float c = cos(theta);
+    float s = sin(theta);
+
+    return mat4(
+        vec4(c, 0, s, 0),
+        vec4(0, 1, 0, 0),
+        vec4(-s, 0, c, 0),
+        vec4(0, 0, 0, 1)
+    );
+}
+
+/**
+ * Signed distance function for a cube centered at the origin
+ * Credit:
+ * http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/
+ */
+float sdCube(in vec3 p){
+	vec3 d = abs(p) - vec3(0.2, 0.2, 0.2);
+
+	// Assuming p is inside the cube, how far is it from the surface?
+    // Result will be negative or zero.
+	float inDist = min(max(d.x, max(d.y, d.z)), 0.0);
+
+	// Assuming p is outside the cube, how far is it from the surface?
+    // Result will be positive or zero.
+	float outDist = length(max(d, 0.0));
+
+	return inDist + outDist;
+
+}
+
 // iq has this version, which seems a lot simpler?
 float sdEllipsoid1( in vec3 p, in vec3 r ) {
 	return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
 }
+
+
 
 // polynomial smooth min (k = 0.1);
 float smin( float a, float b, float k ) {
@@ -290,16 +332,23 @@ float fScene(vec3 p) {
 	float z = 0.25;
 	float y = 0.5;
 
+	//z = -1.0 of the second parameter of the sdCapsules is the front of the object.
 	float a = sdCapsule1(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
 	float b = sdCapsule2(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
+	float c = sdCapsule2(p, vec3(0., -0., -0.0), vec3(z, w, y), 0.125, 0.1);
+	float cube = sdCube((rotateY(-timephase) * vec4(p, 1.0)).xyz);
 	//float a = 0.7;
 	//float b = 0.7;
 	float d = smin(a, b, 0.5);
+	float e = smin(d, c, 0.1);
+	float f = smin(e, cube, 0.1);
 
-	float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
+	
+	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
+	float mouth = sdEllipsoid1((rotateY(-timephase) * vec4(p.yzx, 1.0)).xyz, vec3(0.25, 0.5, 0.05)); //Rotating the mouth Ellipsoid
 
 	//return d * world_scale;
-	return scl * ssub(d, mouth, 0.125);
+	return scl * ssub(f, mouth, 0.2);
 }
 
 vec3 fScene_tex(vec3 p) {

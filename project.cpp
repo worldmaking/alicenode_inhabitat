@@ -30,6 +30,8 @@ float near_clip = 0.1f;
 float far_clip = 12.f;
 float particleSize = 1.f/196;
 
+int debugMode = 0;
+
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 4.f, 8.f);
 glm::vec3 world_centre(0.f, 1.8f, 4.f);
@@ -508,6 +510,18 @@ void onFrame(uint32_t width, uint32_t height) {
 			}
 		}
 
+		//change mode to have object[0], segement[0], or nothing in focus
+		if(debugMode % 3 == 1){
+			state->objects[0].location = world_centre;
+			state->objects[0].scale = 1;
+		}else if(debugMode % 3 == 2){
+			state->segments[0].location = world_centre;
+			state->segments[0].scale = 1;
+			state->objects[0].scale = 0.25;
+		}else{
+			state->segments[0].scale = 0.25;
+		}
+
 		// upload VBO data to GPU:
 		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
@@ -625,6 +639,19 @@ void onFrame(uint32_t width, uint32_t height) {
 	} 
 }
 
+void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bool alt, bool cmd){
+
+	if(downup){
+		switch(keycode){
+			case GLFW_KEY_D: {
+				//console.log("D was pressed");
+				debugMode++;
+			}break;
+		}
+	}
+
+}
+
 // The onReset event is triggered when pressing the "Backspace" key in Alice
 void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
@@ -733,6 +760,7 @@ extern "C" {
 		alice.onReloadGPU.connect(onReloadGPU);
 		alice.onReset.connect(onReset);
 
+		alice.onKeyEvent.connect(onKeyEvent);
 		alice.window.position(45, 45);
 
 		return 0;
@@ -756,6 +784,7 @@ extern "C" {
     	alice.onFrame.disconnect(onFrame);
     	alice.onReloadGPU.disconnect(onReloadGPU);
 		alice.onReset.disconnect(onReset);
+		alice.onKeyEvent.disconnect(onKeyEvent);
 		console.log("disconnected events");
     	
     	// export/free state

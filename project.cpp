@@ -15,6 +15,7 @@ QuadMesh quadMesh;
 GLuint colorTex;
 FloatTexture3D fluidTex;
 FloatTexture3D densityTex;
+FloatTexture3D landTex;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -376,6 +377,7 @@ void onUnloadGPU() {
 
 	fluidTex.dest_closing();
 	densityTex.dest_closing();
+	landTex.dest_closing();
 
 	gBuffer.dest_closing();
 	Alice::Instance().hmd->dest_closing();
@@ -451,7 +453,11 @@ void draw_scene(int width, int height) {
 	landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 	landShader.uniform("uNearClip", near_clip);
 	landShader.uniform("uFarClip", far_clip);
+	landShader.uniform("uLandTex", 5);
+	landShader.uniform("uLandMatrix", world2fluid);
+	landTex.bind(5);
 	quadMesh.draw();
+	landTex.unbind(5);
 
 	objectShader.use();
 	objectShader.uniform("time", t);
@@ -549,6 +555,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		densityTex.submit(field_dim, state->density_back, true);
+		landTex.submit(field_dim, &state->landscape[0], true);
 
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -752,6 +759,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("gColor", 0);
 			deferShader.uniform("gNormal", 1);
 			deferShader.uniform("gPosition", 2);
+			deferShader.uniform("uLandTex", 5);
 			deferShader.uniform("uDensityTex", 6);
 			deferShader.uniform("uFluidTex", 7);
 
@@ -762,10 +770,13 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("uFluidMatrix", world2fluid);
 			deferShader.uniform("time", Alice::Instance().simTime);
 			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			landTex.bind(5);
 			densityTex.bind(6);
 			fluidTex.bind(7);
 			gBuffer.bindTextures();
 			quadMesh.draw();
+
+			landTex.unbind(5);
 			densityTex.unbind(6);
 			fluidTex.unbind(7);
 			gBuffer.unbindTextures();
@@ -846,8 +857,13 @@ void onReset() {
 				for (size_t x=0;x<dim.x;x++) {
 					glm::vec3 coord = glm::vec3(x, y, z);
 					glm::vec3 norm = coord/glm::vec3(dim);
+					glm::vec3 snorm = norm*2.f-1.f;
 					state->density[i] = glm::vec3(0.f);//norm * 0.000001f;
-					state->density_back[i] = glm::vec3(0.f); //state->density[i] * 0.00001f;
+					state->density_back[i] = state->density[i];
+
+					// default scene is a flat plane:
+					state->landscape[i] = coord.y - 1. + cos(snorm.z * M_PI * 2.) * cos(snorm.x * M_PI * 4.) * 0.2; // + 4.f*cos(snorm.x * M_PI)*cos(snorm.y * M_PI);
+					state->landscape_back[i] = state->landscape[i];
 					i++;
 				}
 			}

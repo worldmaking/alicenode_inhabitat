@@ -40,6 +40,9 @@ struct State {
 
 	glm::vec3 density[FIELD_VOXELS];
 	glm::vec3 density_back[FIELD_VOXELS];
+
+	float landscape[FIELD_VOXELS];
+	float landscape_back[FIELD_VOXELS];
 };
 
 #endif

@@ -19,6 +19,7 @@ bloom, colour correction, antialiasing
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform sampler3D uLandTex;
 uniform sampler3D uDensityTex;
 uniform sampler3D uFluidTex;
 
@@ -59,6 +60,7 @@ void main() {
 	//vec3 fluidtexcoord = position; //
 	vec3 fluid = texture(uFluidTex, fluidtexcoord).xyz;
 	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
+	float land = texture(uLandTex, fluidtexcoord).x;
 
 	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
 	float depth = length(view_position); 
@@ -142,7 +144,7 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// reflection vectors
-	//color.rgb = ref.xyz*0.5+0.5;
+	color.rgb = ref.xyz*0.5+0.5;
 
 	// depth viz:
 	//color.rgb = vec3(normalized_depth);
@@ -157,7 +159,10 @@ void main() {
 	// paint bright when normals point in the same direction as fluid:
 	float sameness =  dot(fluid.xyz * 100., normal);
 	//color.rgb = mix(vec3(0.25), color.rgb, sameness);
+	//color.rgb = density;
 	//color.rgb = (normalize(density)*0.5+0.5) * length(density);
+
+	//color.rg = vec2(land / 32.);
 
 	float gamma = 1.4;
 	//color = pow(color, vec3(gamma));

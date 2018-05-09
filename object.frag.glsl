@@ -108,6 +108,19 @@ float fSphere(vec3 p, float r) {
 void pR(inout vec2 p, float a) {
 	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
+vec2 pRot(in vec2 p, float a) {
+	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+	return p;
+}
+
+vec3 pRotYZ(in vec3 p, float a) {
+	p.yz = cos(a)*p.yz + sin(a)*vec2(p.z, -p.y);
+	return p;
+}
+
+vec3 pTranslate(vec3 p, vec3 t) {
+	return p + t;
+}
 
 // Shortcut for 45-degrees rotation
 void pR45(inout vec2 p) {
@@ -195,6 +208,32 @@ vec4 closest_point_on_line_segment_with_t(vec3 P, vec3 A, vec3 B) {
 	}
 }
 
+vec4 closest_point_on_line_segment_with_t_leng(vec3 P, float l) {
+	//vec3 AB = B-A;
+	float l2 = l * l;	// length squared
+	
+	if (l2 < EPS) {
+		// line is too short, just use an endpoint
+		return vec4(0.);
+	}
+	
+	// Consider the line extending the segment,
+	// parameterized as A + t (AB).
+	// We find projection of point p onto the line.
+	// It falls where t = [(AP) . (AB)] / |AB|^2
+	
+	//vec3 AP = P-A;
+	float t = P.z / l;
+	
+	if (t < 0.0) {
+		return vec4(0.); 	// off A end
+	} else if (t > 1.0) {
+		return vec4(0., 0. , l, 1.); 	// off B end
+	} else {
+		return vec4(0., 0., l * t, t); // on segment
+	}
+}
+
 // i.e. distance to line segment, with smoothness r
 float sdCapsule1(vec3 p, vec3 a, vec3 b, float r) {
 	vec3 p1 = closest_point_on_line_segment(p, a, b);
@@ -206,6 +245,32 @@ vec3 sdCapsule1_tex(vec3 p, vec3 a, vec3 b, float r) {
 	return vec3(0., p1.w, distance(p, p1.xyz) - r);
 }
 
+vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
+	//vec4 p1 = closest_point_on_line_segment_with_t_leng(p, l);
+
+	vec4 p1 = vec4(0.);
+	vec2 uv;
+	//vec3 AB = B-A;
+	float l2 = l * l;	// length squared
+	if (l2 > EPS) {
+		// Consider the line extending the segment,
+		// parameterized as A + t (AB).
+		// We find projection of point p onto the line.
+		// It falls where t = [(AP) . (AB)] / |AB|^2
+		//vec3 AP = P-A;
+		float t = p.z / l;
+		if (t > 1.0) {
+			p1 = vec4(0., 0. , l, 1.); 	// off B end
+		} else if (t > 0.) {
+			p1 = vec4(0., 0., l * t, t); // on segment
+		}
+		uv.x = p1.w;
+		uv.y = atan(p.y, p.x);
+	}
+	// other texcoord is a function of p.xy's angle, mapped 0..1
+
+	return vec3(uv, distance(p, p1.xyz) - r);
+}
 
 /*p = position of ray
 * a and b = endpoints of the line (capsule)
@@ -382,6 +447,40 @@ vec3 fScene_tex(vec3 p) {
 	//return scl * ssub(d, mouth, 0.125);
 	return vec3(d.xy, d.z * scl);
 }
+
+vec3 fScene_tex_z(vec3 p) {
+	float timephase = time + phase;
+	float scl = world_scale;
+
+	p /= scl;
+
+	//p = p.yxz;
+	// basic symmetry:
+	p.y = abs(p.y);
+
+	// blobbies
+	
+	vec3 A = vec3(0., 0., -0.5);
+	vec3 B = vec3(0., 0., 0.5);
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	//float w = 0.4;
+	float z = 0.25;
+	float y = 0.5;
+
+	//sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
+	vec3 a = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.5, w*w);
+	vec3 b = sdCapsule2_tex(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
+	//float a = 0.7;
+	//float b = 0.7;
+	vec3 d = a ;//smin_tex(a, b, 0.5);
+
+
+	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
+
+	//return d * world_scale;
+	//return scl * ssub(d, mouth, 0.125);
+	return vec3(d.xy, d.z * scl);
+}
  
 float fScene_old(vec3 p) {
 	float osc = (0.3+abs(sin(time*7.)));
@@ -446,7 +545,7 @@ void main() {
 	vec3 d_tex;
 	for( int i=0; i<MAX_STEPS; i++ ) {
 	
-		d_tex = fScene_tex(p);
+		d_tex = fScene_tex_z(p);
         d = d_tex.z;
         
         if (d < precis || t > maxd ) {

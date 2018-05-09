@@ -169,10 +169,41 @@ vec3 closest_point_on_line_segment(vec3 P, vec3 A, vec3 B) {
 	}
 }
 
+vec4 closest_point_on_line_segment_with_t(vec3 P, vec3 A, vec3 B) {
+	vec3 AB = B-A;
+	float l2 = dot(AB, AB);	// length squared
+	
+	if (l2 < EPS) {
+		// line is too short, just use an endpoint
+		return vec4(A, 0.);
+	}
+	
+	// Consider the line extending the segment,
+	// parameterized as A + t (AB).
+	// We find projection of point p onto the line.
+	// It falls where t = [(AP) . (AB)] / |AB|^2
+	
+	vec3 AP = P-A;
+	float t = dot(AP, AB) / l2;
+	
+	if (t < 0.0) {
+		return vec4(A, 0.); 	// off A end
+	} else if (t > 1.0) {
+		return vec4(B, 1.); 	// off B end
+	} else {
+		return vec4(A + t * AB, t); // on segment
+	}
+}
+
 // i.e. distance to line segment, with smoothness r
 float sdCapsule1(vec3 p, vec3 a, vec3 b, float r) {
 	vec3 p1 = closest_point_on_line_segment(p, a, b);
 	return distance(p, p1) - r;
+}
+
+vec3 sdCapsule1_tex(vec3 p, vec3 a, vec3 b, float r) {
+	vec4 p1 = closest_point_on_line_segment_with_t(p, a, b);
+	return vec3(0., p1.w, distance(p, p1.xyz) - r);
 }
 
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
@@ -193,6 +224,24 @@ float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 	return d;
 }
 
+vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
+	float timephase = time+phase;
+	vec3 pa = p - a, ba = b - a;
+	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
+	float h = clamp( t, 0.0, 1.0 );
+	
+	// add some ripple:
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
+	
+	// basic distance:
+	vec3 rel = pa - ba*h;
+	float d = length(rel);
+	
+	d = d - mix(ra, rb, h1);
+	
+	return vec3(1., 0., d);
+}
+
 // iq has this version, which seems a lot simpler?
 float sdEllipsoid1( in vec3 p, in vec3 r ) {
 	return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
@@ -201,6 +250,11 @@ float sdEllipsoid1( in vec3 p, in vec3 r ) {
 // polynomial smooth min (k = 0.1);
 float smin( float a, float b, float k ) {
 	float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+	return mix( b, a, h ) - k*h*(1.0-h);
+}
+
+vec3 smin_tex( vec3 a, vec3 b, float k ) {
+	float h = clamp( 0.5+0.5*(b.z-a.z)/k, 0.0, 1.0 );
 	return mix( b, a, h ) - k*h*(1.0-h);
 }
 
@@ -246,6 +300,38 @@ float fScene(vec3 p) {
 
 	//return d * world_scale;
 	return scl * ssub(d, mouth, 0.125);
+}
+
+vec3 fScene_tex(vec3 p) {
+	float timephase = time + phase;
+	float scl = world_scale;
+
+	p /= scl;
+
+	//p = p.yxz;
+	// basic symmetry:
+	p.y = abs(p.y);
+
+	// blobbies
+	
+	vec3 A = vec3(0., 0., -0.5);
+	vec3 B = vec3(0., 0., 0.5);
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	//float w = 0.4;
+	float z = 0.25;
+	float y = 0.5;
+
+	vec3 a = sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
+	vec3 b = sdCapsule2_tex(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
+	//float a = 0.7;
+	//float b = 0.7;
+	vec3 d = a ;//smin_tex(a, b, 0.5);
+
+	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
+
+	//return d * world_scale;
+	//return scl * ssub(d, mouth, 0.125);
+	return vec3(d.xy, d.z * scl);
 }
  
 float fScene_old(vec3 p) {
@@ -308,9 +394,11 @@ void main() {
 	float d = maxd;
 	vec3 p = ro;
 	float count = 0.;
+	vec3 d_tex;
 	for( int i=0; i<MAX_STEPS; i++ ) {
 	
-        d = fScene(p);
+		d_tex = fScene_tex(p);
+        d = d_tex.z;
         
         if (d < precis || t > maxd ) {
         	if (t <= maxd) count += STEP_SIZE * (d)/precis;
@@ -326,7 +414,7 @@ void main() {
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
-		FragColor.rgb = vec3(cheap_self_occlusion);
+		FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
 		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
 		
 	} else if (t >= maxd) {

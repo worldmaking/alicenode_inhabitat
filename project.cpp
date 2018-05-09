@@ -671,6 +671,8 @@ void onReset() {
 		o.location = world_centre+glm::ballRand(1.f);
 		o.color = glm::vec3(1.f);
 	}
+
+	onReloadGPU();
 }
 
 void test() {

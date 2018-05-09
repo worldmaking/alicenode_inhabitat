@@ -44,7 +44,7 @@ vec3 sky(vec3 dir) {
 	// simplify
 	n.g = mix(n.g, n.r, 0.5);
 	// lighten
-	return mix(n, vec3(1.), 0.75);
+	return mix(n, vec3(0.), 0.75);
 }
 
 void main() {
@@ -118,6 +118,9 @@ void main() {
 	// edge finding by depth difference:
 	//float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
 	//color.rgb *= edges;
+
+
+	color.rgb = color.rgb * 0.1 + density;
 	
 	// fog effect:
 	vec3 fogcolor = sky(rd);
@@ -126,7 +129,7 @@ void main() {
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// base viz:
-	color.rgb = basecolor.xyz;
+	//color.rgb = basecolor.xyz;
 
 	// pos viz:
 	//color.rgb = position.xyz;
@@ -154,11 +157,13 @@ void main() {
 	// paint bright when normals point in the same direction as fluid:
 	float sameness =  dot(fluid.xyz * 100., normal);
 	//color.rgb = mix(vec3(0.25), color.rgb, sameness);
-	color.rgb = density;
 	//color.rgb = (normalize(density)*0.5+0.5) * length(density);
 
 	float gamma = 1.4;
 	//color = pow(color, vec3(gamma));
+
+	//color.rgb = vec3(texCoord, 0.);
+	//color.rgb = rd;
 	
 	FragColor.rgb = color;	
 }

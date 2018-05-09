@@ -739,9 +739,6 @@ extern "C" {
 	
 		gBuffer.dim = glm::ivec2(512, 512);
 
-		// let Alice know we want to use an HMD
-		alice.hmd->connect();
-
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

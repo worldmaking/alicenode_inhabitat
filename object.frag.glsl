@@ -277,13 +277,12 @@ vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 * rb = radius of b
 */
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-	float timephase = phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
 	
 	// add some ripple:
-	float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
 	
 	// basic distance:
 	vec3 rel = pa - ba*h;
@@ -295,13 +294,12 @@ float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 }
 
 vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-	float timephase = time+phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
 	
 	// add some ripple:
-	float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
 	
 	// basic distance:
 	vec3 rel = pa - ba*h;
@@ -378,7 +376,6 @@ float ssub(in float A, in float B, float k) {
 // NOTE scale := f(p/s)*s
 
 float fScene(vec3 p) {
-	float timephase = phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -391,7 +388,7 @@ float fScene(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
@@ -400,7 +397,7 @@ float fScene(vec3 p) {
 	float a = sdCapsule1(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
 	float b = sdCapsule2(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
 	float c = sdCapsule2(p, vec3(0., -0., -0.0), vec3(z, w, y), 0.125, 0.1);
-	float cube = sdCube((rotateY(-timephase) * vec4(p, 1.0)).xyz);
+	float cube = sdCube((rotateY(-phase) * vec4(p, 1.0)).xyz);
 	//float a = 0.7;
 	//float b = 0.7;
 	float d = smin(a, b, 0.5);
@@ -409,14 +406,13 @@ float fScene(vec3 p) {
 
 	
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
-	float mouth = sdEllipsoid1((rotateY(-timephase) * vec4(p.yzx, 1.0)).xyz, vec3(0.25, 0.5, 0.05)); //Rotating the mouth Ellipsoid
+	float mouth = sdEllipsoid1((rotateY(-phase) * vec4(p.yzx, 1.0)).xyz, vec3(0.25, 0.5, 0.05)); //Rotating the mouth Ellipsoid
 
 	//return d * world_scale;
 	return scl * ssub(f, mouth, 0.2);
 }
 
 vec3 fScene_tex(vec3 p) {
-	float timephase = time + phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -429,7 +425,7 @@ vec3 fScene_tex(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
@@ -448,7 +444,6 @@ vec3 fScene_tex(vec3 p) {
 }
 
 vec3 fScene_tex_z(vec3 p) {
-	float timephase = time + phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -461,7 +456,7 @@ vec3 fScene_tex_z(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
@@ -569,7 +564,7 @@ void main() {
     	// shot through to background
     	discard;
     	
-		
+
 	} else {
 		// too many ray steps
 		

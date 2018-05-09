@@ -664,14 +664,22 @@ void onFrame(uint32_t width, uint32_t height) {
 }
 
 void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bool alt, bool cmd){
-
-	if(downup){
-		switch(keycode){
-			case GLFW_KEY_D: {
-				//console.log("D was pressed");
-				debugMode++;
-			}break;
-		}
+	Alice& alice = Alice::Instance();
+	switch(keycode) {
+		case GLFW_KEY_ENTER: {
+			if (downup && alt) {
+				if (alice.hmd->connected) {
+					alice.hmd->disconnect();
+				} else if (alice.hmd->connect()) {
+					alice.desiredFrameRate = 90;
+				}
+			}
+		} break;
+		case GLFW_KEY_D: {
+			//console.log("D was pressed");
+			if (downup) debugMode++;
+		} break;
+		// default:
 	}
 
 }

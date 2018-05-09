@@ -1,6 +1,5 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix, uViewMatrix;
-uniform float time;
 
 // vertex in object space:
 layout (location = 0) in vec3 aPos;

@@ -1,6 +1,5 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
-uniform float time;
 
 in vec3 ray_direction, ray_origin;
 in vec3 world_position;
@@ -176,7 +175,7 @@ float sdCapsule1(vec3 p, vec3 a, vec3 b, float r) {
 }
 
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-	float timephase = time+phase;
+	float timephase = phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
@@ -219,7 +218,7 @@ float ssub(in float A, in float B, float k) {
 
 float fScene(vec3 p0) {
 	float scl = world_scale;
-	float timephase = time + phase;
+	float timephase = phase;
 
 	p0 /= scl;
 
@@ -249,7 +248,7 @@ float fScene(vec3 p0) {
 }
  
 float fScene1(vec3 p) {
-	float osc = (0.3+abs(sin(time*7.)));
+	float osc = (0.3+abs(sin(phase*7.)));
 	float s = fSphere(p, world_scale*osc);
 	float b = fBox(p, vec3(world_scale));
 	
@@ -266,7 +265,7 @@ float fScene1(vec3 p) {
 	
 	vec3 pc = p+vec3(0., 0., -world_scale*0.25);
 	float a = pModPolar(pc.xz, 36.);
-	pR(pc.yx, 0.+0.2*cos(time * 7. + abs(a*PI/3.)));
+	pR(pc.yx, 0.+0.2*cos(phase * 7. + abs(a*PI/3.)));
 	
 	
 	float c1 = fCylinder(pc.zxy, world_scale*.02, world_scale*0.7);

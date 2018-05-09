@@ -1,13 +1,12 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
-uniform float time;
 
 in vec3 ray_direction, ray_origin;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
 in float phase;
-in vec3 velocity;
+in vec3 basecolor;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -278,7 +277,7 @@ vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 * rb = radius of b
 */
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-	float timephase = time+phase;
+	float timephase = phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
@@ -379,7 +378,7 @@ float ssub(in float A, in float B, float k) {
 // NOTE scale := f(p/s)*s
 
 float fScene(vec3 p) {
-	float timephase = time + phase;
+	float timephase = phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -482,8 +481,8 @@ vec3 fScene_tex_z(vec3 p) {
 	return vec3(d.xy, d.z * scl);
 }
  
-float fScene_old(vec3 p) {
-	float osc = (0.3+abs(sin(time*7.)));
+float fScene1(vec3 p) {
+	float osc = (0.3+abs(sin(phase*7.)));
 	float s = fSphere(p, world_scale*osc);
 	float b = fBox(p, vec3(world_scale));
 	
@@ -500,7 +499,7 @@ float fScene_old(vec3 p) {
 	
 	vec3 pc = p+vec3(0., 0., -world_scale*0.25);
 	float a = pModPolar(pc.xz, 36.);
-	pR(pc.yx, 0.+0.2*cos(time * 7. + abs(a*PI/3.)));
+	pR(pc.yx, 0.+0.2*cos(phase * 7. + abs(a*PI/3.)));
 	
 	
 	float c1 = fCylinder(pc.zxy, world_scale*.02, world_scale*0.7);
@@ -562,7 +561,8 @@ void main() {
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
-		FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
+		//FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
+		FragColor.rgb = vec3(cheap_self_occlusion) * basecolor;
 		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
 		
 	} else if (t >= maxd) {

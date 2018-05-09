@@ -19,6 +19,7 @@ bloom, colour correction, antialiasing
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform sampler3D uDensityTex;
 uniform sampler3D uFluidTex;
 
 uniform float uFarClip;
@@ -57,6 +58,7 @@ void main() {
 	vec3 fluidtexcoord = (uFluidMatrix * vec4(position, 1.)).xyz;
 	//vec3 fluidtexcoord = position; //
 	vec3 fluid = texture(uFluidTex, fluidtexcoord).xyz;
+	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
 
 	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
 	float depth = length(view_position); 
@@ -124,7 +126,7 @@ void main() {
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// base viz:
-	//color.rgb = basecolor.xyz;
+	color.rgb = basecolor.xyz;
 
 	// pos viz:
 	//color.rgb = position.xyz;
@@ -144,6 +146,7 @@ void main() {
 	//color.rgb = vec3(mod(normalized_depth * vec3(1., 8., 64.), 1.));
 
 	// fluid viz:
+	//color.rgb = mod(fluidtexcoord, 1.);
 	//color.rgb = mod(fluidtexcoord * 32., 1);
 	//color.rgb += fluid.xyz*50. - 0.25;
 	//color.rgb = 0.5 + fluid.xyz*100;
@@ -151,6 +154,8 @@ void main() {
 	// paint bright when normals point in the same direction as fluid:
 	float sameness =  dot(fluid.xyz * 100., normal);
 	//color.rgb = mix(vec3(0.25), color.rgb, sameness);
+	color.rgb = density;
+	//color.rgb = (normalize(density)*0.5+0.5) * length(density);
 
 	float gamma = 1.4;
 	//color = pow(color, vec3(gamma));

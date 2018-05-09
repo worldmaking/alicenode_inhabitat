@@ -14,6 +14,7 @@ Shader objectShader, segmentShader, particleShader, landShader, deferShader;
 QuadMesh quadMesh;
 GLuint colorTex;
 FloatTexture3D fluidTex;
+FloatTexture3D densityTex;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -55,10 +56,13 @@ Fluid3D<> fluid;
 int fluid_passes = 14;
 int fluid_noise_count = 32;
 float fluid_decay = 0.9999f;
-double fluid_viscosity = 0.0000000001; //0.00001;
+double fluid_viscosity = 0.000000001; //0.00001;
 double fluid_boundary_damping = .2;
 double fluid_noise = 8.;
 
+float density_decay = 0.95f;
+float density_diffuse = 0.1; // somwhere between 0.1 and 0.01 seems to be good
+float density_scale = 25.;
 
 glm::vec4 boundary[FIELD_VOXELS];
 
@@ -278,6 +282,11 @@ void sim_update(double dt) {
 	const glm::vec2 * uv_points = cloudFrame.uv;
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
 
+	// 
+	al_field3d_scale(field_dim, state->density, glm::vec3(density_decay));
+	al_field3d_diffuse(field_dim, state->density, state->density, density_diffuse);
+	memcpy(state->density_back, state->density, sizeof(glm::vec3) * FIELD_VOXELS);
+	
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = state->particles[i];
 
@@ -303,14 +312,15 @@ void sim_update(double dt) {
 				o.color = glm::vec3(uv, 0.5f);
 			}
 		} 
-
 	}
 
 	// simulate creatures:
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = state->objects[i];
 
+		
 		glm::vec3 fluidloc = transform(world2fluid, o.location);
+
 		
 		glm::vec3 flow;
 		fluid.velocities.front().readnorm(fluidloc, &flow.x);
@@ -320,6 +330,12 @@ void sim_update(double dt) {
 		fluid.velocities.front().addnorm(fluidloc, &push.x);
 
 		o.velocity = flow * idt;
+
+		if (fmod(o.phase, 1.f) < 0.01f)
+		al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
+		
+		// get nearest voxel cell:
+
 	}
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -359,6 +375,7 @@ void onUnloadGPU() {
 	particlesVAO.dest_closing();
 
 	fluidTex.dest_closing();
+	densityTex.dest_closing();
 
 	gBuffer.dest_closing();
 	Alice::Instance().hmd->dest_closing();
@@ -391,7 +408,7 @@ void onReloadGPU() {
 	objectVAO.attr(3, &Object::orientation, true);
 	objectVAO.attr(4, &Object::scale, true);
 	objectVAO.attr(5, &Object::phase, true);
-	objectVAO.attr(6, &Object::velocity, true);
+	objectVAO.attr(6, &Object::color, true);
 		
 	segmentVAO.bind();
 	cubeVBO.bind();
@@ -401,7 +418,7 @@ void onReloadGPU() {
 	segmentVAO.attr(3, &Segment::orientation, true);
 	segmentVAO.attr(4, &Segment::scale, true);
 	segmentVAO.attr(5, &Segment::phase, true);
-	segmentVAO.attr(6, &Segment::velocity, true);
+	segmentVAO.attr(6, &Segment::color, true);
 
 	particlesVAO.bind();
 	particlesVBO.bind();
@@ -492,6 +509,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			// TODO: dt-ify this:	
 			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
 			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+			o.phase += dt;
 		}
 
 		for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -501,6 +519,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				// TODO: dt-ify
 				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
 				o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+				o.phase += dt;
 			} else {
 				auto& p = state->segments[i-1];
 				o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
@@ -529,6 +548,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
+		densityTex.submit(field_dim, state->density_back, true);
+
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image.color);
@@ -606,6 +627,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("gColor", 0);
 			deferShader.uniform("gNormal", 1);
 			deferShader.uniform("gPosition", 2);
+			deferShader.uniform("uDensityTex", 6);
 			deferShader.uniform("uFluidTex", 7);
 
 			deferShader.uniform("uViewMatrix", viewMat);
@@ -615,9 +637,11 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("uFluidMatrix", world2fluid);
 			deferShader.uniform("time", Alice::Instance().simTime);
 			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			densityTex.bind(6);
 			fluidTex.bind(7);
 			gBuffer.bindTextures();
 			quadMesh.draw();
+			densityTex.unbind(6);
 			fluidTex.unbind(7);
 			gBuffer.unbindTextures();
 			deferShader.unuse();
@@ -657,12 +681,14 @@ void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
 		o.location = world_centre+glm::ballRand(1.f);
+		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
 		o.scale = 0.25;
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto& o = state->segments[i];
 		o.location = world_centre+glm::ballRand(1.f);
+		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
 		o.scale = 0.25;
 	}
@@ -673,6 +699,23 @@ void onReset() {
 	}
 
 	onReloadGPU();
+	//al_field3d_zero(field_dim, state->density);
+
+	{
+		int i=0;
+		glm::ivec3 dim = field_dim;
+		for (size_t z=0;z<dim.z;z++) {
+			for (size_t y=0;y<dim.y;y++) {
+				for (size_t x=0;x<dim.x;x++) {
+					glm::vec3 coord = glm::vec3(x, y, z);
+					glm::vec3 norm = coord/glm::vec3(dim);
+					state->density[i] = glm::vec3(0.f);//norm * 0.000001f;
+					state->density_back[i] = glm::vec3(0.f); //state->density[i] * 0.00001f;
+					i++;
+				}
+			}
+		}
+	}
 }
 
 void test() {

@@ -560,7 +560,6 @@ void onFrame(uint32_t width, uint32_t height) {
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image.color);
-
 	}
 
 	

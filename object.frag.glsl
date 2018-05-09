@@ -569,6 +569,7 @@ void main() {
     	// shot through to background
     	discard;
     	
+		
 	} else {
 		// too many ray steps
 		

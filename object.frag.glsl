@@ -313,6 +313,43 @@ vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 	return vec3(1., 0., d);
 }
 
+vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
+	float timephase = time+phase;
+
+	vec4 p1 = vec4(0.);
+	vec2 uv;
+	float d;
+	//vec3 AB = B-A;
+	float l2 = l * l;	// length squared
+	if (l2 > EPS) {
+
+		float t = p.z / l;
+		if (t > 1.0) {
+			p1 = vec4(0., 0. , l, 1.); 	// off B end
+		} else if (t > 0.) {
+			p1 = vec4(0., 0., l * t, t); // on segment
+		}
+		uv.x = p1.w;
+		uv.y = atan(p.y, p.x);
+
+		float h = clamp( t, 0.0, 1.0 );
+	
+		// add some ripple:
+		float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
+	
+		// basic distance:
+		vec3 rel = p - vec3(0., 0., l*h);
+		d = length(rel);
+		
+		d = d - mix(ra, rb, h1);
+	}
+	// other texcoord is a function of p.xy's angle, mapped 0..1
+
+	//return vec3(uv, distance(p, p1.xyz) - r);
+	
+	return vec3(uv, d);
+}
+
 //Rotate function by:
 // http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/
 mat4 rotateY(float theta) {
@@ -469,10 +506,10 @@ vec3 fScene_tex_z(vec3 p) {
 
 	//sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
 	vec3 a = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.5, w*w);
-	vec3 b = sdCapsule2_tex(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
+	vec3 b = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -2.), 0.25, 0.125, 0.1);
 	//float a = 0.7;
 	//float b = 0.7;
-	vec3 d = a ;//smin_tex(a, b, 0.5);
+	vec3 d = smin_tex(a, b, 0.5);
 
 
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));

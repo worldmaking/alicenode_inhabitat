@@ -311,7 +311,6 @@ vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 }
 
 vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
-	float timephase = time+phase;
 
 	vec4 p1 = vec4(0.);
 	vec2 uv;
@@ -332,7 +331,7 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 		float h = clamp( t, 0.0, 1.0 );
 	
 		// add some ripple:
-		float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
+		float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
 	
 		// basic distance:
 		vec3 rel = p - vec3(0., 0., l*h);
@@ -406,6 +405,13 @@ float smax( float a, float b, float k )
 	return log( exp(k2*a) + exp(k2*b) )*k1;
 }
 
+vec3 smax_tex( vec3 a, vec3 b, float k )
+{
+	float k1 = k*k;
+	float k2 = 1./k1;
+	return log( exp(k2*a) + exp(k2*b) )*k1;
+}
+
 float ssub(in float A, in float B, float k) {
 	return smax(A, -B, k);
 }
@@ -471,7 +477,7 @@ vec3 fScene_tex(vec3 p) {
 	vec3 b = sdCapsule2_tex(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
 	//float a = 0.7;
 	//float b = 0.7;
-	vec3 d = a ;//smin_tex(a, b, 0.5);
+	vec3 d = a;//smin_tex(a, b, 0.5);
 
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
 
@@ -504,6 +510,7 @@ vec3 fScene_tex_z(vec3 p) {
 	//float a = 0.7;
 	//float b = 0.7;
 	vec3 d = smin_tex(a, b, 0.5);
+	//vec3 d = smax_tex(a, b, 0.5);
 
 
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
@@ -578,6 +585,7 @@ void main() {
 	
 		d_tex = fScene_tex_z(p);
         d = d_tex.z;
+        //d = fScene(p);
         
         if (d < precis || t > maxd ) {
         	if (t <= maxd) count += STEP_SIZE * (d)/precis;

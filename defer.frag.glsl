@@ -62,6 +62,8 @@ void main() {
 	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
 	float land = texture(uLandTex, fluidtexcoord).x;
 
+	
+
 	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
 	float depth = length(view_position); 
 	float normalized_depth = depth/uFarClip;
@@ -112,8 +114,16 @@ void main() {
 	float oblique = 1.0 - acute; // how much surface is perpendicular to us
 	//color *= 1. - 0.5*oblique;	
 
+	// get environmental light from emissive sources
+	// by lookup in the normal direction
+	float nearby = .1;
+	vec3 texcoord_for_normal = (uFluidMatrix * vec4(position + normal*nearby, 1.)).xyz;
+	vec3 envcolor = texture(uDensityTex, texcoord_for_normal).rgb;
+	vec3 texcoord_for_ref = (uFluidMatrix * vec4(position + ref*nearby, 1.)).xyz;
+	vec3 envcolor_ref = texture(uDensityTex, texcoord_for_ref).rgb;
+
 	//float metallic = acute;
-	float metallic = oblique;
+	float metallic = acute;
 	//color.rgb = mix(vec3(0.5), normal*0.5+0.5, 0.2);
 	color.rgb *= mix(sky(ref), sky(normal), metallic);
 	
@@ -121,8 +131,11 @@ void main() {
 	//float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
 	//color.rgb *= edges;
 
+	// env color
+	//color.rgb += envcolor;
+	color.rgb = envcolor_ref;
 
-	color.rgb = color.rgb * 0.1 + density;
+	//color.rgb = color.rgb * 0.1 + density;
 	
 	// fog effect:
 	vec3 fogcolor = sky(rd);
@@ -144,7 +157,7 @@ void main() {
 	//color.rgb = normal*0.5+0.5;
 
 	// reflection vectors
-	color.rgb = ref.xyz*0.5+0.5;
+	//color.rgb = ref.xyz*0.5+0.5;
 
 	// depth viz:
 	//color.rgb = vec3(normalized_depth);

@@ -61,8 +61,8 @@ double fluid_viscosity = 0.000000001; //0.00001;
 double fluid_boundary_damping = .2;
 double fluid_noise = 8.;
 
-float density_decay = 0.97f;
-float density_diffuse = 0.1; // somwhere between 0.1 and 0.01 seems to be good
+float density_decay = 0.9f;
+float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
 float density_scale = 25.;
 
 glm::vec4 boundary[FIELD_VOXELS];
@@ -332,9 +332,9 @@ void sim_update(double dt) {
 
 		o.velocity = flow * idt;
 
-		if (fmod(o.phase, 1.f) < 0.01f)
-		al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
-		
+		if (fmod(o.phase, 1.f) < 0.02f) {
+			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
+		}
 		// get nearest voxel cell:
 
 	}
@@ -627,7 +627,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			fbo.end();
 		}
 		glDisable(GL_SCISSOR_TEST);
-	} else {
+	} else if (0) {
+
 		glEnable(GL_SCISSOR_TEST);
 		gBuffer.begin();
 		// No HMD:
@@ -688,8 +689,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 		fbo.end();
 		glDisable(GL_SCISSOR_TEST);
-	}
-	/*{
+	} else {
 		// draw the scene into the GBuffer:
 		gBuffer.begin();
 		glEnable(GL_SCISSOR_TEST);
@@ -769,6 +769,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("uFluidMatrix", world2fluid);
 			deferShader.uniform("time", Alice::Instance().simTime);
 			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			deferShader.uniform("uTexTransform", glm::vec2(1., 0.));
 			landTex.bind(5);
 			densityTex.bind(6);
 			fluidTex.bind(7);
@@ -784,7 +785,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		glDisable(GL_SCISSOR_TEST);
 		fbo.end();
 	}
-	*/
+	
 	glViewport(0, 0, width, height);
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -845,8 +846,15 @@ void onReset() {
 		o.color = glm::vec3(1.f);
 	}
 
-	onReloadGPU();
 	//al_field3d_zero(field_dim, state->density);
+
+	// TODO currently this is a memory leak on unload:
+	fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
+	for (int i = 0; i<FIELD_VOXELS; i++) {
+		//glm::vec4 * n = (glm::vec4 *)noisefield[i];
+		//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
+		boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
+	}
 
 	{
 		int i=0;
@@ -861,13 +869,15 @@ void onReset() {
 					state->density_back[i] = state->density[i];
 
 					// default scene is a flat plane:
-					state->landscape[i] = coord.y - 1. + cos(snorm.z * M_PI * 2.) * cos(snorm.x * M_PI * 4.) * 0.2; // + 4.f*cos(snorm.x * M_PI)*cos(snorm.y * M_PI);
+					state->landscape[i] = coord.y; // + 0.5; // - 1. + cos(snorm.z * M_PI * 2.) * cos(snorm.x * M_PI * 4.) * 0.02; // + 4.f*cos(snorm.x * M_PI)*cos(snorm.y * M_PI);
 					state->landscape_back[i] = state->landscape[i];
 					i++;
 				}
 			}
 		}
 	}
+
+	onReloadGPU();
 }
 
 void test() {
@@ -910,13 +920,7 @@ extern "C" {
 		// allow threads to run
 		isRunning = true;
 
-		// TODO currently this is a memory leak on unload:
-		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-		for (int i = 0; i<FIELD_VOXELS; i++) {
-			//glm::vec4 * n = (glm::vec4 *)noisefield[i];
-			//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
-			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
-		}
+		
 
 		world2fluid = glm::scale(glm::vec3(0.1f));
 		// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:

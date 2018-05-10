@@ -14,6 +14,8 @@ Shader objectShader, segmentShader, particleShader, landShader, deferShader;
 QuadMesh quadMesh;
 GLuint colorTex;
 FloatTexture3D fluidTex;
+FloatTexture3D densityTex;
+FloatTexture3D landTex;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -39,7 +41,7 @@ glm::vec3 world_centre(0.f, 1.8f, 4.f);
 // how to convert world positions into fluid texture coordinates:
 glm::mat4 world2fluid;
 glm::mat4 fluid2world;
-
+glm::mat4 vive2world;
 glm::mat4 kinect2world; 
 glm::mat4 viewMat;
 glm::mat4 projMat;
@@ -55,10 +57,13 @@ Fluid3D<> fluid;
 int fluid_passes = 14;
 int fluid_noise_count = 32;
 float fluid_decay = 0.9999f;
-double fluid_viscosity = 0.0000000001; //0.00001;
+double fluid_viscosity = 0.000000001; //0.00001;
 double fluid_boundary_damping = .2;
 double fluid_noise = 8.;
 
+float density_decay = 0.9f;
+float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
+float density_scale = 25.;
 
 glm::vec4 boundary[FIELD_VOXELS];
 
@@ -278,6 +283,11 @@ void sim_update(double dt) {
 	const glm::vec2 * uv_points = cloudFrame.uv;
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
 
+	// 
+	al_field3d_scale(field_dim, state->density, glm::vec3(density_decay));
+	al_field3d_diffuse(field_dim, state->density, state->density, density_diffuse);
+	memcpy(state->density_back, state->density, sizeof(glm::vec3) * FIELD_VOXELS);
+	
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = state->particles[i];
 
@@ -303,14 +313,15 @@ void sim_update(double dt) {
 				o.color = glm::vec3(uv, 0.5f);
 			}
 		} 
-
 	}
 
 	// simulate creatures:
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = state->objects[i];
 
+		
 		glm::vec3 fluidloc = transform(world2fluid, o.location);
+
 		
 		glm::vec3 flow;
 		fluid.velocities.front().readnorm(fluidloc, &flow.x);
@@ -320,6 +331,12 @@ void sim_update(double dt) {
 		fluid.velocities.front().addnorm(fluidloc, &push.x);
 
 		o.velocity = flow * idt;
+
+		if (fmod(o.phase, 1.f) < 0.02f) {
+			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
+		}
+		// get nearest voxel cell:
+
 	}
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -359,6 +376,8 @@ void onUnloadGPU() {
 	particlesVAO.dest_closing();
 
 	fluidTex.dest_closing();
+	densityTex.dest_closing();
+	landTex.dest_closing();
 
 	gBuffer.dest_closing();
 	Alice::Instance().hmd->dest_closing();
@@ -391,7 +410,7 @@ void onReloadGPU() {
 	objectVAO.attr(3, &Object::orientation, true);
 	objectVAO.attr(4, &Object::scale, true);
 	objectVAO.attr(5, &Object::phase, true);
-	objectVAO.attr(6, &Object::velocity, true);
+	objectVAO.attr(6, &Object::color, true);
 		
 	segmentVAO.bind();
 	cubeVBO.bind();
@@ -401,7 +420,7 @@ void onReloadGPU() {
 	segmentVAO.attr(3, &Segment::orientation, true);
 	segmentVAO.attr(4, &Segment::scale, true);
 	segmentVAO.attr(5, &Segment::phase, true);
-	segmentVAO.attr(6, &Segment::velocity, true);
+	segmentVAO.attr(6, &Segment::color, true);
 
 	particlesVAO.bind();
 	particlesVBO.bind();
@@ -434,7 +453,11 @@ void draw_scene(int width, int height) {
 	landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 	landShader.uniform("uNearClip", near_clip);
 	landShader.uniform("uFarClip", far_clip);
+	landShader.uniform("uLandTex", 5);
+	landShader.uniform("uLandMatrix", world2fluid);
+	landTex.bind(5);
 	quadMesh.draw();
+	landTex.unbind(5);
 
 	objectShader.use();
 	objectShader.uniform("time", t);
@@ -492,6 +515,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			// TODO: dt-ify this:	
 			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
 			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+			o.phase += dt;
 		}
 
 		for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -501,6 +525,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				// TODO: dt-ify
 				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
 				o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+				o.phase += dt;
 			} else {
 				auto& p = state->segments[i-1];
 				o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
@@ -529,15 +554,142 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
+		densityTex.submit(field_dim, state->density_back, true);
+		landTex.submit(field_dim, &state->landscape[0], true);
+
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image.color);
-
 	}
 
-	alice.hmd->update();
+	
+	Hmd& vive = *alice.hmd;
+	SimpleFBO& fbo = vive.fbo;
+	if (vive.connected) {	
+		vive.near_clip = near_clip;
+		vive.far_clip = far_clip;	
+		vive.update();
+		glEnable(GL_SCISSOR_TEST);
 
-	{
+		for (int eye = 0; eye < 2; eye++) {
+			gBuffer.begin();
+
+			glScissor(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
+			glViewport(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
+			glEnable(GL_DEPTH_TEST);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			// update nav
+			viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition);
+			projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
+
+			viewProjMat = projMat * viewMat;
+			projMatInverse = glm::inverse(projMat);
+			viewMatInverse = glm::inverse(viewMat);
+			viewProjMatInverse = glm::inverse(viewProjMat);
+
+			draw_scene(gBuffer.dim.x / 2, gBuffer.dim.y);
+			gBuffer.end();
+
+			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+
+			// now process the GBuffer and render the result into the fbo
+			fbo.begin();
+			//glScissor(0, 0, fbo.dim.x, fbo.dim.y);
+			//glViewport(0, 0, fbo.dim.x, fbo.dim.y);
+			glEnable(GL_DEPTH_TEST);
+			glClearColor(0.f, 0.f, 0.f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			{
+				deferShader.use();
+				deferShader.uniform("gColor", 0);
+				deferShader.uniform("gNormal", 1);
+				deferShader.uniform("gPosition", 2);
+				deferShader.uniform("uDensityTex", 6);
+				deferShader.uniform("uFluidTex", 7);
+
+				deferShader.uniform("uViewMatrix", viewMat);
+				deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+				deferShader.uniform("uNearClip", near_clip);
+				deferShader.uniform("uFarClip", far_clip);
+				deferShader.uniform("uFluidMatrix", world2fluid);
+				deferShader.uniform("time", Alice::Instance().simTime);
+				deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+				deferShader.uniform("uTexTransform", glm::vec2(0.5, eye * 0.5));
+				densityTex.bind(6);
+				fluidTex.bind(7);
+				gBuffer.bindTextures();
+				quadMesh.draw();
+				densityTex.unbind(6);
+				fluidTex.unbind(7);
+				gBuffer.unbindTextures();
+				deferShader.unuse();
+			}
+			fbo.end();
+		}
+		glDisable(GL_SCISSOR_TEST);
+	} else if (0) {
+
+		glEnable(GL_SCISSOR_TEST);
+		gBuffer.begin();
+		// No HMD:
+		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
+		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
+		glEnable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// update nav
+		double a = M_PI * t / 30.;
+		viewMat = glm::lookAt(
+			world_centre + 
+			glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
+			world_centre, 
+			glm::vec3(0., 1., 0.));
+		projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+		
+		viewProjMat = projMat * viewMat;
+		projMatInverse = glm::inverse(projMat);
+		viewMatInverse = glm::inverse(viewMat);
+		viewProjMatInverse = glm::inverse(viewProjMat);
+
+		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
+		gBuffer.end();
+		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+
+		// now process the GBuffer and render the result into the fbo
+		fbo.begin();
+		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
+		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		{
+			deferShader.use();
+			deferShader.uniform("gColor", 0);
+			deferShader.uniform("gNormal", 1);
+			deferShader.uniform("gPosition", 2);
+			deferShader.uniform("uDensityTex", 6);
+			deferShader.uniform("uFluidTex", 7);
+
+			deferShader.uniform("uViewMatrix", viewMat);
+			deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+			deferShader.uniform("uNearClip", near_clip);
+			deferShader.uniform("uFarClip", far_clip);
+			deferShader.uniform("uFluidMatrix", world2fluid);
+			deferShader.uniform("time", Alice::Instance().simTime);
+			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			deferShader.uniform("uTexTransform", glm::vec2(1., 0.));
+			densityTex.bind(6);
+			fluidTex.bind(7);
+			gBuffer.bindTextures();
+			quadMesh.draw();
+			densityTex.unbind(6);
+			fluidTex.unbind(7);
+			gBuffer.unbindTextures();
+			deferShader.unuse();
+		}
+		fbo.end();
+		glDisable(GL_SCISSOR_TEST);
+	} else {
 		// draw the scene into the GBuffer:
 		gBuffer.begin();
 		glEnable(GL_SCISSOR_TEST);
@@ -606,6 +758,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("gColor", 0);
 			deferShader.uniform("gNormal", 1);
 			deferShader.uniform("gPosition", 2);
+			deferShader.uniform("uLandTex", 5);
+			deferShader.uniform("uDensityTex", 6);
 			deferShader.uniform("uFluidTex", 7);
 
 			deferShader.uniform("uViewMatrix", viewMat);
@@ -615,39 +769,57 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("uFluidMatrix", world2fluid);
 			deferShader.uniform("time", Alice::Instance().simTime);
 			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
+			deferShader.uniform("uTexTransform", glm::vec2(1., 0.));
+			landTex.bind(5);
+			densityTex.bind(6);
 			fluidTex.bind(7);
 			gBuffer.bindTextures();
 			quadMesh.draw();
+
+			landTex.unbind(5);
+			densityTex.unbind(6);
 			fluidTex.unbind(7);
 			gBuffer.unbindTextures();
 			deferShader.unuse();
 		}
 		glDisable(GL_SCISSOR_TEST);
 		fbo.end();
+	}
+	
+	glViewport(0, 0, width, height);
+	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	fbo.draw();
 
-		glViewport(0, 0, width, height);
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.f, 0.f, 0.f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		fbo.draw();
+	alice.hmd->submit();
+	
+	// openvr header recommends this after submit:
+	//glFlush();
+	//glFinish();
 
-		alice.hmd->submit();
-		
-		// openvr header recommends this after submit:
-		//glFlush();
-		//glFinish();
-	} 
 }
 
 void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bool alt, bool cmd){
-
-	if(downup){
-		switch(keycode){
-			case GLFW_KEY_D: {
-				//console.log("D was pressed");
-				debugMode++;
-			}break;
-		}
+	Alice& alice = Alice::Instance();
+	switch(keycode) {
+		case GLFW_KEY_ENTER: {
+			if (downup && alt) {
+				if (alice.hmd->connected) {
+					alice.hmd->disconnect();
+				} else if (alice.hmd->connect()) {
+					gBuffer.dim = alice.hmd->fbo.dim;
+					gBuffer.dest_changed();
+					alice.hmd->dest_changed();
+					alice.desiredFrameRate = 90;
+				}
+			}
+		} break;
+		case GLFW_KEY_D: {
+			//console.log("D was pressed");
+			if (downup) debugMode++;
+		} break;
+		// default:
 	}
 
 }
@@ -657,12 +829,14 @@ void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
 		o.location = world_centre+glm::ballRand(1.f);
+		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
 		o.scale = 0.25;
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto& o = state->segments[i];
 		o.location = world_centre+glm::ballRand(1.f);
+		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
 		o.scale = 0.25;
 	}
@@ -671,6 +845,39 @@ void onReset() {
 		o.location = world_centre+glm::ballRand(1.f);
 		o.color = glm::vec3(1.f);
 	}
+
+	//al_field3d_zero(field_dim, state->density);
+
+	// TODO currently this is a memory leak on unload:
+	fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
+	for (int i = 0; i<FIELD_VOXELS; i++) {
+		//glm::vec4 * n = (glm::vec4 *)noisefield[i];
+		//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
+		boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
+	}
+
+	{
+		int i=0;
+		glm::ivec3 dim = field_dim;
+		for (size_t z=0;z<dim.z;z++) {
+			for (size_t y=0;y<dim.y;y++) {
+				for (size_t x=0;x<dim.x;x++) {
+					glm::vec3 coord = glm::vec3(x, y, z);
+					glm::vec3 norm = coord/glm::vec3(dim);
+					glm::vec3 snorm = norm*2.f-1.f;
+					state->density[i] = glm::vec3(0.f);//norm * 0.000001f;
+					state->density_back[i] = state->density[i];
+
+					// default scene is a flat plane:
+					state->landscape[i] = coord.y; // + 0.5; // - 1. + cos(snorm.z * M_PI * 2.) * cos(snorm.x * M_PI * 4.) * 0.02; // + 4.f*cos(snorm.x * M_PI)*cos(snorm.y * M_PI);
+					state->landscape_back[i] = state->landscape[i];
+					i++;
+				}
+			}
+		}
+	}
+
+	onReloadGPU();
 }
 
 void test() {
@@ -713,13 +920,7 @@ extern "C" {
 		// allow threads to run
 		isRunning = true;
 
-		// TODO currently this is a memory leak on unload:
-		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-		for (int i = 0; i<FIELD_VOXELS; i++) {
-			//glm::vec4 * n = (glm::vec4 *)noisefield[i];
-			//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
-			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
-		}
+		
 
 		world2fluid = glm::scale(glm::vec3(0.1f));
 		// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
@@ -730,16 +931,17 @@ extern "C" {
 		// how to convert world positions into normalized texture coordinates in the fluid field:
 		world2fluid = glm::inverse(fluid2world);
 
+		vive2world = glm::translate(glm::vec3(0.f, 0.f, -4.f)) * 
+			glm::rotate(float(M_PI/2), glm::vec3(0,1,0));
+			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
+
 		simThread.begin(sim_update);
 		fluidThread.begin(fluid_update);
 
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-
-		// let Alice know we want to use an HMD
 		//alice.hmd->connect();
-
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

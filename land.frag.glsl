@@ -3,6 +3,8 @@ uniform sampler2D tex;
 uniform float time;
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 uniform float uNearClip, uFarClip;
+uniform sampler3D uLandTex;
+uniform mat4 uLandMatrix;
 
 in vec2 texCoord;
 in vec3 ray, origin, eyepos;
@@ -114,7 +116,7 @@ float fCapsule(vec3 p, float r, float c) {
 	return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
 }
 
-float fScene(vec3 p) {
+float fScene_test(vec3 p) {
 	
 	float x1 = min(0., sin(p.x * 4.)*sin(p.z* 4.));
 	float plane = fPlane(p, vec3(0.,1.,0.), x1* .3);
@@ -132,6 +134,14 @@ float fScene(vec3 p) {
 	float z = fCapsule(pc, 0.04, 0.3*h);
 	return min(z, plane);
 }
+
+float fScene(vec3 p) {
+	float a = fScene_test(p);
+	vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
+	float b = texture(uLandTex, landtexcoord).r;
+	return min(a, b);
+}
+
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`
 // (cheaper than the usual technique of sampling 6 cardinal points)
@@ -185,6 +195,10 @@ void main() {
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = normal4(p, .01);
+
+		vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
+		float land = 0.01 * texture(uLandTex, landtexcoord).r;
+		//FragColor.rgb = vec3(land);
 		
 	} else if (t >= maxd) {
     	// shot through to background

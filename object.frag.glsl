@@ -1,13 +1,12 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
-uniform float time;
 
 in vec3 ray_direction, ray_origin;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
 in float phase;
-in vec3 velocity;
+in vec3 basecolor;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -278,13 +277,12 @@ vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 * rb = radius of b
 */
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-	float timephase = time+phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
 	
 	// add some ripple:
-	float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
 	
 	// basic distance:
 	vec3 rel = pa - ba*h;
@@ -296,13 +294,12 @@ float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 }
 
 vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-	float timephase = time+phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
 	
 	// add some ripple:
-	float h1 = h + 0.2*sin(PI * 4. * (t*t + timephase* 0.3));
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
 	
 	// basic distance:
 	vec3 rel = pa - ba*h;
@@ -416,7 +413,6 @@ float ssub(in float A, in float B, float k) {
 // NOTE scale := f(p/s)*s
 
 float fScene(vec3 p) {
-	float timephase = time + phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -429,7 +425,7 @@ float fScene(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
@@ -438,7 +434,7 @@ float fScene(vec3 p) {
 	float a = sdCapsule1(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
 	float b = sdCapsule2(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
 	float c = sdCapsule2(p, vec3(0., -0., -0.0), vec3(z, w, y), 0.125, 0.1);
-	float cube = sdCube((rotateY(-timephase) * vec4(p, 1.0)).xyz);
+	float cube = sdCube((rotateY(-phase) * vec4(p, 1.0)).xyz);
 	//float a = 0.7;
 	//float b = 0.7;
 	float d = smin(a, b, 0.5);
@@ -447,14 +443,13 @@ float fScene(vec3 p) {
 
 	
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
-	float mouth = sdEllipsoid1((rotateY(-timephase) * vec4(p.yzx, 1.0)).xyz, vec3(0.25, 0.5, 0.05)); //Rotating the mouth Ellipsoid
+	float mouth = sdEllipsoid1((rotateY(-phase) * vec4(p.yzx, 1.0)).xyz, vec3(0.25, 0.5, 0.05)); //Rotating the mouth Ellipsoid
 
 	//return d * world_scale;
 	return scl * ssub(f, mouth, 0.2);
 }
 
 vec3 fScene_tex(vec3 p) {
-	float timephase = time + phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -467,7 +462,7 @@ vec3 fScene_tex(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
@@ -486,7 +481,6 @@ vec3 fScene_tex(vec3 p) {
 }
 
 vec3 fScene_tex_z(vec3 p) {
-	float timephase = time + phase;
 	float scl = world_scale;
 
 	p /= scl;
@@ -499,7 +493,7 @@ vec3 fScene_tex_z(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*timephase));
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
@@ -519,8 +513,8 @@ vec3 fScene_tex_z(vec3 p) {
 	return vec3(d.xy, d.z * scl);
 }
  
-float fScene_old(vec3 p) {
-	float osc = (0.3+abs(sin(time*7.)));
+float fScene1(vec3 p) {
+	float osc = (0.3+abs(sin(phase*7.)));
 	float s = fSphere(p, world_scale*osc);
 	float b = fBox(p, vec3(world_scale));
 	
@@ -537,7 +531,7 @@ float fScene_old(vec3 p) {
 	
 	vec3 pc = p+vec3(0., 0., -world_scale*0.25);
 	float a = pModPolar(pc.xz, 36.);
-	pR(pc.yx, 0.+0.2*cos(time * 7. + abs(a*PI/3.)));
+	pR(pc.yx, 0.+0.2*cos(phase * 7. + abs(a*PI/3.)));
 	
 	
 	float c1 = fCylinder(pc.zxy, world_scale*.02, world_scale*0.7);
@@ -599,13 +593,15 @@ void main() {
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
-		FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
+		//FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
+		FragColor.rgb = vec3(cheap_self_occlusion) * basecolor;
 		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
 		
 	} else if (t >= maxd) {
     	// shot through to background
     	discard;
     	
+
 	} else {
 		// too many ray steps
 		

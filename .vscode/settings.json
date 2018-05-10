@@ -6,7 +6,11 @@
         "chrono": "cpp",
         "ratio": "cpp",
         "cmath": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "initializer_list": "cpp",
+        "vector": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

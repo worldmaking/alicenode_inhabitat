@@ -310,8 +310,30 @@ vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 	return vec3(1., 0., d);
 }
 
+// assumes l is not zero
 vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 
+	vec3 a = vec3(0);
+	vec3 b = vec3(0, 0, -l);
+
+	vec3 pa = p, ba = b;
+	float t = (p.z * -l) / (l*l);//Does l need to be negated?
+	float h = clamp( t, 0.0, 1.0 );
+	
+	// add some ripple:
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
+	h1 = clamp( h1, 0.0, 1.0 );
+	// TODO shoudl clamp after ripple really
+	
+	// basic distance:
+	vec3 rel = p - b*h;
+	float d = length(rel);
+	
+	d = d - mix(ra, rb, h1);
+	return vec3(0, 0, d);
+
+	//Previous code, does the same thing as above but with a positive l
+/*
 	vec4 p1 = vec4(0.);
 	vec2 uv;
 	float d;
@@ -344,6 +366,7 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	//return vec3(uv, distance(p, p1.xyz) - r);
 	
 	return vec3(uv, d);
+	*/
 }
 
 //Rotate function by:
@@ -385,6 +408,9 @@ float sdEllipsoid1( in vec3 p, in vec3 r ) {
 	return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
 }
 
+float sdEllipsoid1_tex( in vec3 p, in vec3 r ) {
+	return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
+}
 
 
 // polynomial smooth min (k = 0.1);
@@ -394,8 +420,16 @@ float smin( float a, float b, float k ) {
 }
 
 vec3 smin_tex( vec3 a, vec3 b, float k ) {
-	float h = clamp( 0.5+0.5*(b.z-a.z)/k, 0.0, 1.0 );
+	float h = clamp( 0.5+0.5*(b.z-a.z)/k, 0.0, 1.0 );//ask about this
 	return mix( b, a, h ) - k*h*(1.0-h);
+}
+
+vec3 max_tex(vec3 a, vec3 b) {
+	return (a.z > b.z) ? a : b;
+}
+
+vec3 min_tex(vec3 a, vec3 b) {
+	return (a.z < b.z) ? a : b;
 }
 
 float smax( float a, float b, float k )
@@ -409,11 +443,21 @@ vec3 smax_tex( vec3 a, vec3 b, float k )
 {
 	float k1 = k*k;
 	float k2 = 1./k1;
-	return log( exp(k2*a) + exp(k2*b) )*k1;
+	return vec3(
+		mix(a.xy, b.xy, k), //log(exp(a.xy) + exp(b.xy)), 
+		log( exp(k2*a.z) + exp(k2*b.z) )*k1);
 }
 
 float ssub(in float A, in float B, float k) {
 	return smax(A, -B, k);
+}
+
+vec3 ssub_tex(vec3 a, vec3 b, float k) {
+	return smax_tex(a, -b, k);
+}
+
+vec3 sub_tex(vec3 a, vec3 b, float k) {
+	return max_tex(a, -b, k);
 }
 
 // NOTE scale := f(p/s)*s
@@ -477,7 +521,7 @@ vec3 fScene_tex(vec3 p) {
 	vec3 b = sdCapsule2_tex(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
 	//float a = 0.7;
 	//float b = 0.7;
-	vec3 d = a;//smin_tex(a, b, 0.5);
+	vec3 d = b;//min_tex(a, b);//smin_tex(a, b, 0.5);
 
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
 
@@ -506,13 +550,17 @@ vec3 fScene_tex_z(vec3 p) {
 
 	//sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
 	vec3 a = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.5, w*w);
-	vec3 b = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -2.), 0.25, 0.125, 0.1);
+	//a = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.25, 0.125, 0.1);
+	vec3 b = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -2.), -0.25, 0.125, 0.15);
+	
 	//float a = 0.7;
 	//float b = 0.7;
 	vec3 d = smin_tex(a, b, 0.5);
-	//vec3 d = smax_tex(a, b, 0.5);
+	//d = smax_tex(a, d, 0.5);
+	//d.z = smax(b.z, a.z, 0.1)7; //smax_tex(d, a, 0.1);
 
-
+//	d = max_tex(d, a);
+	//d.z = smin(a.z, d.z, 0.5);
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
 
 	//return d * world_scale;
@@ -567,13 +615,24 @@ vec3 normal4(in vec3 p, float eps) {
 	return normalize(n);
 }
 
+vec3 normal4_tex(in vec3 p, float eps) {
+	vec2 e = vec2(-eps, eps);
+	// tetrahedral points
+	float t1 = fScene_tex_z(p + e.yxx).z, t2 = fScene_tex_z(p + e.xxy).z, t3 = fScene_tex_z(p + e.xyx).z, t4 = fScene_tex_z(p + e.yyy).z; 
+	vec3 n = (e.yxx*t1 + e.xxy*t2 + e.xyx*t3 + e.yyy*t4);
+	// normalize for a consistent SDF:
+	//return n / (4.*eps*eps);
+	// otherwise:
+	return normalize(n);
+}
+
 void main() {
 
 	vec3 rd = normalize(ray_direction);
 	vec3 ro = ray_origin; 
 	
 	float precis = EPS;
-	float maxd = 4.;
+	float maxd = world_scale * 3.;
 	
 	vec3 color = vec3(0.);
 	float t = 0.0;
@@ -585,7 +644,7 @@ void main() {
 	
 		d_tex = fScene_tex_z(p);
         d = d_tex.z;
-        //d = fScene(p);
+        //d =fScene(p);
         
         if (d < precis || t > maxd ) {
         	if (t <= maxd) count += STEP_SIZE * (d)/precis;
@@ -597,21 +656,26 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    FragColor = vec4(1.);
+    FragColor = vec4(count, count, 0., 1.);
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
 		//FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
 		FragColor.rgb = vec3(cheap_self_occlusion) * basecolor;
-		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
+		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
 		
 	} else if (t >= maxd) {
     	// shot through to background
+
+		FragColor.b = 1.;
     	discard;
+		
     	
 
 	} else {
 		// too many ray steps
+
+		FragColor.rb = vec2(1.);
 		
 		//FragNormal.xyz = rd;
 		//FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));

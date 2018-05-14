@@ -446,6 +446,8 @@ void onReloadGPU() {
 
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
+
+	glEnable(GL_CULL_FACE);
 	
 	landShader.use();
 	landShader.uniform("time", t);
@@ -489,6 +491,8 @@ void draw_scene(int width, int height) {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glDisable(GL_POINT_SPRITE);
 	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glDisable(GL_CULL_FACE);
 }
 
 void onFrame(uint32_t width, uint32_t height) {

@@ -307,7 +307,7 @@ void sim_update(double dt) {
 				p = glm::vec3(kinect2world * glm::vec4(p, 1.f));
 				glm::vec2 uv = uv_points[idx];
 				// this is in meters, but that seems a bit limited for our world
-				glm::vec3 campos = glm::vec3(0., 1.20, 0.);
+				glm::vec3 campos = glm::vec3(0., 1.1, 0.);
 				p = p + campos;
 				o.location = p;
 				o.color = glm::vec3(uv, 0.5f);
@@ -583,7 +583,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			glEnable(GL_DEPTH_TEST);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			// update nav
-			viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition);
+			viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * vive2world;
 			projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
 
 			viewProjMat = projMat * viewMat;
@@ -935,8 +935,7 @@ extern "C" {
 		// how to convert world positions into normalized texture coordinates in the fluid field:
 		world2fluid = glm::inverse(fluid2world);
 
-		vive2world = glm::translate(glm::vec3(0.f, 0.f, -4.f)) * 
-			glm::rotate(float(M_PI/2), glm::vec3(0,1,0));
+		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(0.f, 0.f, -3.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 
 		simThread.begin(sim_update);
@@ -945,7 +944,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-		//alice.hmd->connect();
+		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

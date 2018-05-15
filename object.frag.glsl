@@ -13,7 +13,7 @@ layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
 
 #define PI 3.14159265359
-
+#define TWOPI 6.283185307
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;
@@ -248,24 +248,70 @@ vec3 sdCapsule1_tex(vec3 p, vec3 a, vec3 b, float r) {
 vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 	//vec4 p1 = closest_point_on_line_segment_with_t_leng(p, l);
 
+/*
 	vec4 p1 = vec4(0.);
 	vec2 uv;
 
-	float l2 = l * l;	// length squared
-	if (l2 > EPS) {
 
-		float t = p.z / l;
-		if (t > 1.0) {
-			p1 = vec4(0., 0. , l, 1.); 	// off B end
-		} else if (t > 0.) {
-			p1 = vec4(0., 0., l * t, t); // on segment
-		}
-		uv.x = p1.w;
-		uv.y = atan(p.y, p.x);
+	float t = p.z / l;
+	if (t > 1.0) {
+		p1 = vec4(0., 0. , l, 1.); 	// off B end
+	} else if (t > 0.) {
+		p1 = vec4(0., 0., l * t, t); // on segment
 	}
+	uv.x = p1.w;
+	uv.y = atan(p.y, p.x);
+
 	// other texcoord is a function of p.xy's angle, mapped 0..1
 
 	return vec3(uv, distance(p, p1.xyz) - r);
+*/
+	
+
+	vec3 a = vec3(0);
+	vec3 b = vec3(0, 0, l);
+	vec2 uv;
+
+	vec3 pa = p, ba = b;
+	float t = p.z / l;
+	float h = clamp( t, 0.0, 1.0 );
+
+	
+	/*
+	a = vec3(0, 0, -ra)
+	b = vec3(0, 0, l+rb)
+
+	pa = p-a  
+	ba = b-a
+
+	l1 = l + rb + ra
+
+	t = dot(p-a, l1) / (l1*l1)
+
+	t = clamp(t, 0, 1)
+	*/
+	
+	
+	// add some ripple:
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
+	h1 = clamp( h1, 0.0, 1.0 );
+	// TODO should clamp after ripple really
+	
+	// basic distance:
+	vec3 rel = p - b*h;
+	float d = length(rel);
+
+	vec3 reln = rel/d;
+	float angle = atan(reln.y, reln.x);
+	//float angle = acos(dot(reln, vec3(0, 1, 0)));
+	uv.y = angle / TWOPI + 0.5;
+	
+	float tr = (p.z + r) / (l + r*2);
+	uv.x = clamp(tr, 0., 1.);
+	
+	return vec3(uv, d - r);
+
+	
 }
 
 /*p = position of ray
@@ -313,22 +359,49 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 
 	vec3 a = vec3(0);
 	vec3 b = vec3(0, 0, l);
+	vec2 uv;
+	vec4 p1 = vec4(0.);
 
 	vec3 pa = p, ba = b;
-	float t = (p.z * l) / (l*l);
+	float t = p.z / l;//(p.z * l) / (l * l)
 	float h = clamp( t, 0.0, 1.0 );
+
+	
+	/*
+	a = vec3(0, 0, -ra)
+	b = vec3(0, 0, l+rb)
+
+	pa = p-a  
+	ba = b-a
+
+	l1 = l + rb + ra
+
+	t = dot(p-a, l1) / (l1*l1)
+
+	t = clamp(t, 0, 1)
+	*/
 	
 	// add some ripple:
 	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
 	h1 = clamp( h1, 0.0, 1.0 );
-	// TODO shoudl clamp after ripple really
+	// TODO should clamp after ripple really
 	
 	// basic distance:
 	vec3 rel = p - b*h;
 	float d = length(rel);
+	//if (d > 0.00001) {
+		vec3 reln = rel/d;
+		float angle = atan(reln.y, reln.x);
+		//float angle = acos(dot(reln, vec3(0, 1, 0)));
+		uv.y = angle / TWOPI + 0.5;
+	//}
+	
+	float lab = l + ra + rb;
+	float tab = (p.z + ra) / lab;
+	uv.x = clamp(tab, 0., 1.);
 	
 	d = d - mix(ra, rb, h1);
-	return vec3(0, 0, d);
+	return vec3(uv, d);
 
 	//Previous code, does the same thing as above but with a positive l
 /*
@@ -419,7 +492,11 @@ float smin( float a, float b, float k ) {
 
 vec3 smin_tex( vec3 a, vec3 b, float k ) {
 	float h = clamp( 0.5+0.5*(b.z-a.z)/k, 0.0, 1.0 );//ask about this
-	return mix( b, a, h ) - k*h*(1.0-h);
+	//return mix( b, a, h ) - k*h*(1.0-h);
+	return vec3(
+		mix( b.xy, a.xy, h),
+		mix( b.z, a.z, h ) - k*h*(1.0-h)
+	);
 }
 
 vec3 max_tex(vec3 a, vec3 b) {
@@ -559,6 +636,8 @@ vec3 fScene_tex_z(vec3 p) {
 	d = smin_tex(d, c, 0.3);
 	d = smin_tex(d, e, 0.4);
 
+	vec3 f = smin_tex(b, c, 0.5);
+
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
 
 	//return d * world_scale;
@@ -654,12 +733,16 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    FragColor = vec4(count, count, 0., 1.);
+    FragColor = vec4(count);
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
 		//FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
-		FragColor.rgb = vec3(cheap_self_occlusion) * basecolor;
+		FragColor.rgb = vec3(d_tex.xy, 0);// * basecolor;
+
+		vec3 pn = normalize(p);
+		FragColor.xy = pn.zx*0.5+0.5;
+
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
 		
 	} else if (t >= maxd) {

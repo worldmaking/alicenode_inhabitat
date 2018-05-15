@@ -143,8 +143,18 @@ void main() {
 	float fogmix = smoothstep(uFarClip*0.25, uFarClip, depth);
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
+
+
 	// base viz:
-	//color.rgb = basecolor.xyz;
+	color.rgb = basecolor.xyz;
+
+	
+
+	// uv grid viz:
+	vec2 uvgrid = clamp(pow((mod(8.*basecolor.xy,1.)-0.5)*2., vec2(16.)), 0., 1.);
+	//color.rgb = vec3(uvgrid.y);
+	color.rgb = vec3(sin(basecolor.xy * 2 * PI) *0.5 + 0.5, 0.);
+	color.rgb += vec3(max(uvgrid.x, uvgrid.y));
 
 	// pos viz:
 	//color.rgb = position.xyz;

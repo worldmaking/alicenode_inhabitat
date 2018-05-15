@@ -461,6 +461,9 @@ void main() {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
+
+		vec3 pn = normalize(p);
+		FragColor.xy = pn.zx*0.5+0.5;
 		
 	} else if (t >= maxd) {
     	// shot through to background

@@ -457,7 +457,7 @@ vec3 ssub_tex(vec3 a, vec3 b, float k) {
 }
 
 vec3 sub_tex(vec3 a, vec3 b, float k) {
-	return max_tex(a, -b, k);
+	return max_tex(a, -b);
 }
 
 // NOTE scale := f(p/s)*s

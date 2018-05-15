@@ -554,8 +554,8 @@ vec3 fScene_tex_z(vec3 p) {
 	//a = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.25, 0.125, 0.1);
 	vec3 b = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -2.5), 0.25, 0.15, 0.125);
 	//vec3 b2 = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.35)), PI / -2.), 0.25, 0.02, 0.025);
-	vec3 c = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, -0.2, 0.2)), PI / -7.), 0.3, 0.1, 0.05);
-	vec3 e = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0.2, 0, 0)), PI / -8.), 0.45, w*w*7.5);
+	vec3 c = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, -0.2, 0.2)), PI / -7.), 0.3, 0.1, 0.2);
+	vec3 e = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0.2, 0, 0)), PI / -8.), 0.4, w*w*0.8);
 	
 	vec3 d = smin_tex(a, b, 0.4);
 	//d = smin_tex(d, a, 0.05);

@@ -311,13 +311,14 @@ vec3 sdCapsule2_tex(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 }
 
 // assumes l is not zero
+// Leave l positive. Object seems to be using positive z as it's front, not negative z
 vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 
 	vec3 a = vec3(0);
-	vec3 b = vec3(0, 0, -l);
+	vec3 b = vec3(0, 0, l);
 
 	vec3 pa = p, ba = b;
-	float t = (p.z * -l) / (l*l);//Does l need to be negated?
+	float t = (p.z * l) / (l*l);
 	float h = clamp( t, 0.0, 1.0 );
 	
 	// add some ripple:
@@ -549,18 +550,18 @@ vec3 fScene_tex_z(vec3 p) {
 	float y = 0.5;
 
 	//sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
-	vec3 a = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.5, w*w);
+	vec3 a = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -6.), 0.5, w*w);
 	//a = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.25, 0.125, 0.1);
-	vec3 b = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -2.), -0.25, 0.125, 0.15);
+	vec3 b = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -2.5), 0.25, 0.15, 0.125);
+	//vec3 b2 = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.35)), PI / -2.), 0.25, 0.02, 0.025);
+	vec3 c = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, -0.2, 0.2)), PI / -7.), 0.3, 0.1, 0.05);
+	vec3 e = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0.2, 0, 0)), PI / -8.), 0.45, w*w*7.5);
 	
-	//float a = 0.7;
-	//float b = 0.7;
-	vec3 d = smin_tex(a, b, 0.5);
-	//d = smax_tex(a, d, 0.5);
-	//d.z = smax(b.z, a.z, 0.1)7; //smax_tex(d, a, 0.1);
+	vec3 d = smin_tex(a, b, 0.4);
+	//d = smin_tex(d, a, 0.05);
+	d = smin_tex(d, c, 0.3);
+	d = smin_tex(d, e, 0.4);
 
-//	d = max_tex(d, a);
-	//d.z = smin(a.z, d.z, 0.5);
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
 
 	//return d * world_scale;

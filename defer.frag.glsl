@@ -144,7 +144,7 @@ void main() {
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// base viz:
-	//color.rgb = basecolor.xyz;
+	color.rgb = basecolor.xyz;
 
 	// pos viz:
 	//color.rgb = position.xyz;

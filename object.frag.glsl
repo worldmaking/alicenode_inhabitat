@@ -107,6 +107,7 @@ float fSphere(vec3 p, float r) {
 void pR(inout vec2 p, float a) {
 	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
+
 vec2 pRot(in vec2 p, float a) {
 	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 	return p;
@@ -249,14 +250,10 @@ vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 
 	vec4 p1 = vec4(0.);
 	vec2 uv;
-	//vec3 AB = B-A;
+
 	float l2 = l * l;	// length squared
 	if (l2 > EPS) {
-		// Consider the line extending the segment,
-		// parameterized as A + t (AB).
-		// We find projection of point p onto the line.
-		// It falls where t = [(AP) . (AB)] / |AB|^2
-		//vec3 AP = P-A;
+
 		float t = p.z / l;
 		if (t > 1.0) {
 			p1 = vec4(0., 0. , l, 1.); 	// off B end

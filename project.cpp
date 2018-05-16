@@ -8,7 +8,7 @@
 #include "al/al_time.h"
 #include "alice.h"
 #include "state.h"
-//git commmit author test
+//git commmit or test
 Shader objectShader, segmentShader, particleShader, landShader, deferShader; 
 
 QuadMesh quadMesh;

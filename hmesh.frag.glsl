@@ -4,7 +4,6 @@ uniform float time;
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 uniform float uNearClip, uFarClip;
 uniform sampler3D uLandTex;
-uniform sampler3D uDistanceTex;
 uniform mat4 uLandMatrix;
 
 in vec2 texCoord;
@@ -15,6 +14,8 @@ layout (location = 2) out vec3 FragPosition;
 
 #define PI 3.14159265359
 #define EPS 0.01
+#define MAX_STEPS 128
+#define STEP_SIZE 1./float(MAX_STEPS)
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;
@@ -118,19 +119,19 @@ float fCapsule(vec3 p, float r, float c) {
 float fScene_test(vec3 p) {
 	
 	float x1 = min(0., sin(p.x * 4.)*sin(p.z* 4.));
-	float plane = fPlane(p, vec3(0.,1.,0.), 0.01);
+	float plane = fPlane(p, vec3(0.,1.,0.), x1* .3);
 	
-	vec3 pc = p;// + vec3(0, x1, 0);
+	vec3 pc = p;
 	//vec2 c = pModInterval2(pc.xz, vec2(1.), vec2(-32.), vec2(32.));
 	vec2 c = pMod2(pc.xz, vec2(0.25));
 	float h = abs(sin(c.y*0.12)*sin(c.x*0.12));
 	
-	//pR(pc.yx, h*0.1*sin(c.y+time*1.3));
-	//pR(pc.yz, h*0.1*sin(c.x+time*3.7));
+	pR(pc.yx, h*0.1*sin(c.y+time*1.3));
+	pR(pc.yz, h*0.1*sin(c.x+time*3.7));
 	
 	//float s = fSphere(pc, h); //
 	//float b = fBox(pc, vec3(0.3, h, 0.3));
-	float z = fCapsule(pc - vec3(0, h, 0), 0.04, 0.1);
+	float z = fCapsule(pc, 0.04, 0.3*h);
 	return min(z, plane);
 }
 
@@ -139,19 +140,6 @@ float quant(float v, float s) {
 }
 
 float fScene(vec3 p) {
-	vec3 tc = (uLandMatrix * vec4(p, 1.)).xyz;
-	// distance to nearest floor (not same as direct down)
-    float d = texture(uDistanceTex, tc).x;
-
-	// surface detail:
-	vec3 p1 = p * vec3(1,0,1) + vec3(0, d, 0);
-	float d0 = fScene_test(p);
-	float d1 = fScene_test(p1) + d;
-
-	return d; //min(d0, d);
-}
-
-float fScene0(vec3 p) {
 
 	float a = fScene_test(p);
 	vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
@@ -178,15 +166,11 @@ vec3 normal4(in vec3 p, float eps) {
 	return normalize(n);
 }
 
-
 void main() {
 	vec3 rd = normalize(ray);
 	vec3 ro = origin; // plus a little ray? 
 	
-
-	#define MAX_STEPS 256
-	#define STEP_SIZE 1./float(MAX_STEPS)
-	float precis = 1./100.; //EPS;
+	float precis = EPS;
 	float maxd = uFarClip-uNearClip;
 	
 	vec3 color = vec3(0.);
@@ -204,7 +188,7 @@ void main() {
         }
         
         // advance ray
-        t += d;
+        t += d * 0.75;
         p = ro+rd*t;
         count += STEP_SIZE;
     }
@@ -215,10 +199,10 @@ void main() {
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);
-		FragNormal.xyz = normal4(p, .5);
+		FragNormal.xyz = normal4(p, .01);
 
-		//vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
-		//float land = 0.01 * texture(uLandTex, landtexcoord).r;
+		vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
+		float land = 0.01 * texture(uLandTex, landtexcoord).r;
 		//FragColor.rgb = vec3(land);
 		
 	} else if (t >= maxd) {

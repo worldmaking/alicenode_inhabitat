@@ -19,6 +19,7 @@ bloom, colour correction, antialiasing
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform sampler3D uDistanceTex;
 uniform sampler3D uLandTex;
 uniform sampler3D uDensityTex;
 uniform sampler3D uFluidTex;
@@ -48,6 +49,22 @@ vec3 sky(vec3 dir) {
 	return mix(n, vec3(0.), 0.75);
 }
 
+float fScene(vec3 p) {
+	vec3 tc = (uFluidMatrix * vec4(p, 1.)).xyz;
+    return texture(uDistanceTex, tc).x;
+}
+
+vec3 normal4(in vec3 p, float eps) {
+	vec2 e = vec2(-eps, eps);
+	// tetrahedral points
+	float t1 = fScene(p + e.yxx), t2 = fScene(p + e.xxy), t3 = fScene(p + e.xyx), t4 = fScene(p + e.yyy); 
+	vec3 n = (e.yxx*t1 + e.xxy*t2 + e.xyx*t3 + e.yyy*t4);
+	// normalize for a consistent SDF:
+	//return n / (4.*eps*eps);
+	// otherwise:
+	return normalize(n);
+}
+
 void main() {
 	vec2 inverseDim = 1./uDim;
 	vec3 sides = vec3(inverseDim, 0.);
@@ -62,6 +79,7 @@ void main() {
 	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
 	float land = texture(uLandTex, fluidtexcoord).x;
 
+	float dist = texture(uDistanceTex, fluidtexcoord).x;
 	
 
 	vec3 view_position = (uViewMatrix * vec4(position, 1.)).xyz;
@@ -116,7 +134,7 @@ void main() {
 
 	// get environmental light from emissive sources
 	// by lookup in the normal direction
-	float nearby = .1;
+	float nearby = .5;
 	vec3 texcoord_for_normal = (uFluidMatrix * vec4(position + normal*nearby, 1.)).xyz;
 	vec3 envcolor = texture(uDensityTex, texcoord_for_normal).rgb;
 	vec3 texcoord_for_ref = (uFluidMatrix * vec4(position + ref*nearby, 1.)).xyz;
@@ -132,8 +150,9 @@ void main() {
 	//color.rgb *= edges;
 
 	// env color
-	//color.rgb += envcolor;
+	//color.rgb = envcolor;
 	color.rgb = envcolor_ref;
+	color.rgb += 0.1*basecolor.xyz;
 
 	//color.rgb = color.rgb * 0.1 + density;
 	
@@ -141,10 +160,9 @@ void main() {
 	vec3 fogcolor = sky(rd);
 	//float fogmix = clamp(normalized_depth, 0., 1.);
 	float fogmix = smoothstep(uFarClip*0.25, uFarClip, depth);
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	// base viz:
-	//color.rgb = basecolor.xyz;
+	color.rgb = basecolor.xyz;
 
 	// pos viz:
 	//color.rgb = position.xyz;
@@ -182,6 +200,11 @@ void main() {
 
 	//color.rgb = vec3(texCoord, 0.);
 	//color.rgb = rd;
+
+	//color.rgb = vec3(vec2(mod(dist * 16., 1.)), mod(position.x, 1.));
+
+	//color = normal*0.5+0.5;
 	
+	color.rgb = mix(color.rgb, fogcolor, fogmix);
 	FragColor.rgb = color;	
 }

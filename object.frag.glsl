@@ -54,6 +54,10 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 				);
 }
 
+float quant(float v, float s) {
+	return floor(v/s)*s;
+}
+
 #define EPS 0.001
 #define VERYFARAWAY  64.
 #define MAX_STEPS 64
@@ -452,6 +456,8 @@ vec3 fScene_tex_z(vec3 p) {
 	// basic symmetry:
 	p.y = abs(p.y);
 
+	//p.z = quant(p.z, 0.05);
+
 	// blobbies
 	
 	vec3 A = vec3(0., 0., -0.5);
@@ -466,7 +472,7 @@ vec3 fScene_tex_z(vec3 p) {
 	vec3 b = sdCapsule2_tex(p, vec3(0., -0., -0.25), vec3(z, w, y), 0.125, 0.1);
 	//float a = 0.7;
 	//float b = 0.7;
-	vec3 d = a ;//smin_tex(a, b, 0.5);
+	vec3 d = a;//smin_tex(a, b, 0.5);
 
 
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));

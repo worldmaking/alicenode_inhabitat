@@ -649,10 +649,11 @@ void onFrame(uint32_t width, uint32_t height) {
 			fbo.end();
 		}
 		glDisable(GL_SCISSOR_TEST);
-	} else if (0) {
-
-		glEnable(GL_SCISSOR_TEST);
+	} else {
+		// draw the scene into the GBuffer:
 		gBuffer.begin();
+		glEnable(GL_SCISSOR_TEST);
+	
 		// No HMD:
 		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
 		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
@@ -674,95 +675,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		viewProjMatInverse = glm::inverse(viewProjMat);
 
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
-		gBuffer.end();
-		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-
-		// now process the GBuffer and render the result into the fbo
-		fbo.begin();
-		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
-		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.f, 0.f, 0.f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		{
-			deferShader.use();
-			deferShader.uniform("gColor", 0);
-			deferShader.uniform("gNormal", 1);
-			deferShader.uniform("gPosition", 2);
-			deferShader.uniform("uDistanceTex", 4);
-			deferShader.uniform("uDensityTex", 6);
-			deferShader.uniform("uFluidTex", 7);
-
-			deferShader.uniform("uViewMatrix", viewMat);
-			deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-			deferShader.uniform("uNearClip", near_clip);
-			deferShader.uniform("uFarClip", far_clip);
-			deferShader.uniform("uFluidMatrix", world2fluid);
-			deferShader.uniform("time", Alice::Instance().simTime);
-			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
-			deferShader.uniform("uTexTransform", glm::vec2(1., 0.));
-			distanceTex.bind(4);
-			densityTex.bind(6);
-			fluidTex.bind(7);
-			gBuffer.bindTextures();
-			quadMesh.draw();
-			distanceTex.unbind(4);
-			densityTex.unbind(6);
-			fluidTex.unbind(7);
-			gBuffer.unbindTextures();
-			deferShader.unuse();
-		}
-		fbo.end();
-		glDisable(GL_SCISSOR_TEST);
-	} else {
-		// draw the scene into the GBuffer:
-		gBuffer.begin();
-		glEnable(GL_SCISSOR_TEST);
-
-		if (alice.hmd->connected) {		
-			Hmd& vive = *alice.hmd;	
-			vive.near_clip = near_clip;
-			vive.far_clip = far_clip;
-			for (int eye = 0; eye < 2; eye++) {
-				glScissor(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
-				glViewport(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
-				glEnable(GL_DEPTH_TEST);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-				// update nav
-				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition);
-				projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
-
-				viewProjMat = projMat * viewMat;
-				projMatInverse = glm::inverse(projMat);
-				viewMatInverse = glm::inverse(viewMat);
-				viewProjMatInverse = glm::inverse(viewProjMat);
-
-				draw_scene(gBuffer.dim.x / 2, gBuffer.dim.y);
-			}
-		} else {
-			// No HMD:
-			glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-			glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-			glEnable(GL_DEPTH_TEST);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			// update nav
-			double a = M_PI * t / 30.;
-			viewMat = glm::lookAt(
-				world_centre + 
-				glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
-				world_centre, 
-				glm::vec3(0., 1., 0.));
-			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-			
-			viewProjMat = projMat * viewMat;
-			projMatInverse = glm::inverse(projMat);
-			viewMatInverse = glm::inverse(viewMat);
-			viewProjMatInverse = glm::inverse(viewProjMat);
-
-			draw_scene(gBuffer.dim.x, gBuffer.dim.y);
-		}
+	
 		glDisable(GL_SCISSOR_TEST);
 		gBuffer.end();
 		

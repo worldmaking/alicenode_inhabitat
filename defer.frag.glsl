@@ -162,7 +162,7 @@ void main() {
 	float fogmix = smoothstep(uFarClip*0.25, uFarClip, depth);
 
 	// base viz:
-	color.rgb = basecolor.xyz;
+	//color.rgb = basecolor.xyz;
 
 	// pos viz:
 	//color.rgb = position.xyz;

@@ -575,9 +575,9 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
-		densityTex.submit(field_dim, state->density_back, true);
-		landTex.submit(field_dim, &state->landscape[0], true);
-		distanceTex.submit(land_dim, &state->distance[0], true);
+		densityTex.submit(field_dim, state->density_back);
+		landTex.submit(field_dim, &state->landscape[0]);
+		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
 		glBindTexture(GL_TEXTURE_2D, colorTex);

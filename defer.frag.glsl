@@ -146,15 +146,21 @@ void main() {
 
 
 	// base viz:
-	color.rgb = basecolor.xyz;
+	//color.rgb = basecolor.xyz;
 
 	
 
 	// uv grid viz:
-	vec2 uvgrid = clamp(pow((mod(8.*basecolor.xy,1.)-0.5)*2., vec2(16.)), 0., 1.);
+	//vec2 uvgrid = clamp(pow((mod(8.*basecolor.xy,1.)-0.5)*2., vec2(16.)), 0., 1.);
 	//color.rgb = vec3(uvgrid.y);
+	//color.rgb = vec3(sin(basecolor.xy * 2 * PI) *0.5 + 0.5, 0.);
+	//color.rgb += vec3(max(uvgrid.x, uvgrid.y));
+
+	// uv application test
+	vec2 uvgridTest = clamp(pow((mod(8.*basecolor.xy,1.)-0.5)*2., vec2(16.)), 0., 1.);
+	//vec2 uvgridTest = clamp(pow((8.*basecolor.xy-0.5)*2., vec2(16.)), 0., 1.);
 	color.rgb = vec3(sin(basecolor.xy * 2 * PI) *0.5 + 0.5, 0.);
-	color.rgb += vec3(max(uvgrid.x, uvgrid.y));
+	color.rgb += vec3(max(uvgridTest.x, uvgridTest.y));
 
 	// pos viz:
 	//color.rgb = position.xyz;

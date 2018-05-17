@@ -1,5 +1,6 @@
 #include "al/al_console.h"
 #include "al/al_math.h"
+#include "al/al_distance.h"
 #include "al/al_field3d.h"
 #include "al/al_gl.h"
 #include "al/al_kinect2.h"
@@ -8,14 +9,20 @@
 #include "al/al_time.h"
 #include "alice.h"
 #include "state.h"
-//git commmit or test
-Shader objectShader, segmentShader, particleShader, landShader, deferShader; 
+
+Shader objectShader;
+Shader segmentShader;
+Shader particleShader;
+Shader landShader;
+Shader heightMeshShader;
+Shader deferShader; 
 
 QuadMesh quadMesh;
 GLuint colorTex;
 FloatTexture3D fluidTex;
 FloatTexture3D densityTex;
 FloatTexture3D landTex;
+FloatTexture3D distanceTex;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -35,7 +42,7 @@ float particleSize = 1.f/196;
 int debugMode = 0;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
-glm::vec3 world_max(4.f, 4.f, 8.f);
+glm::vec3 world_max(4.f, 8.f, 8.f);
 glm::vec3 world_centre(0.f, 1.8f, 4.f);
 
 // how to convert world positions into fluid texture coordinates:
@@ -57,13 +64,13 @@ Fluid3D<> fluid;
 int fluid_passes = 14;
 int fluid_noise_count = 32;
 float fluid_decay = 0.9999f;
-double fluid_viscosity = 0.000000001; //0.00001;
+double fluid_viscosity = 0.00000001; //0.00001;
 double fluid_boundary_damping = .2;
 double fluid_noise = 8.;
 
-float density_decay = 0.9f;
+float density_decay = 0.98f;
 float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
-float density_scale = 25.;
+float density_scale = 50.;
 
 glm::vec4 boundary[FIELD_VOXELS];
 
@@ -176,7 +183,6 @@ struct GBuffer {
 		}
 	}
 };
-
 
 GBuffer gBuffer;
 
@@ -351,6 +357,8 @@ void sim_update(double dt) {
 			fluid.velocities.front().addnorm(fluidloc, &push.x);
 			o.velocity = flow * idt;
 
+			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale * 0.02f);
+			
 		} else {
 			auto& p = state->segments[i-1];
 			o.scale = p.scale * 0.9f;
@@ -362,6 +370,7 @@ void sim_update(double dt) {
 void onUnloadGPU() {
 	// free resources:
 	landShader.dest_closing();
+	heightMeshShader.dest_closing();
 	particleShader.dest_closing();
 	objectShader.dest_closing();
 	segmentShader.dest_closing();
@@ -377,6 +386,7 @@ void onUnloadGPU() {
 
 	fluidTex.dest_closing();
 	densityTex.dest_closing();
+	distanceTex.dest_closing();
 	landTex.dest_closing();
 
 	gBuffer.dest_closing();
@@ -398,6 +408,7 @@ void onReloadGPU() {
 	segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
 	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
+	heightMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
 	
 	quadMesh.dest_changed();
@@ -447,19 +458,27 @@ void onReloadGPU() {
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
 
-	glEnable(GL_CULL_FACE);
-	
-	landShader.use();
-	landShader.uniform("time", t);
-	landShader.uniform("uViewProjectionMatrix", viewProjMat);
-	landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-	landShader.uniform("uNearClip", near_clip);
-	landShader.uniform("uFarClip", far_clip);
-	landShader.uniform("uLandTex", 5);
-	landShader.uniform("uLandMatrix", world2fluid);
-	landTex.bind(5);
-	quadMesh.draw();
-	landTex.unbind(5);
+	if (0) {
+		heightMeshShader.use();
+		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+
+	} else {
+		landShader.use();
+		landShader.uniform("time", t);
+		landShader.uniform("uViewProjectionMatrix", viewProjMat);
+		landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		landShader.uniform("uNearClip", near_clip);
+		landShader.uniform("uFarClip", far_clip);
+		landShader.uniform("uDistanceTex", 4);
+		landShader.uniform("uLandTex", 5);
+		landShader.uniform("uLandMatrix", world2fluid);
+		distanceTex.bind(4);
+		landTex.bind(5);
+		quadMesh.draw();
+		distanceTex.unbind(4);
+		landTex.unbind(5);
+	}
 
 	objectShader.use();
 	objectShader.uniform("time", t);
@@ -558,8 +577,9 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
-		densityTex.submit(field_dim, state->density_back, true);
-		landTex.submit(field_dim, &state->landscape[0], true);
+		densityTex.submit(field_dim, state->density_back);
+		landTex.submit(field_dim, &state->landscape[0]);
+		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -631,10 +651,11 @@ void onFrame(uint32_t width, uint32_t height) {
 			fbo.end();
 		}
 		glDisable(GL_SCISSOR_TEST);
-	} else if (0) {
-
-		glEnable(GL_SCISSOR_TEST);
+	} else {
+		// draw the scene into the GBuffer:
 		gBuffer.begin();
+		glEnable(GL_SCISSOR_TEST);
+	
 		// No HMD:
 		glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
 		glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
@@ -656,92 +677,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		viewProjMatInverse = glm::inverse(viewProjMat);
 
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
-		gBuffer.end();
-		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-
-		// now process the GBuffer and render the result into the fbo
-		fbo.begin();
-		glScissor(0, 0, fbo.dim.x, fbo.dim.y);
-		glViewport(0, 0, fbo.dim.x, fbo.dim.y);
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.f, 0.f, 0.f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		{
-			deferShader.use();
-			deferShader.uniform("gColor", 0);
-			deferShader.uniform("gNormal", 1);
-			deferShader.uniform("gPosition", 2);
-			deferShader.uniform("uDensityTex", 6);
-			deferShader.uniform("uFluidTex", 7);
-
-			deferShader.uniform("uViewMatrix", viewMat);
-			deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-			deferShader.uniform("uNearClip", near_clip);
-			deferShader.uniform("uFarClip", far_clip);
-			deferShader.uniform("uFluidMatrix", world2fluid);
-			deferShader.uniform("time", Alice::Instance().simTime);
-			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
-			deferShader.uniform("uTexTransform", glm::vec2(1., 0.));
-			densityTex.bind(6);
-			fluidTex.bind(7);
-			gBuffer.bindTextures();
-			quadMesh.draw();
-			densityTex.unbind(6);
-			fluidTex.unbind(7);
-			gBuffer.unbindTextures();
-			deferShader.unuse();
-		}
-		fbo.end();
-		glDisable(GL_SCISSOR_TEST);
-	} else {
-		// draw the scene into the GBuffer:
-		gBuffer.begin();
-		glEnable(GL_SCISSOR_TEST);
-
-		if (alice.hmd->connected) {		
-			Hmd& vive = *alice.hmd;	
-			vive.near_clip = near_clip;
-			vive.far_clip = far_clip;
-			for (int eye = 0; eye < 2; eye++) {
-				glScissor(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
-				glViewport(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
-				glEnable(GL_DEPTH_TEST);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-				// update nav
-				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition);
-				projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
-
-				viewProjMat = projMat * viewMat;
-				projMatInverse = glm::inverse(projMat);
-				viewMatInverse = glm::inverse(viewMat);
-				viewProjMatInverse = glm::inverse(viewProjMat);
-
-				draw_scene(gBuffer.dim.x / 2, gBuffer.dim.y);
-			}
-		} else {
-			// No HMD:
-			glScissor(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-			glViewport(0, 0, gBuffer.dim.x, gBuffer.dim.y);
-			glEnable(GL_DEPTH_TEST);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			// update nav
-			double a = M_PI * t / 30.;
-			viewMat = glm::lookAt(
-				world_centre + 
-				glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
-				world_centre, 
-				glm::vec3(0., 1., 0.));
-			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-			
-			viewProjMat = projMat * viewMat;
-			projMatInverse = glm::inverse(projMat);
-			viewMatInverse = glm::inverse(viewMat);
-			viewProjMatInverse = glm::inverse(viewProjMat);
-
-			draw_scene(gBuffer.dim.x, gBuffer.dim.y);
-		}
+	
 		glDisable(GL_SCISSOR_TEST);
 		gBuffer.end();
 		
@@ -762,6 +698,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("gColor", 0);
 			deferShader.uniform("gNormal", 1);
 			deferShader.uniform("gPosition", 2);
+			deferShader.uniform("uDistanceTex", 4);
 			deferShader.uniform("uLandTex", 5);
 			deferShader.uniform("uDensityTex", 6);
 			deferShader.uniform("uFluidTex", 7);
@@ -774,12 +711,14 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("time", Alice::Instance().simTime);
 			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
 			deferShader.uniform("uTexTransform", glm::vec2(1., 0.));
+			distanceTex.bind(4);
 			landTex.bind(5);
 			densityTex.bind(6);
 			fluidTex.bind(7);
 			gBuffer.bindTextures();
 			quadMesh.draw();
 
+			distanceTex.unbind(4);
 			landTex.unbind(5);
 			densityTex.unbind(6);
 			fluidTex.unbind(7);
@@ -852,13 +791,17 @@ void onReset() {
 
 	//al_field3d_zero(field_dim, state->density);
 
-	// TODO currently this is a memory leak on unload:
-	fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-	for (int i = 0; i<FIELD_VOXELS; i++) {
-		//glm::vec4 * n = (glm::vec4 *)noisefield[i];
-		//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
-		boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
+	{
+		int i=0;
+		glm::ivec3 dim = field_dim;
+		for (size_t y=0;y<dim.y;y++) {
+			for (size_t x=0;x<dim.x;x++) {
+				// a flat plane at floor level
+				state->land[i] = glm::vec4(0, 1, 0, 0);
+			}
+		}
 	}
+
 
 	{
 		int i=0;
@@ -869,17 +812,59 @@ void onReset() {
 					glm::vec3 coord = glm::vec3(x, y, z);
 					glm::vec3 norm = coord/glm::vec3(dim);
 					glm::vec3 snorm = norm*2.f-1.f;
+					glm::vec3 snormhalf = snorm * 0.5f;
 					state->density[i] = glm::vec3(0.f);//norm * 0.000001f;
 					state->density_back[i] = state->density[i];
 
+
+					float dome = 1. + glm::abs(5. * sin(norm.z * M_PI) * sin(norm.x * M_PI));
 					// default scene is a flat plane:
-					state->landscape[i] = coord.y; // + 0.5; // - 1. + cos(snorm.z * M_PI * 2.) * cos(snorm.x * M_PI * 4.) * 0.02; // + 4.f*cos(snorm.x * M_PI)*cos(snorm.y * M_PI);
+					//state->landscape[i] = coord.y < dome ? 0. : 1.; // + 0.5; // - 1. + cos(snorm.z * M_PI * 2.) * cos(snorm.x * M_PI * 4.) * 0.02; // + 4.f*cos(snorm.x * M_PI)*cos(snorm.y * M_PI);
+
+					if (norm.x < 0.25 && norm.y < 0.25) {
+						state->landscape[i] = coord.y < 6. ? 0. : 1.;
+					} else {
+						state->landscape[i] = coord.y < 1. ? 0. : 1.;
+					}
+
 					state->landscape_back[i] = state->landscape[i];
 					i++;
 				}
 			}
 		}
 	}
+
+	{
+		int i=0;
+		glm::ivec3 dim = land_dim;
+		for (size_t z=0;z<dim.z;z++) {
+			for (size_t y=0;y<dim.y;y++) {
+				for (size_t x=0;x<dim.x;x++) {
+					glm::vec3 coord = glm::vec3(x, y, z);
+					glm::vec3 norm = coord/glm::vec3(dim);
+					glm::vec3 snorm = norm*2.f-1.f;
+					glm::vec3 snormhalf = snorm * 0.5f;
+
+					float bd = sdf_box(snormhalf, glm::vec3(0.2f));
+					float bs = sdf_sphere(snormhalf, 0.25f);
+					float bp = sdf_plane(snormhalf, glm::normalize(glm::vec3(-0.1,1,0.2)), 0.55f);
+
+
+					//state->distance[i] = //sdf_union(bp, bd);
+
+					state->distance[i] = norm.y < glm::abs(sin(M_PI * snorm.x)*snorm.z*0.1) + 0.01 ? -1. : 1.;
+
+					state->distance_binary[i] = state->distance[i] < 0.f ? 0.f : 1.f;
+
+					i++;
+				}
+			}
+		}
+	}
+
+	sdf_from_binary(land_dim, state->distance_binary, state->distance);
+	//sdf_from_binary_deadreckoning(land_dim, state->distance_binary, state->distance);
+	al_field3d_scale(land_dim, state->distance, 1.f/land_dim.x);
 
 	onReloadGPU();
 }
@@ -921,6 +906,15 @@ extern "C" {
 		//state_initialize();
 		console.log("onload state initialized");
 
+
+		// TODO currently this is a memory leak on unload:
+		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
+		for (int i = 0; i<FIELD_VOXELS; i++) {
+			//glm::vec4 * n = (glm::vec4 *)noisefield[i];
+			//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
+			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
+		}
+
 		// allow threads to run
 		isRunning = true;
 
@@ -931,7 +925,7 @@ extern "C" {
 		// this effectively defines the bounds of the fluid in the world:
 		// from transform(fluid2world(glm::vec3(0.)))
 		// to   transform(fluid2world(glm::vec3(1.)))
-		fluid2world = glm::scale(glm::vec3(16.));
+		fluid2world = glm::scale(glm::vec3(world_max.x - world_min.x));
 		// how to convert world positions into normalized texture coordinates in the fluid field:
 		world2fluid = glm::inverse(fluid2world);
 

@@ -54,6 +54,10 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 				);
 }
 
+float quant(float v, float s) {
+	return floor(v/s)*s;
+}
+
 #define EPS 0.001
 #define VERYFARAWAY  64.
 #define MAX_STEPS 64
@@ -613,6 +617,8 @@ vec3 fScene_tex_z(vec3 p) {
 	//p = p.yxz;
 	// basic symmetry:
 	p.y = abs(p.y);
+
+	//p.z = quant(p.z, 0.05);
 
 	// blobbies
 	

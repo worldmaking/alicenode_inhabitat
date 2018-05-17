@@ -54,6 +54,10 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 				);
 }
 
+float quant(float v, float s) {
+	return floor(v/s)*s;
+}
+
 #define EPS 0.001
 #define VERYFARAWAY  64.
 #define MAX_STEPS 64
@@ -279,6 +283,8 @@ float sdEllipsoid1( in vec3 p, in vec3 r ) {
 	return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
 }
 
+
+
 // polynomial smooth min (k = 0.1);
 float smin( float a, float b, float k ) {
 	float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
@@ -309,11 +315,12 @@ float fScene(vec3 p0) {
 
 	p0 /= scl;
 
-	vec3 p = p0;	
+	vec3 p = p0;
 
 	// cheap symmetry:
 	p.xy = abs(p.xy);
 
+	
 	// blobbies
 	
 	vec3 A = vec3(0., 0., -0.5);
@@ -330,8 +337,10 @@ float fScene(vec3 p0) {
 	//float a = 0.7;
 	//float b = 0.7;
 	float d = smin(a, b, 0.5);
+	
+	//d = length(p.xy) - d;
 
-	return scl * d; //ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
+	return scl * ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
 }
 
 

@@ -9,7 +9,6 @@
 #include "al/al_time.h"
 #include "alice.h"
 #include "state.h"
-#include <glut.h>
 
 Shader objectShader;
 Shader segmentShader;

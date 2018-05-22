@@ -9,6 +9,7 @@
 #include "al/al_time.h"
 #include "alice.h"
 #include "state.h"
+#include <glut.h>
 
 Shader objectShader;
 Shader segmentShader;
@@ -40,6 +41,7 @@ float far_clip = 12.f;
 float particleSize = 1.f/196;
 
 int debugMode = 0;
+int camMode = 0;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 8.f, 8.f);
@@ -77,6 +79,13 @@ glm::vec4 boundary[FIELD_VOXELS];
 MetroThread simThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
+
+// angle of rotation for the camera direction
+float angle=0.0;
+// actual vector representing the camera's direction
+float lx=0.0f,lz=-1.0f;
+// XZ position of the camera
+float x=0.0f,z=5.0f;
 
 /*
 	A helper for deferred rendering
@@ -568,6 +577,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			state->segments[0].scale = 0.25;
 		}
 
+		
+
 		// upload VBO data to GPU:
 		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
@@ -661,17 +672,40 @@ void onFrame(uint32_t width, uint32_t height) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// update nav
+
 		double a = M_PI * t / 30.;
-		viewMat = glm::lookAt(
+		/*
+		gluLookAt(x, 0.5, z, state->objects[0].location.x, state->objects[0].location.y, state->objects[0].location.z, 0, 1, 0);
+			*/
+
+		//switch camera view to rotate around or be on a creature
+		if (camMode % 2 == 1){
+			//state->objects[0].location = world_centre;
+
+		} else {
+			viewMat = glm::lookAt(
 			world_centre + 
 			glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
 			world_centre, 
 			glm::vec3(0., 1., 0.));
-		projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+
+			/*
+			viewMat = glm::lookAt(
+			world_centre + 
+			glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
+			world_centre, 
+			glm::vec3(0., 1., 0.));
+			*/
+		}
+
+		
+		projMat = glm::perspective(glm::radians(85.0f), aspect, near_clip, far_clip);
 		
 		viewProjMat = projMat * viewMat;
+
 		projMatInverse = glm::inverse(projMat);
 		viewMatInverse = glm::inverse(viewMat);
+
 		viewProjMatInverse = glm::inverse(viewProjMat);
 
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);
@@ -759,6 +793,10 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 		case GLFW_KEY_D: {
 			//console.log("D was pressed");
 			if (downup) debugMode++;
+		} break;
+		case GLFW_KEY_C: {
+			//console.log("C was pressed");
+			if (downup) camMode++;
 		} break;
 		// default:
 	}

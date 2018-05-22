@@ -678,9 +678,9 @@ void onFrame(uint32_t width, uint32_t height) {
 		// update nav
 
 		int camModeMax = 4;
+		double a = M_PI * t / 30.;
 		//when c is pressed, swap between normal camera, objects[0] camera, and segments[0] camera
 		if(camMode % camModeMax == 1){
-			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
 				glm::vec3(state->objects[0].location), 
 				state->objects[0].location + (state->objects[0].velocity + prevVel)/glm::vec3(2.), 

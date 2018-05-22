@@ -354,11 +354,11 @@ vec3 fScene_tex_z(vec3 p0) {
 	// cheap symmetry:
 	p.xy = abs(p.xy);
 
-	// blobbies
+	//Segmented Creature shapes
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
+	float w = 0.15*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;

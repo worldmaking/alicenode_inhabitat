@@ -80,6 +80,13 @@ MetroThread simThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
 
+// angle of rotation for the camera direction
+float angle=0.0;
+// actual vector representing the camera's direction
+float lx=0.0f,lz=-1.0f;
+// XZ position of the camera
+float x=0.0f,z=5.0f;
+
 /*
 	A helper for deferred rendering
 */
@@ -574,6 +581,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			state->objects[0].scale = 0.25;
 		}
 
+		
+
 		// upload VBO data to GPU:
 		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
@@ -668,8 +677,9 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		// update nav
 
+		int camModeMax = 4;
 		//when c is pressed, swap between normal camera, objects[0] camera, and segments[0] camera
-		if(camMode % 3 == 1){
+		if(camMode % camModeMax == 1){
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
 				glm::vec3(state->objects[0].location), 
@@ -677,7 +687,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 			prevVel = glm::vec3(state->objects[0].velocity);
-		}else if(camMode % 3 == 2){
+		}else if(camMode % camModeMax == 2){
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
 				glm::vec3(state->segments[0].location), 
@@ -685,6 +695,12 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 			prevVel = glm::vec3(state->segments[0].velocity);
+		}else if(camMode % camModeMax == 3){
+			viewMat = glm::lookAt(
+			world_centre + 
+			glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
+			world_centre, 
+			glm::vec3(0., 1., 0.));
 		}else{
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
@@ -697,8 +713,10 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		
 		viewProjMat = projMat * viewMat;
+
 		projMatInverse = glm::inverse(projMat);
 		viewMatInverse = glm::inverse(viewMat);
+
 		viewProjMatInverse = glm::inverse(viewProjMat);
 
 		draw_scene(gBuffer.dim.x, gBuffer.dim.y);

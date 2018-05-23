@@ -10,6 +10,7 @@
 #include "alice.h"
 #include "state.h"
 
+
 Shader objectShader;
 Shader segmentShader;
 Shader particleShader;
@@ -38,9 +39,12 @@ VBO particlesVBO(sizeof(State::particles));
 float near_clip = 0.1f;
 float far_clip = 12.f;
 float particleSize = 1.f/196;
+float creature_fluid_push = 0.1f;
 
 int debugMode = 0;
 int camMode = 0;
+
+std::mutex sim_mutex;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 8.f, 8.f);
@@ -73,8 +77,6 @@ double fluid_noise = 8.;
 float density_decay = 0.98f;
 float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
 float density_scale = 50.;
-
-glm::vec4 boundary[FIELD_VOXELS];
 
 MetroThread simThread(30);
 MetroThread fluidThread(10);
@@ -195,8 +197,48 @@ struct GBuffer {
 
 GBuffer gBuffer;
 
+void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float * distancefield, const glm::ivec3 land_dim) {
+
+	/* 
+		boundary effect of landscape: the closer we get to the landscape, 
+		the more the velocities should be redirected away from the surface
 
 
+
+
+	*/
+
+	glm::vec3 field_dimf = glm::vec3(field_dim);
+	float normal_eps = 0.5f/land_dim.x; 
+
+	int i = 0;
+	for (size_t z = 0; z<field_dim.z; z++) {
+		for (size_t y = 0; y<field_dim.y; y++) {
+			for (size_t x = 0; x<field_dim.x; x++, i++) {
+				
+				// get norm'd coordinate:
+				glm::vec3 norm = glm::vec3(x,y,z) / field_dimf;
+
+				// use this to sample the landscape:
+				float sdist;
+				al_field3d_readnorm_interp(land_dim, distancefield, norm, &sdist);
+				float dist = fabsf(sdist);
+
+				// generate a normalized influence factor -- the closer we are to the surface, the greater this is
+				float influence = glm::smoothstep(0.3f, 0.f, dist);
+
+				if (x == 10 && y == 10 && z == 10) {
+					//console.log("sdist %f infl %f", sdist, influence);
+				}
+
+				// get a normal for the land:
+				glm::vec3 normal = sdf_field_normal4(land_dim, distancefield, norm, normal_eps);
+			}
+		}
+	}
+}
+
+/*
 void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, const size_t dim0, const size_t dim1, const size_t dim2) {
 
 	const float influence_offset = -(float)fluid_boundary_damping;
@@ -237,7 +279,7 @@ void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, 
 			}
 		}
 	}
-}
+}*/
 
 void fluid_update(double dt) {
 	// update fluid
@@ -267,6 +309,9 @@ void fluid_update(double dt) {
 	fluid.project(fluid_passes / 2);
 	// advect:
 	velocities.advect(velocities.back(), 1.);
+
+	fluid_land_resist((glm::vec3 *)velocities.front().data, field_dim, state->distance, land_dim);
+
 	// apply boundaries:
 	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
 	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
@@ -276,6 +321,7 @@ void fluid_update(double dt) {
 	fluid.gradient.front().zero();
 	fluid.gradient.back().zero();
 }
+
 
 void sim_update(double dt) {
 
@@ -334,23 +380,30 @@ void sim_update(double dt) {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = state->objects[i];
 
-		
+		// get fluid current at my location
 		glm::vec3 fluidloc = transform(world2fluid, o.location);
-
-		
 		glm::vec3 flow;
 		fluid.velocities.front().readnorm(fluidloc, &flow.x);
-		
-		float creature_speed = 0.02f*(float)dt;
-		glm::vec3 push = quat_uf(o.orientation) * creature_speed;
-		fluid.velocities.front().addnorm(fluidloc, &push.x);
-
+		// set my velocity to this
 		o.velocity = flow * idt;
 
+		// get my distance from the ground:
+		// get norm'd coordinate:
+		glm::vec3 norm = fluidloc / glm::vec3(field_dim);
+
+		// use this to sample the landscape:
+		float sdist; // creature's distance above the ground (or negative if below)
+		al_field3d_readnorm_interp(land_dim, distancefield, norm, &sdist);
+		// get normal here too
+		// get a normal for the land:
+		glm::vec3 normal = sdf_field_normal4(land_dim, distancefield, norm, 0.5f/LAND_DIM);
+		
+		// add my direction to the fluid current
+		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
+		fluid.velocities.front().addnorm(fluidloc, &push.x);
 		if (fmod(o.phase, 1.f) < 0.02f) {
 			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
 		}
-		// get nearest voxel cell:
 
 	}
 
@@ -361,8 +414,7 @@ void sim_update(double dt) {
 			glm::vec3 fluidloc = transform(world2fluid, o.location);
 			glm::vec3 flow;
 			fluid.velocities.front().readnorm(fluidloc, &flow.x);
-			float creature_speed = 0.02f*(float)dt;
-			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
+			glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
 			fluid.velocities.front().addnorm(fluidloc, &push.x);
 			o.velocity = flow * idt;
 
@@ -531,7 +583,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f)", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS());
 
-	if (alice.isSimulating) {
+	if (alice.isSimulating && isRunning) {
 		// keep the simulation in here to absolute minimum
 		// since it detracts from frame rate
 		// here we should only be extrapolating visible features
@@ -591,7 +643,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		densityTex.submit(field_dim, state->density_back);
-		landTex.submit(field_dim, &state->landscape[0]);
+		//landTex.submit(field_dim, &state->landscape[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
@@ -814,8 +866,33 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 
 }
 
+
+void threads_begin() {
+	console.log("starting threads");
+	// allow threads to run
+	isRunning = true;
+	simThread.begin(sim_update);
+	fluidThread.begin(fluid_update);
+	console.log("started threads");
+}
+
+void threads_end() {
+	// release threads:
+	isRunning = false;
+	console.log("ending threads");
+	simThread.end();
+	fluidThread.end();
+	console.log("ended threads");
+}
+
 // The onReset event is triggered when pressing the "Backspace" key in Alice
 void onReset() {
+
+	threads_end();
+
+	// zero by default:
+	memset(state, 0, sizeof(State));
+
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
 		o.location = world_centre+glm::ballRand(1.f);
@@ -838,7 +915,7 @@ void onReset() {
 
 	//al_field3d_zero(field_dim, state->density);
 
-	{
+	/*{
 		int i=0;
 		glm::ivec3 dim = field_dim;
 		for (size_t y=0;y<dim.y;y++) {
@@ -879,7 +956,7 @@ void onReset() {
 				}
 			}
 		}
-	}
+	}*/
 
 	{
 		int i=0;
@@ -914,6 +991,8 @@ void onReset() {
 	al_field3d_scale(land_dim, state->distance, 1.f/land_dim.x);
 
 	onReloadGPU();
+
+	threads_begin();
 }
 
 void test() {
@@ -937,6 +1016,7 @@ void test() {
 	t *= 0.1;
 }
 
+
 extern "C" {
     AL_EXPORT int onload() {
 
@@ -956,16 +1036,9 @@ extern "C" {
 
 		// TODO currently this is a memory leak on unload:
 		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-		for (int i = 0; i<FIELD_VOXELS; i++) {
-			//glm::vec4 * n = (glm::vec4 *)noisefield[i];
-			//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
-			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
-		}
-
-		// allow threads to run
-		isRunning = true;
-
 		
+
+		threads_begin();
 
 		world2fluid = glm::scale(glm::vec3(0.1f));
 		// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
@@ -979,9 +1052,7 @@ extern "C" {
 		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(0.f, 0.f, -3.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 
-		simThread.begin(sim_update);
-		fluidThread.begin(fluid_update);
-
+		
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
@@ -1015,12 +1086,7 @@ extern "C" {
     AL_EXPORT int onunload() {
 		Alice& alice = Alice::Instance();
 
-		// release threads:
-		isRunning = false;
-		console.log("joining threads");
-		simThread.end();
-		fluidThread.end();
-		console.log("joined threads");
+		threads_end();
 
     	// free resources:
     	onUnloadGPU();

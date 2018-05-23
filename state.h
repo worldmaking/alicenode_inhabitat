@@ -44,19 +44,24 @@ struct State {
 	Object objects[NUM_OBJECTS];
 	Segment segments[NUM_SEGMENTS];
 
-	// the basic height field
-	// .w represents the height
-	// .xyz represents the normal
-	glm::vec4 land[FIELD_TEXELS];
-
+	// the density field is currently being used to store emissive light (as a form of smell)
 	glm::vec3 density[FIELD_VOXELS];
 	glm::vec3 density_back[FIELD_VOXELS];
 
-	float landscape[FIELD_VOXELS];
-	float landscape_back[FIELD_VOXELS];
+	// the basic height field
+	// .w represents the height
+	// .xyz represents the normal
+	//glm::vec4 land[FIELD_TEXELS];
 
-//././/.
+
+	//float landscape[FIELD_VOXELS];
+	//float landscape_back[FIELD_VOXELS];
+
+	// signed distance field representing the landscape
+	// scaled such that the distance across the entire space == 1
 	float distance[LAND_VOXELS];
+	// the boolean field that is used to generate the distance field
+	// surface edges are marked by unequal neighbour values
 	float distance_binary[LAND_VOXELS];
 };
 

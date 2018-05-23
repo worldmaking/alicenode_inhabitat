@@ -42,6 +42,10 @@ float particleSize = 1.f/196;
 int debugMode = 0;
 int camMode = 0;
 
+bool accel = 0;
+bool decel = 0;
+
+
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 8.f, 8.f);
 glm::vec3 world_centre(0.f, 1.8f, 4.f);
@@ -58,6 +62,8 @@ glm::mat4 viewProjMat;
 glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
+glm::vec3 cameraLoc;
+glm::quat cameraOri;
 
 State * state;
 Mmap<State> statemap;
@@ -346,6 +352,8 @@ void sim_update(double dt) {
 		fluid.velocities.front().addnorm(fluidloc, &push.x);
 
 		o.velocity = flow * idt;
+		//if(accel == 1) o.velocity += o.velocity;
+		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
 
 		if (fmod(o.phase, 1.f) < 0.02f) {
 			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
@@ -353,6 +361,10 @@ void sim_update(double dt) {
 		// get nearest voxel cell:
 
 	}
+
+
+	//if(accel == 1)state->objects[0].velocity += state->objects[0].velocity;
+	//else if(decel == 1)state->objects[0].velocity -= state->objects[0].velocity * glm::vec3(2.);
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto &o = state->segments[i];
@@ -681,26 +693,53 @@ void onFrame(uint32_t width, uint32_t height) {
 		double a = M_PI * t / 30.;
 		//when c is pressed, swap between normal camera, objects[0] camera, segments[0] camera, and a sine wave movement
 		if(camMode % camModeMax == 1){
-			viewMat = glm::lookAt(
+			/*viewMat = glm::lookAt(
 				glm::vec3(state->objects[0].location), 
 				state->objects[0].location + (state->objects[0].velocity + prevVel)/glm::vec3(2.), 
-				glm::vec3(0., 1., 0.));
+				glm::vec3(0., 1., 0.));*/
+			auto& o = state->objects[0];
+
+			glm::vec3 fluidloc = transform(world2fluid, o.location);
+			glm::vec3 flow;
+			fluid.velocities.front().readnorm(fluidloc, &flow.x);
+			flow = flow * dt * 100.0f;
+			
+			cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
+			cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
+			//TODO: Once creatures follow the ground, fix boom going into the earth
+
+			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.3, 0.75)));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-			prevVel = glm::vec3(state->objects[0].velocity);
+			prevVel = glm::vec3(o.velocity);
+
 		}else if(camMode % camModeMax == 2){
 			double a = M_PI * t / 30.;
-			viewMat = glm::lookAt(
+			/*viewMat = glm::lookAt(
 				glm::vec3(state->segments[0].location), 
 				state->segments[0].location + (state->segments[0].velocity + prevVel)/glm::vec3(2.), 
-				glm::vec3(0., 1., 0.));
+				glm::vec3(0., 1., 0.));*/
+
+			auto& o = state->segments[0];
+
+			glm::vec3 fluidloc = transform(world2fluid, o.location);
+			glm::vec3 flow;
+			fluid.velocities.front().readnorm(fluidloc, &flow.x);
+			flow = flow * dt * 100.0f;
+			
+			cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
+			cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
+			//TODO: Once creatures follow the ground, fix boom going into the earth
+
+			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.4, 1.)));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-			prevVel = glm::vec3(state->segments[0].velocity);
+			prevVel = glm::vec3(o.velocity);
+
 		}else if(camMode % camModeMax == 3){
 			viewMat = glm::lookAt(
-			world_centre + 
-			glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
-			world_centre, 
-			glm::vec3(0., 1., 0.));
+				world_centre + 
+				glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
+				world_centre, 
+				glm::vec3(0., 1., 0.));
 		}else{
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
@@ -809,7 +848,46 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			//console.log("C was pressed");
 			if (downup) camMode++;
 		} break;
+		//forward
+		case GLFW_KEY_UP: {
+			//state->objects[0].velocity++;
+			accel = 1;
+			float aclTst = accel;
+			console.log("Accel = %f", accel);//aclTst);
+		} break;
+		//backward
+		case GLFW_KEY_DOWN: {
+			//state->objects[0].velocity -= state->objects[0].velocity * glm::vec3(2.);
+			decel = 1;
+		} break;
+		//yaw left
+		case GLFW_KEY_LEFT: {
+
+		} break;
+		//yaw right
+		case GLFW_KEY_RIGHT: {
+
+		} break;
+		//pitch up
+		case GLFW_KEY_KP_8: {
+
+		} break;
+		//pitch down
+		case GLFW_KEY_KP_2: {
+
+		} break;
+		//roll left
+		case GLFW_KEY_KP_4: {
+
+		} break;
+		//roll right
+		case GLFW_KEY_KP_6: {
+
+		} break;
 		// default:
+		//state->objects[0].velocity = glm::vec3(0.);
+		accel = 0;
+		decel = 0;
 	}
 
 }

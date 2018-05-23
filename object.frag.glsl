@@ -122,6 +122,11 @@ vec3 pRotYZ(in vec3 p, float a) {
 	return p;
 }
 
+vec3 pRotXZ(in vec3 p, float a) {
+	p.xz = cos(a)*p.xz + sin(a)*vec2(p.z, -p.x);
+	return p;
+}
+
 vec3 pTranslate(vec3 p, vec3 t) {
 	return p + t;
 }
@@ -369,7 +374,6 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	vec3 pa = p, ba = b;
 	float t = p.z / l;//(p.z * l) / (l * l)
 	float h = clamp( t, 0.0, 1.0 );
-
 	
 	/*
 	a = vec3(0, 0, -ra)
@@ -616,7 +620,7 @@ vec3 fScene_tex_z(vec3 p) {
 
 	//p = p.yxz;
 	// basic symmetry:
-	p.y = abs(p.y);
+	p.x = abs(p.x);
 
 	//p.z = quant(p.z, 0.05);
 
@@ -630,12 +634,12 @@ vec3 fScene_tex_z(vec3 p) {
 	float y = 0.5;
 
 	//sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
-	vec3 a = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -6.), 0.5, w*w);
+	vec3 a = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -6.), 0.5, w*w);
 	//a = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.25, 0.125, 0.1);
-	vec3 b = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -2.5), 0.25, 0.15, 0.125);
+	vec3 b = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -2.5), 0.25, 0.15, 0.125);
 	//vec3 b2 = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.35)), PI / -2.), 0.25, 0.02, 0.025);
-	vec3 c = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, -0.2, 0.2)), PI / -7.), 0.3, 0.1, 0.2);
-	vec3 e = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0.2, 0, 0)), PI / -8.), 0.4, w*w*0.8);
+	vec3 c = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), PI / -7.), 0.3, 0.1, 0.2);
+	vec3 e = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0.2, 0)), PI / -8.), 0.4, w*w*0.8);
 	
 	vec3 d = smin_tex(a, b, 0.4);
 	//d = smin_tex(d, a, 0.05);
@@ -747,7 +751,7 @@ void main() {
 		FragColor.rgb = vec3(d_tex.xy, 0);// * basecolor;
 
 		vec3 pn = normalize(p);
-		FragColor.xy = pn.zx*0.5+0.5;
+		FragColor.xy = -pn.zy*0.5+0.5;
 
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
 		

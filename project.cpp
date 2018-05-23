@@ -679,7 +679,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		int camModeMax = 4;
 		double a = M_PI * t / 30.;
-		//when c is pressed, swap between normal camera, objects[0] camera, and segments[0] camera
+		//when c is pressed, swap between normal camera, objects[0] camera, segments[0] camera, and a sine wave movement
 		if(camMode % camModeMax == 1){
 			viewMat = glm::lookAt(
 				glm::vec3(state->objects[0].location), 

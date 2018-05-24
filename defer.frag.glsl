@@ -20,7 +20,7 @@ uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
 uniform sampler3D uDistanceTex;
-uniform sampler3D uLandTex;
+//uniform sampler3D uLandTex;
 uniform sampler3D uDensityTex;
 uniform sampler3D uFluidTex;
 
@@ -77,7 +77,7 @@ void main() {
 	//vec3 fluidtexcoord = position; //
 	vec3 fluid = texture(uFluidTex, fluidtexcoord).xyz;
 	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
-	float land = texture(uLandTex, fluidtexcoord).x;
+	//float land = texture(uLandTex, fluidtexcoord).x;
 
 	float dist = texture(uDistanceTex, fluidtexcoord).x;
 	

@@ -148,7 +148,29 @@ float fScene(vec3 p) {
 	float d0 = fScene_test(p);
 	float d1 = fScene_test(p1) + d;
 
-	return d; //min(d0, d);
+	// a repetitive object:
+	vec3 pt = p * 3.;
+	vec3 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.05;
+
+	d -= tiledeform;
+
+	//.float d3 = p.y + dot(sin(p/2. + cos(p.yzx/2. + 3.14159/2.)), vec3(.5)) - 0.1;
+
+	return d; //min(d, d3);
 }
 
 float fScene0(vec3 p) {
@@ -215,7 +237,7 @@ void main() {
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);
-		FragNormal.xyz = normal4(p, .5);
+		FragNormal.xyz = normal4(p, .005);
 
 		//vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
 		//float land = 0.01 * texture(uLandTex, landtexcoord).r;

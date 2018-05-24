@@ -243,6 +243,7 @@ void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float
 			}
 		}
 	}
+	
 }
 
 /*

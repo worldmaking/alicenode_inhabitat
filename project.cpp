@@ -38,6 +38,13 @@ VBO particlesVBO(sizeof(State::particles));
 float near_clip = 0.1f;
 float far_clip = 12.f;
 float particleSize = 1.f/196;
+float camSpeed = 5.0f;
+float camPitch;
+float camYaw;
+float camUp;
+float camStrafe;
+bool camForward;
+bool camBackwards;
 
 int debugMode = 0;
 int camMode = 0;
@@ -50,6 +57,7 @@ glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 8.f, 8.f);
 glm::vec3 world_centre(0.f, 1.8f, 4.f);
 glm::vec3 prevVel = glm::vec3(0.);
+glm::vec3  newCamLoc;
 
 // how to convert world positions into fluid texture coordinates:
 glm::mat4 world2fluid;
@@ -689,7 +697,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		// update nav
 
-		int camModeMax = 4;
+		int camModeMax = 5;
 		double a = M_PI * t / 30.;
 		//when c is pressed, swap between normal camera, objects[0] camera, segments[0] camera, and a sine wave movement
 		if(camMode % camModeMax == 1){
@@ -740,6 +748,27 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
+		}else if(camMode % camModeMax == 4){
+			
+			if(camForward){
+				newCamLoc = cameraLoc + quat_uf(cameraOri)* (camSpeed * 0.01f);}
+			else if(camBackwards){
+				 newCamLoc = cameraLoc + quat_uf(cameraOri)* -(camSpeed * 0.01f);}
+
+			newCamLoc = glm::vec3 (newCamLoc.x, camUp*0.01f, newCamLoc.z);
+			cameraLoc = glm::mix(cameraLoc,newCamLoc, 0.5f);
+
+			
+			glm::quat newCamRot = glm::angleAxis(camYaw*0.01f, glm::vec3(0, 1, 0)) * glm::angleAxis(camPitch*0.01f, glm::vec3(1, 0, 0));
+			newCamRot = glm::normalize(newCamRot);
+			//glm::quat (0.f, camYaw*0.01f, 0.f , camPitch*0.01f);
+			cameraOri = glm::mix(cameraOri,newCamRot, 0.5f);
+
+			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.3, 0.75)));
+			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+
+			camForward = false;
+			camBackwards = false;
 		}else{
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
@@ -860,29 +889,53 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			//state->objects[0].velocity -= state->objects[0].velocity * glm::vec3(2.);
 			decel = 1;
 		} break;
-		//yaw left
+		
 		case GLFW_KEY_LEFT: {
-
+			
 		} break;
-		//yaw right
+		
 		case GLFW_KEY_RIGHT: {
-
+			
 		} break;
 		//pitch up
 		case GLFW_KEY_KP_8: {
-
+			camPitch += camSpeed;
 		} break;
 		//pitch down
 		case GLFW_KEY_KP_2: {
-
+			camPitch -= camSpeed;
 		} break;
-		//roll left
+		//yaw left
 		case GLFW_KEY_KP_4: {
-
+			camYaw += camSpeed;
 		} break;
-		//roll right
+		//yaw right
 		case GLFW_KEY_KP_6: {
-
+			camYaw -= camSpeed;
+		} break;
+		//Go left
+		case GLFW_KEY_KP_7: {
+			camStrafe -= camSpeed;
+		} break;
+		//Go right
+		case GLFW_KEY_KP_9: {
+			camStrafe += camSpeed;
+		} break;
+		//Go Up
+		case GLFW_KEY_KP_ADD: {
+			camUp += camSpeed;
+		} break;
+		//Go down
+		case GLFW_KEY_KP_SUBTRACT: { 
+			camUp -= camSpeed;
+		} break;
+		//Go Forward
+		case GLFW_KEY_KP_1: {
+			camForward = true;
+		} break;
+		//Go Back
+		case GLFW_KEY_KP_3: {
+			camBackwards = true;
 		} break;
 		// default:
 		//state->objects[0].velocity = glm::vec3(0.);

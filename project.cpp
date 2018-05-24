@@ -39,7 +39,6 @@ VBO particlesVBO(sizeof(State::particles));
 float near_clip = 0.1f;
 float far_clip = 12.f;
 float particleSize = 1.f/196;
-<<<<<<< HEAD
 float camSpeed = 5.0f;
 float camPitch;
 float camYaw;
@@ -47,9 +46,7 @@ float camUp;
 float camStrafe;
 bool camForward;
 bool camBackwards;
-=======
 float creature_fluid_push = 0.1f;
->>>>>>> 5d02e7efe488d8870ff203b5a8c2ba99e7dd43e2
 
 int debugMode = 0;
 int camMode = 0;

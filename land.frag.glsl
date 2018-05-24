@@ -3,7 +3,7 @@ uniform sampler2D tex;
 uniform float time;
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 uniform float uNearClip, uFarClip;
-uniform sampler3D uLandTex;
+uniform sampler2D uFungusTex;
 uniform sampler3D uDistanceTex;
 uniform mat4 uLandMatrix;
 
@@ -177,7 +177,7 @@ float fScene0(vec3 p) {
 
 	float a = fScene_test(p);
 	vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
-	float b = texture(uLandTex, landtexcoord).r;
+	//float b = texture(uFungusTex, landtexcoord).r;
 	return a; // - dy; // min(a, b);
 }
 
@@ -239,9 +239,9 @@ void main() {
 		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = normal4(p, .005);
 
-		//vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
-		//float land = 0.01 * texture(uLandTex, landtexcoord).r;
-		//FragColor.rgb = vec3(land);
+		vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
+		float land = texture(uFungusTex, landtexcoord.xz).r;
+		FragColor.rgb = vec3(land);
 		
 	} else if (t >= maxd) {
     	// shot through to background

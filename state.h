@@ -9,11 +9,11 @@
 #define FIELD_TEXELS FIELD_DIM*FIELD_DIM
 #define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
 
-#define LAND_DIM 128
+#define LAND_DIM 196
 #define LAND_TEXELS LAND_DIM*LAND_DIM
 #define LAND_VOXELS LAND_DIM*LAND_DIM*LAND_DIM
 
-#define FUNGUS_DIM 256
+#define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
 
 static const glm::ivec3 field_dim = glm::vec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
@@ -52,18 +52,14 @@ struct State {
 	glm::vec3 density[FIELD_VOXELS];
 	glm::vec3 density_back[FIELD_VOXELS];
 
-	//float landscape[FIELD_VOXELS];
-	//float landscape_back[FIELD_VOXELS];
-
-	// signed distance field representing the landscape
-	// scaled such that the distance across the entire space == 1
-
 	// the basic height field
 	// .xyz represents the normal
 	// .w represents the height
 	glm::vec4 land[LAND_TEXELS];
 
+	// signed distance field representing the landscape
 	// the distance to the nearest land surface, as a 3D SDF
+	// scaled such that the distance across the entire space == 1
 	// distances are normalized over the LAND_DIM as 0..1
 	float distance[LAND_VOXELS];
 	// the boolean field that is used to generate the distance field

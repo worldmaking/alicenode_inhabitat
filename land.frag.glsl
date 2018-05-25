@@ -4,6 +4,7 @@ uniform float time;
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 uniform float uNearClip, uFarClip;
 uniform sampler2D uFungusTex;
+uniform sampler2D uLandTex;
 uniform sampler3D uDistanceTex;
 uniform mat4 uLandMatrix;
 
@@ -240,8 +241,24 @@ void main() {
 		FragNormal.xyz = normal4(p, .005);
 
 		vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
-		float land = texture(uFungusTex, landtexcoord.xz).r;
-		FragColor.rgb = vec3(land);
+		float fungus = texture(uFungusTex, landtexcoord.xz).r;
+
+		if (fungus > 0.) {
+			// fungus:
+			float smog = 0.7; // between 0.1 and 0.9
+			float factor = fungus*smog;
+			factor += 0.2; //factor += noise.z * 0.4; 
+			//float w = min(1., h * 4.);
+			float w = 1.;
+			FragColor.rgb = mix(vec3(w), FragColor.rgb, factor);
+		
+		} else {
+			//FragColor.rgb -= 0.8*(0.8-steepness);
+		}
+
+		vec4 land = texture(uLandTex, landtexcoord.xz);
+		FragColor.rgb = vec3(fungus);
+		//FragNormal.xyz = land.xyz;
 		
 	} else if (t >= maxd) {
     	// shot through to background

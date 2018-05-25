@@ -26,6 +26,7 @@ FloatTexture3D densityTex;
 FloatTexture3D distanceTex;
 
 FloatTexture2D fungusTex;
+FloatTexture2D landTex;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -48,7 +49,7 @@ float camUp;
 float camStrafe;
 bool camForward;
 bool camBackwards;
-float creature_fluid_push = 0.1f;
+float creature_fluid_push = 0.2f;
 
 int debugMode = 0;
 int camMode = 0;
@@ -224,7 +225,6 @@ void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float
 	*/
 
 	glm::vec3 field_dimf = glm::vec3(field_dim);
-	float normal_eps = 0.5f/land_dim.x; 
 
 	int i = 0;
 	for (size_t z = 0; z<field_dim.z; z++) {
@@ -236,18 +236,33 @@ void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float
 
 				// use this to sample the landscape:
 				float sdist;
-				//al_field3d_readnorm_interp(land_dim, distancefield, norm, &sdist);
-				//float dist = fabsf(sdist);
+				al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist );
+				float dist = fabsf(sdist);
 
 				// generate a normalized influence factor -- the closer we are to the surface, the greater this is
-				//float influence = glm::smoothstep(0.3f, 0.f, dist);
+				float influence = glm::smoothstep(0.2f, 0.f, dist);
 
-				if (x == 10 && y == 10 && z == 10) {
-					//console.log("sdist %f infl %f", sdist, influence);
-				}
-
+				
 				// get a normal for the land:
-				//glm::vec3 normal = sdf_field_normal4(land_dim, distancefield, norm, normal_eps);
+				// TODO: or read from state->land xyz?
+				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 2.f/LAND_DIM);
+
+				glm::vec3& vel = velocities[i];
+				//glm::vec3 veln = safe_normalize(vel);
+				float speed = glm::length(vel);
+
+				// get the projection of vel onto normal axis
+				// i.e. the component of vel that points in either normal direction:
+				glm::vec3 normal_component = normal * (dot(vel, normal));
+
+				// remove this component from the original velocity:
+				glm::vec3 without_normal_component = vel - normal_component;
+
+				// and re-scale to original magnitude:
+				glm::vec3 rescaled = safe_normalize(without_normal_component) * speed;
+
+				// update:
+				vel = mix(vel, rescaled, influence);	
 			}
 		}
 	}
@@ -351,8 +366,10 @@ void fungus_update(float dt) {
 			const glm::vec2 norm = cell/glm::vec2(dim); // TODO convert to premultiplier
 			float C = src_array[i];
 			float C1 = C - 0.1;
-			float h = 20 * 1.;//heightmap_array.sample(norm);
-			//float h = 20. * al_field2d_readnorm(dim, src_array, norm);
+			//float h = 20 * .1;//heightmap_array.sample(norm);
+			glm::vec4 l;
+			al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), state->land, norm, &l);
+			float h = 20.f * l.w;
 			float hu = 0.;//humanmap_array.sample(norm);
 			float dst = C;
 			if (h <= 0 || hu > 0.1) {
@@ -445,23 +462,34 @@ void sim_update(double dt) {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = state->objects[i];
 
-		// get fluid current at my location
-		glm::vec3 fluidloc = transform(world2fluid, o.location);
+		// get norm'd coordinate:
+		glm::vec3 norm = transform(world2fluid, o.location);
+
+		// get fluid flow:
 		glm::vec3 flow;
-		fluid.velocities.front().readnorm(fluidloc, &flow.x);
-		// set my velocity to this
-		o.velocity = flow * idt;
+		fluid.velocities.front().readnorm(norm, &flow.x);
+
+		// get my distance from the ground:
+		float sdist; // creature's distance above the ground (or negative if below)
+		al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
+
+		// convert to meters per second:
+		flow *= idt;
+
+		// if below ground, rise up;
+		// if above ground, sink down:
+		float gravity = 0.1f;
+		flow.y += sdist < 0.1f ? gravity : -gravity;
+
+
+		// set my velocity, in meters per second:
+		o.velocity = flow;
 		//if(accel == 1) o.velocity += o.velocity;
 		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
 
-		// get my distance from the ground:
-		// get norm'd coordinate:
-		glm::vec3 norm = fluidloc / glm::vec3(field_dim);
-
 /*
 		// use this to sample the landscape:
-		float sdist; // creature's distance above the ground (or negative if below)
-		al_field3d_readnorm_interp(land_dim, distancefield, norm, &sdist);
+		
 		// get normal here too
 		// get a normal for the land:
 		glm::vec3 normal = sdf_field_normal4(land_dim, distancefield, norm, 0.5f/LAND_DIM);
@@ -469,9 +497,9 @@ void sim_update(double dt) {
 
 		// add my direction to the fluid current
 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-		fluid.velocities.front().addnorm(fluidloc, &push.x);
+		fluid.velocities.front().addnorm(norm, &push.x);
 		if (fmod(o.phase, 1.f) < 0.02f) {
-			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
+			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale);
 		}
 
 	}
@@ -522,6 +550,7 @@ void onUnloadGPU() {
 	densityTex.dest_closing();
 	distanceTex.dest_closing();
 	fungusTex.dest_closing();
+	landTex.dest_closing();
 
 	gBuffer.dest_closing();
 	Alice::Instance().hmd->dest_closing();
@@ -606,12 +635,15 @@ void draw_scene(int width, int height) {
 		landShader.uniform("uFarClip", far_clip);
 		landShader.uniform("uDistanceTex", 4);
 		landShader.uniform("uFungusTex", 5);
+		landShader.uniform("uLandTex", 6);
 		landShader.uniform("uLandMatrix", world2fluid);
 		distanceTex.bind(4);
 		fungusTex.bind(5);
+		landTex.bind(6);
 		quadMesh.draw();
 		distanceTex.unbind(4);
 		fungusTex.unbind(5);
+		landTex.unbind(6);
 	}
 
 	objectShader.use();
@@ -717,6 +749,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		densityTex.submit(field_dim, state->density_back);
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->fungus[0]);
+		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
@@ -1097,31 +1130,19 @@ void onReset() {
 		o.color = glm::vec3(1.f);
 	}
 
-	//al_field3d_zero(field_dim, state->density);
-
-	/*{
-		int i=0;
-		glm::ivec3 dim = field_dim;
-		for (size_t y=0;y<dim.y;y++) {
-			for (size_t x=0;x<dim.x;x++) {
-				// a flat plane at floor level
-				state->land[i] = glm::vec4(0, 1, 0, 0);
-			}
-		}
-	}
 
 	{
 		int i=0;
 		glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 		for (size_t y=0;y<dim.y;y++) {
 			for (size_t x=0;x<dim.x;x++) {
-				// a flat plane at floor level
 				state->fungus[i] = rnd::uni();
 				state->fungus_old[i] = rnd::uni();
 			}
 		}
 	}
 
+	//al_field3d_zero(field_dim, state->density);
 	{
 		int i=0;
 		glm::ivec3 dim = field_dim;
@@ -1139,56 +1160,70 @@ void onReset() {
 				}
 			}
 		}
-	}*/
+	}
 
 	{
 		int i=0;
-		glm::ivec3 dim = land_dim;
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+		for (size_t y=0;y<dim2.y;y++) {
+			for (size_t x=0;x<dim2.x;x++, i++) {
+				glm::vec2 coord = glm::vec2(x, y);
+				glm::vec2 norm = coord/glm::vec2(dim2);
+				glm::vec2 snorm = norm*2.f-1.f;
+
+				// plane height (in normed 0..1 to LAND_DIM):
+				float w = glm::abs(sin(M_PI * snorm.x)*snorm.y*0.15) + 0.01;
+				state->land[i].w = w;
+			}
+		}
+	}
+	{
+		// generate SDF from state->land height:
+		int i=0;
+		glm::ivec3 dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
 		for (size_t z=0;z<dim.z;z++) {
 			for (size_t y=0;y<dim.y;y++) {
 				for (size_t x=0;x<dim.x;x++) {
 					glm::vec3 coord = glm::vec3(x, y, z);
 					glm::vec3 norm = coord/glm::vec3(dim);
-					glm::vec3 snorm = norm*2.f-1.f;
-					//glm::vec3 snormhalf = snorm * 0.5f;
+					
+					int ii = al_field2d_index(dim2, glm::ivec2(x, z));
+					float w = state->land[ ii ].w;
 
-					//float bd = sdf_box(snormhalf, glm::vec3(0.2f));
-					//float bs = sdf_sphere(snormhalf, 0.25f);
-					//float bp = sdf_plane(snormhalf, glm::normalize(glm::vec3(-0.1,1,0.2)), 0.55f);
-
-
-					//state->distance[i] = //sdf_union(bp, bd);
-
-					state->distance[i] = norm.y < glm::abs(sin(M_PI * snorm.x)*snorm.z*0.1) + 0.01 ? -1. : 1.;
-
+					state->distance[i] = norm.y < w ? -1. : 1.;
 					state->distance_binary[i] = state->distance[i] < 0.f ? 0.f : 1.f;
 
 					i++;
 				}
 			}
 		}
+		sdf_from_binary(land_dim, state->distance_binary, state->distance);
+		//sdf_from_binary_deadreckoning(land_dim, state->distance_binary, state->distance);
+		al_field3d_scale(land_dim, state->distance, 1.f/land_dim.x);
 	}
-
-	/*{
+	{
+		// generate state->land normals:
 		int i=0;
-		glm::ivec2 dim = glm::ivec2(LAND_DIM, LAND_DIM);
-		for (size_t y=0;y<dim.y;y++) {
-			for (size_t x=0;x<dim.x;x++) {
-				glm::vec3 coord = glm::vec3(x, y, z);
-				glm::vec3 norm = coord/glm::vec3(dim);
-				glm::vec3 snorm = norm*2.f-1.f;
-				//glm::vec3 snormhalf = snorm * 0.5f;
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+		for (size_t y=0;y<dim2.y;y++) {
+			for (size_t x=0;x<dim2.x;x++, i++) {
+				glm::vec2 coord = glm::vec2(x, y);
+				glm::vec2 norm = coord/glm::vec2(dim2);
+				glm::vec2 snorm = norm*2.f-1.f;
 
-				state->land[i] = glm::abs(sin(M_PI * snorm.x)*snorm.z*0.1) + 0.01;
+				float w = state->land[i].w;
 
-				i++;
+				glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
+
+				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm3, 2.f/LAND_DIM);
+				state->land[i] = glm::vec4(normal, w);
 			}
 		}
-	}*/
+	}
 
-	sdf_from_binary(land_dim, state->distance_binary, state->distance);
-	//sdf_from_binary_deadreckoning(land_dim, state->distance_binary, state->distance);
-	al_field3d_scale(land_dim, state->distance, 1.f/land_dim.x);
+	
+	
 
 	onReloadGPU();
 

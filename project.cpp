@@ -924,7 +924,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		// update nav
 
-		int camModeMax = 5;
+		int camModeMax = 6;
 		double a = M_PI * t / 30.;
 		//when c is pressed, swap between normal camera, objects[0] camera, segments[0] camera, and a sine wave movement
 		if(camMode % camModeMax == 1){
@@ -997,13 +997,19 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			camForward = false;
 			camBackwards = false;
-		}else{
+		}else if(camMode % camModeMax == 5){
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
 				world_centre + 
-				glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
+				glm::vec3(3.*cos(a), 1., 4.*sin(a)), 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
+			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+		} else { //top down camera view
+			viewMat = glm::lookAt(
+				glm::vec3(0.0f, 7.0f, 3.0f), 
+  		   		world_centre, 
+  		   		glm::vec3(0.0f, 0.0f, 1.0f));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 		}
 		

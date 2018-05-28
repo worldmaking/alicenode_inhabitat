@@ -490,15 +490,47 @@ void sim_update(double dt) {
 		//if(accel == 1) o.velocity += o.velocity;
 		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
 
-/*
+
 		// use this to sample the landscape:
 		
 		// get normal here too
 		// get a normal for the land:
-		glm::vec3 normal = sdf_field_normal4(land_dim, distancefield, norm, 0.5f/LAND_DIM);
-		*/
+		glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
 
-		// add my direction to the fluid current
+		glm::vec3 v0 = normal; //up vec
+		glm::vec3 v1 = quat_uy(o.orientation);
+		float dotProd = glm::dot( v0, v1 );
+		if (fabsf(dotProd) < 0.99f) {
+			//get axis - cross product b/w up and world vec
+			glm::vec3 axis = glm::cross(v0,v1);
+
+			//get angle - dot product and cosine
+			float angle = acos( dotProd );
+
+			//make quaternium 
+			glm::quat diff = glm::angleAxis(angle, axis);
+
+			/*
+			if (i == 0) {
+				console.log("axis: %f %f %f", axis.x, axis.y, axis.z);
+				console.log("angle: %f", angle);
+				console.log("dot product %f", dotProd);
+				
+			}*/
+
+			//slerp o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
+
+			glm::quat tempNorm = glm::normalize(o.orientation * diff);
+			
+			o.orientation = glm::slerp(o.orientation, tempNorm, 0.2f);
+			//o.orientation = glm::normalize(o.orientation * diff);
+			
+		}
+
+
+		
+
+ 		// add my direction to the fluid current
 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
 		fluid.velocities.front().addnorm(norm, &push.x);
 		if (fmod(o.phase, 1.f) < 0.02f) {
@@ -515,6 +547,8 @@ void sim_update(double dt) {
 		auto &o = state->segments[i];
 		if (i % 8 == 0) {
 			// a root;
+			
+			/*
 			glm::vec3 fluidloc = transform(world2fluid, o.location);
 			glm::vec3 flow;
 			fluid.velocities.front().readnorm(fluidloc, &flow.x);
@@ -523,6 +557,58 @@ void sim_update(double dt) {
 			o.velocity = flow * idt;
 
 			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale * 0.02f);
+			*/
+
+
+			// get norm'd coordinate:
+			glm::vec3 norm = transform(world2fluid, o.location);
+
+			// get fluid flow:
+			glm::vec3 flow;
+			fluid.velocities.front().readnorm(norm, &flow.x);
+
+			// get my distance from the ground:
+			float sdist; // creature's distance above the ground (or negative if below)
+			al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
+
+			// convert to meters per second:
+			flow *= idt;
+
+			// if below ground, rise up;
+			// if above ground, sink down:
+			float gravity = 0.1f;
+			flow.y += sdist < 0.1f ? gravity : -gravity;
+
+			// set my velocity, in meters per second:
+			o.velocity = flow;
+			//if(accel == 1) o.velocity += o.velocity;
+			//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
+
+			// use this to sample the landscape:
+			
+			// get normal here too
+			// get a normal for the land:
+			glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
+
+			glm::vec3 v0 = normal; 
+			glm::vec3 v1 = quat_uy(o.orientation);
+			float dotProd = glm::dot( v0, v1 );
+			if (fabsf(dotProd) < 0.99f) {
+				//get axis - cross product b/w up and world vec
+				glm::vec3 axis = glm::cross(v0,v1);
+
+				//get angle - dot product and cosine
+				float angle = acos( dotProd );
+
+				//make quaternium 
+				glm::quat diff = glm::angleAxis(angle, axis);
+
+				glm::quat tempNorm = glm::normalize(o.orientation * diff);
+				
+				o.orientation = glm::slerp(o.orientation, tempNorm, 0.2f);
+		}
+
+
 			
 		} else {
 			auto& p = state->segments[i-1];

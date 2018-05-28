@@ -45,6 +45,8 @@ int camMode = 0;
 bool accel = 0;
 bool decel = 0;
 
+const float MOVEMENT_SPEED = 0.1f;
+
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 8.f, 8.f);
@@ -64,6 +66,7 @@ glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::vec3 cameraLoc;
 glm::quat cameraOri;
+glm::vec3 cameraLoc2;
 
 State * state;
 Mmap<State> statemap;
@@ -689,7 +692,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		// update nav
 
-		int camModeMax = 4;
+		int camModeMax = 5;
 		double a = M_PI * t / 30.;
 		//when c is pressed, swap between normal camera, objects[0] camera, segments[0] camera, and a sine wave movement
 		if(camMode % camModeMax == 1){
@@ -707,6 +710,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
 			cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
 			//TODO: Once creatures follow the ground, fix boom going into the earth
+			
 
 			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.3, 0.75)));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
@@ -740,7 +744,9 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
-		}else{
+
+				
+		}else if(camMode % camModeMax == 4){
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
 				world_centre + 
@@ -748,8 +754,10 @@ void onFrame(uint32_t width, uint32_t height) {
 				world_centre, 
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+		} else {
+			
+
 		}
-		
 		
 		viewProjMat = projMat * viewMat;
 
@@ -825,8 +833,10 @@ void onFrame(uint32_t width, uint32_t height) {
 
 }
 
+
 void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bool alt, bool cmd){
 	Alice& alice = Alice::Instance();
+
 	switch(keycode) {
 		case GLFW_KEY_ENTER: {
 			if (downup && alt) {
@@ -850,22 +860,27 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 		} break;
 		//forward
 		case GLFW_KEY_UP: {
+			
 			//state->objects[0].velocity++;
-			accel = 1;
+			/*accel = 1;
 			float aclTst = accel;
-			console.log("Accel = %f", accel);//aclTst);
+			console.log("Accel = %f", accel);//aclTst);*/
 		} break;
 		//backward
 		case GLFW_KEY_DOWN: {
+
+
 			//state->objects[0].velocity -= state->objects[0].velocity * glm::vec3(2.);
 			decel = 1;
 		} break;
 		//yaw left
 		case GLFW_KEY_LEFT: {
 
+
 		} break;
 		//yaw right
 		case GLFW_KEY_RIGHT: {
+
 
 		} break;
 		//pitch up

@@ -28,6 +28,12 @@ FloatTexture3D distanceTex;
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
 
+
+VAO gridVAO;
+VBO gridVBO;
+EBO gridEBO;
+unsigned int grid_elements;
+
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
 VAO objectVAO;
@@ -665,6 +671,60 @@ void onReloadGPU() {
 	
 	quadMesh.dest_changed();
 
+	gridVAO.bind();
+	{
+		const int dim = LAND_DIM+1;
+		Vertex grid[dim*dim];
+		for (int i=0, y=0; y<dim; y++) {
+			for (int x=0; x<dim; x++) {
+				Vertex& v = grid[i++];
+				v.position = glm::vec3(x, 0, y);
+				v.normal = glm::vec3(0, 1, 0);
+				// depends whether wrapping or not, divide dim or dim+1?
+				v.texcoord = glm::vec2(x, y) / glm::vec2(dim, dim);
+			}
+		}
+		gridVBO.submit((void *)grid, sizeof(grid));
+
+		/*
+			e.g.: 2x2 squares:
+			0 1 2
+			3 4 5
+			6 7 8
+
+			dim = 3x3 vertices
+			elements = 2x2 squares * 2 tris * 3 verts:
+			034 410, 145 521
+			367 743, 478 854
+		*/
+		const unsigned int num_elements = (dim-1) * (dim-1) * 6;
+		grid_elements = num_elements;
+		unsigned int elements[num_elements];
+		int i=0;
+		for (unsigned int y=0; y<dim-1; y++) {
+			for (unsigned int x=0; x<dim-1; x++) {
+				unsigned int p00 = (y*dim) + (x);
+				unsigned int p01 = p00 + 1;
+				unsigned int p10 = p00 + dim;
+				unsigned int p11 = p00 + dim + 1;
+				// tri 1:
+				elements[i++] = p00;
+				elements[i++] = p10;
+				elements[i++] = p11;
+				// tri 2:
+				elements[i++] = p11;
+				elements[i++] = p01;
+				elements[i++] = p00;
+			}
+		}
+		gridEBO.submit(&elements[0], num_elements);
+	}
+	gridVBO.bind();
+	gridEBO.bind();
+	gridVAO.attr(0, &Vertex::position);
+	gridVAO.attr(1, &Vertex::normal);
+	gridVAO.attr(2, &Vertex::texcoord);
+
 	objectVAO.bind();
 	cubeVBO.bind();
 	objectVAO.attr(0, 3, GL_FLOAT, sizeof(glm::vec3), 0);
@@ -706,7 +766,6 @@ void onReloadGPU() {
 	Alice::Instance().hmd->dest_changed();
 }
 
-
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
 
@@ -715,25 +774,29 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 
+		gridVAO.drawElements(grid_elements);
+
 	} else {
-		landShader.use();
-		landShader.uniform("time", t);
-		landShader.uniform("uViewProjectionMatrix", viewProjMat);
-		landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		landShader.uniform("uNearClip", near_clip);
-		landShader.uniform("uFarClip", far_clip);
-		landShader.uniform("uDistanceTex", 4);
-		landShader.uniform("uFungusTex", 5);
-		landShader.uniform("uLandTex", 6);
-		landShader.uniform("uLandMatrix", world2fluid);
-		distanceTex.bind(4);
-		fungusTex.bind(5);
-		landTex.bind(6);
-		quadMesh.draw();
-		distanceTex.unbind(4);
-		fungusTex.unbind(5);
-		landTex.unbind(6);
-	}
+
+	landShader.use();
+	landShader.uniform("time", t);
+	landShader.uniform("uViewProjectionMatrix", viewProjMat);
+	landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+	landShader.uniform("uNearClip", near_clip);
+	landShader.uniform("uFarClip", far_clip);
+	landShader.uniform("uDistanceTex", 4);
+	landShader.uniform("uFungusTex", 5);
+	landShader.uniform("uLandTex", 6);
+	landShader.uniform("uLandMatrix", world2fluid);
+	distanceTex.bind(4);
+	fungusTex.bind(5);
+	landTex.bind(6);
+	quadMesh.draw();
+	distanceTex.unbind(4);
+	fungusTex.unbind(5);
+	landTex.unbind(6);
+
+	
 
 	objectShader.use();
 	objectShader.uniform("time", t);
@@ -767,6 +830,8 @@ void draw_scene(int width, int height) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glDisable(GL_CULL_FACE);
+
+	}
 }
 
 void onFrame(uint32_t width, uint32_t height) {

@@ -42,7 +42,7 @@ VBO particlesVBO(sizeof(State::particles));
 float near_clip = 0.1f;
 float far_clip = 12.f;
 float particleSize = 1.f/196;
-float camSpeed = 5.0f;
+float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
 float camUp;
@@ -1106,67 +1106,55 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			//console.log("C was pressed");
 			if (downup) camMode++;
 		} break;
-		//forward
-		case GLFW_KEY_UP: {
-			
-			//state->objects[0].velocity++;
-			/*accel = 1;
-			float aclTst = accel;
-			console.log("Accel = %f", accel);//aclTst);*/
-		} break;
-		//backward
-		case GLFW_KEY_DOWN: {
-
-
-			//state->objects[0].velocity -= state->objects[0].velocity * glm::vec3(2.);
-			decel = 1;
-		} break;
-		
-		case GLFW_KEY_LEFT: {
-			
-		} break;
-		
-		case GLFW_KEY_RIGHT: {
-			
-		} break;
+	
 		//pitch up
-		case GLFW_KEY_KP_8: {
+		case GLFW_KEY_KP_8:
+		case GLFW_KEY_UP:{
 			camPitch += camSpeed;
 		} break;
 		//pitch down
-		case GLFW_KEY_KP_2: {
+		case GLFW_KEY_KP_2: 
+		case GLFW_KEY_DOWN:{
 			camPitch -= camSpeed;
 		} break;
 		//yaw left
-		case GLFW_KEY_KP_4: {
+		case GLFW_KEY_KP_4:
+		case GLFW_KEY_LEFT: {
 			camYaw += camSpeed;
 		} break;
 		//yaw right
-		case GLFW_KEY_KP_6: {
+		case GLFW_KEY_KP_6:
+		case GLFW_KEY_RIGHT: {
 			camYaw -= camSpeed;
 		} break;
 		//Go left
-		case GLFW_KEY_KP_7: {
+		case GLFW_KEY_KP_7:
+		case GLFW_KEY_O: {
 			camStrafe -= camSpeed;
 		} break;
 		//Go right
-		case GLFW_KEY_KP_9: {
+		case GLFW_KEY_KP_9:
+		case GLFW_KEY_P: {
 			camStrafe += camSpeed;
 		} break;
 		//Go Up
-		case GLFW_KEY_KP_ADD: {
+		case GLFW_KEY_KP_ADD:
+		case GLFW_KEY_LEFT_BRACKET: {
 			camUp += camSpeed;
 		} break;
 		//Go down
-		case GLFW_KEY_KP_SUBTRACT: { 
+		case GLFW_KEY_KP_SUBTRACT:
+		case GLFW_KEY_RIGHT_BRACKET: { 
 			camUp -= camSpeed;
 		} break;
 		//Go Forward
-		case GLFW_KEY_KP_1: {
+		case GLFW_KEY_KP_1:
+		case GLFW_KEY_K: {
 			camForward = true;
 		} break;
 		//Go Back
-		case GLFW_KEY_KP_3: {
+		case GLFW_KEY_KP_3:
+		case GLFW_KEY_L: {
 			camBackwards = true;
 		} break;
 		// default:

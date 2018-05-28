@@ -49,7 +49,7 @@ float camUp;
 float camStrafe;
 bool camForward;
 bool camBackwards;
-float creature_fluid_push = 0.2f;
+float creature_fluid_push = 0.05f;
 
 int debugMode = 0;
 int camMode = 0;
@@ -502,7 +502,7 @@ void sim_update(double dt) {
 		float dotProd = glm::dot( v0, v1 );
 		if (fabsf(dotProd) < 0.99f) {
 			//get axis - cross product b/w up and world vec
-			glm::vec3 axis = glm::cross(v0,v1);
+			glm::vec3 axis = glm::cross(v1,v0);
 
 			//get angle - dot product and cosine
 			float angle = acos( dotProd );
@@ -518,18 +518,18 @@ void sim_update(double dt) {
 				
 			}*/
 
-			//slerp o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
-
-			glm::quat tempNorm = glm::normalize(o.orientation * diff);
+			//glm::quat tempNorm = safe_normalize(o.orientation * diff);
+			glm::quat tempNorm = safe_normalize(diff * o.orientation);
 			
-			o.orientation = glm::slerp(o.orientation, tempNorm, 0.2f);
+			o.orientation = glm::slerp(o.orientation, tempNorm, 0.04f);
 			//o.orientation = glm::normalize(o.orientation * diff);
-			
+
+			o.orientation = safe_normalize(o.orientation * glm::angleAxis(rnd::bi(0.1f), axis));
+
 		}
 
-
+		//o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
 		
-
  		// add my direction to the fluid current
 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
 		fluid.velocities.front().addnorm(norm, &push.x);
@@ -791,7 +791,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		for (int i=0; i<NUM_OBJECTS; i++) {
 			auto &o = state->objects[i];
 			// TODO: dt-ify this:	
-			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
+			
 			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
 			o.phase += dt;
 		}

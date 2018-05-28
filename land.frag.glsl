@@ -3,7 +3,8 @@ uniform sampler2D tex;
 uniform float time;
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
 uniform float uNearClip, uFarClip;
-uniform sampler3D uLandTex;
+uniform sampler2D uFungusTex;
+uniform sampler2D uLandTex;
 uniform sampler3D uDistanceTex;
 uniform mat4 uLandMatrix;
 
@@ -148,14 +149,36 @@ float fScene(vec3 p) {
 	float d0 = fScene_test(p);
 	float d1 = fScene_test(p1) + d;
 
-	return d; //min(d0, d);
+	// a repetitive object:
+	vec3 pt = p * 3.;
+	vec3 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.05;
+
+	d -= tiledeform;
+
+	//.float d3 = p.y + dot(sin(p/2. + cos(p.yzx/2. + 3.14159/2.)), vec3(.5)) - 0.1;
+
+	return d; //min(d, d3);
 }
 
 float fScene0(vec3 p) {
 
 	float a = fScene_test(p);
 	vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
-	float b = texture(uLandTex, landtexcoord).r;
+	//float b = texture(uFungusTex, landtexcoord).r;
 	return a; // - dy; // min(a, b);
 }
 
@@ -215,11 +238,27 @@ void main() {
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);
-		FragNormal.xyz = normal4(p, .5);
+		FragNormal.xyz = normal4(p, .005);
 
-		//vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
-		//float land = 0.01 * texture(uLandTex, landtexcoord).r;
-		//FragColor.rgb = vec3(land);
+		vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
+		float fungus = texture(uFungusTex, landtexcoord.xz).r;
+
+		if (fungus > 0.) {
+			// fungus:
+			float smog = 0.7; // between 0.1 and 0.9
+			float factor = fungus*smog;
+			factor += 0.2; //factor += noise.z * 0.4; 
+			//float w = min(1., h * 4.);
+			float w = 1.;
+			FragColor.rgb = mix(vec3(w), FragColor.rgb, factor);
+		
+		} else {
+			//FragColor.rgb -= 0.8*(0.8-steepness);
+		}
+
+		vec4 land = texture(uLandTex, landtexcoord.xz);
+		FragColor.rgb = vec3(fungus);
+		//FragNormal.xyz = land.xyz;
 		
 	} else if (t >= maxd) {
     	// shot through to background

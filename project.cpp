@@ -2,6 +2,7 @@
 #include "al/al_math.h"
 #include "al/al_distance.h"
 #include "al/al_field3d.h"
+#include "al/al_field2d.h"
 #include "al/al_gl.h"
 #include "al/al_kinect2.h"
 #include "al/al_mmap.h"
@@ -9,6 +10,7 @@
 #include "al/al_time.h"
 #include "alice.h"
 #include "state.h"
+
 
 Shader objectShader;
 Shader segmentShader;
@@ -21,8 +23,10 @@ QuadMesh quadMesh;
 GLuint colorTex;
 FloatTexture3D fluidTex;
 FloatTexture3D densityTex;
-FloatTexture3D landTex;
 FloatTexture3D distanceTex;
+
+FloatTexture2D fungusTex;
+FloatTexture2D landTex;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -38,10 +42,19 @@ VBO particlesVBO(sizeof(State::particles));
 float near_clip = 0.1f;
 float far_clip = 12.f;
 float particleSize = 1.f/196;
+float camSpeed = 5.0f;
+float camPitch;
+float camYaw;
+float camUp;
+float camStrafe;
+bool camForward;
+bool camBackwards;
+float creature_fluid_push = 0.2f;
 
 int debugMode = 0;
 int camMode = 0;
 
+std::mutex sim_mutex;
 bool accel = 0;
 bool decel = 0;
 
@@ -52,6 +65,7 @@ glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 8.f, 8.f);
 glm::vec3 world_centre(0.f, 1.8f, 4.f);
 glm::vec3 prevVel = glm::vec3(0.);
+glm::vec3  newCamLoc;
 
 // how to convert world positions into fluid texture coordinates:
 glm::mat4 world2fluid;
@@ -82,8 +96,6 @@ double fluid_noise = 8.;
 float density_decay = 0.98f;
 float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
 float density_scale = 50.;
-
-glm::vec4 boundary[FIELD_VOXELS];
 
 MetroThread simThread(30);
 MetroThread fluidThread(10);
@@ -204,8 +216,63 @@ struct GBuffer {
 
 GBuffer gBuffer;
 
+void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float * distancefield, const glm::ivec3 land_dim) {
+
+	/* 
+		boundary effect of landscape: the closer we get to the landscape, 
+		the more the velocities should be redirected away from the surface
 
 
+
+
+	*/
+
+	glm::vec3 field_dimf = glm::vec3(field_dim);
+
+	int i = 0;
+	for (size_t z = 0; z<field_dim.z; z++) {
+		for (size_t y = 0; y<field_dim.y; y++) {
+			for (size_t x = 0; x<field_dim.x; x++, i++) {
+				
+				// get norm'd coordinate:
+				glm::vec3 norm = glm::vec3(x,y,z) / field_dimf;
+
+				// use this to sample the landscape:
+				float sdist;
+				al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist );
+				float dist = fabsf(sdist);
+
+				// generate a normalized influence factor -- the closer we are to the surface, the greater this is
+				float influence = glm::smoothstep(0.2f, 0.f, dist);
+
+				
+				// get a normal for the land:
+				// TODO: or read from state->land xyz?
+				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 2.f/LAND_DIM);
+
+				glm::vec3& vel = velocities[i];
+				//glm::vec3 veln = safe_normalize(vel);
+				float speed = glm::length(vel);
+
+				// get the projection of vel onto normal axis
+				// i.e. the component of vel that points in either normal direction:
+				glm::vec3 normal_component = normal * (dot(vel, normal));
+
+				// remove this component from the original velocity:
+				glm::vec3 without_normal_component = vel - normal_component;
+
+				// and re-scale to original magnitude:
+				glm::vec3 rescaled = safe_normalize(without_normal_component) * speed;
+
+				// update:
+				vel = mix(vel, rescaled, influence);	
+			}
+		}
+	}
+	
+}
+
+/*
 void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, const size_t dim0, const size_t dim1, const size_t dim2) {
 
 	const float influence_offset = -(float)fluid_boundary_damping;
@@ -246,7 +313,7 @@ void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, 
 			}
 		}
 	}
-}
+}*/
 
 void fluid_update(double dt) {
 	// update fluid
@@ -276,6 +343,9 @@ void fluid_update(double dt) {
 	fluid.project(fluid_passes / 2);
 	// advect:
 	velocities.advect(velocities.back(), 1.);
+
+	fluid_land_resist((glm::vec3 *)velocities.front().data, field_dim, state->distance, land_dim);
+
 	// apply boundaries:
 	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
 	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
@@ -284,6 +354,56 @@ void fluid_update(double dt) {
 	// clear gradients:
 	fluid.gradient.front().zero();
 	fluid.gradient.back().zero();
+}
+
+void fungus_update(float dt) {
+	const glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
+	auto & src_array = state->fungus;
+	auto & dst_array = state->fungus_old;
+
+	//float * land = state->
+
+	for (int i=0, y=0; y<dim.y; y++) {
+		for (int x=0; x<dim.x; x++, i++) {
+			const glm::vec2 cell = glm::vec2(float(x),float(y));			
+			const glm::vec2 norm = cell/glm::vec2(dim); // TODO convert to premultiplier
+			float C = src_array[i];
+			float C1 = C - 0.1;
+			//float h = 20 * .1;//heightmap_array.sample(norm);
+			glm::vec4 l;
+			al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), state->land, norm, &l);
+			float h = 20.f * l.w;
+			float hu = 0.;//humanmap_array.sample(norm);
+			float dst = C;
+			if (h <= 0 || hu > 0.1) {
+				// force lowlands to be vacant
+				// (note, human will also do this)
+				dst = 0;
+			} else if (C < -0.1) {
+				// very negative values gradually drift back to zero
+				dst = C * 0.999;
+			} else if (C < 0) {
+				// and then jump to zero when in [-0.1,0) range
+				dst = 0;
+			} else if (h < C1 || rnd::uni() < 0.00005*h) {
+				// if land lower than vitality, decrease vitality
+				// also random chance of decay for any living cell
+				dst = h*rnd::uni();
+			} else if (rnd::uni() < 0.06*h) {
+				// migration chance increases with altitude
+				// pick a neighbour cell:
+				glm::vec2 tc = cell + glm::vec2(floor(rnd::uni()*3)-1, floor(rnd::uni()*3)-1);
+				float tv = al_field2d_read(dim, src_array, tc); //src_array.samplepix(tc);
+				// if alive, copy it
+				if (tv > 0.) { dst = tv; }
+			}
+			dst_array[i] = dst;
+		}
+	}
+
+	memcpy(src_array, dst_array, sizeof(state->fungus));
+
+	//fungus_write = !fungus_write;
 }
 
 void sim_update(double dt) {
@@ -311,6 +431,8 @@ void sim_update(double dt) {
 	al_field3d_scale(field_dim, state->density, glm::vec3(density_decay));
 	al_field3d_diffuse(field_dim, state->density, state->density, density_diffuse);
 	memcpy(state->density_back, state->density, sizeof(glm::vec3) * FIELD_VOXELS);
+
+	fungus_update(dt);
 	
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = state->particles[i];
@@ -343,25 +465,45 @@ void sim_update(double dt) {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = state->objects[i];
 
-		
-		glm::vec3 fluidloc = transform(world2fluid, o.location);
+		// get norm'd coordinate:
+		glm::vec3 norm = transform(world2fluid, o.location);
 
-		
+		// get fluid flow:
 		glm::vec3 flow;
-		fluid.velocities.front().readnorm(fluidloc, &flow.x);
-		
-		float creature_speed = 0.02f*(float)dt;
-		glm::vec3 push = quat_uf(o.orientation) * creature_speed;
-		fluid.velocities.front().addnorm(fluidloc, &push.x);
+		fluid.velocities.front().readnorm(norm, &flow.x);
 
-		o.velocity = flow * idt;
+		// get my distance from the ground:
+		float sdist; // creature's distance above the ground (or negative if below)
+		al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
+
+		// convert to meters per second:
+		flow *= idt;
+
+		// if below ground, rise up;
+		// if above ground, sink down:
+		float gravity = 0.1f;
+		flow.y += sdist < 0.1f ? gravity : -gravity;
+
+
+		// set my velocity, in meters per second:
+		o.velocity = flow;
 		//if(accel == 1) o.velocity += o.velocity;
 		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
 
+/*
+		// use this to sample the landscape:
+		
+		// get normal here too
+		// get a normal for the land:
+		glm::vec3 normal = sdf_field_normal4(land_dim, distancefield, norm, 0.5f/LAND_DIM);
+		*/
+
+		// add my direction to the fluid current
+		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
+		fluid.velocities.front().addnorm(norm, &push.x);
 		if (fmod(o.phase, 1.f) < 0.02f) {
-			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale);
+			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale);
 		}
-		// get nearest voxel cell:
 
 	}
 
@@ -376,8 +518,7 @@ void sim_update(double dt) {
 			glm::vec3 fluidloc = transform(world2fluid, o.location);
 			glm::vec3 flow;
 			fluid.velocities.front().readnorm(fluidloc, &flow.x);
-			float creature_speed = 0.02f*(float)dt;
-			glm::vec3 push = quat_uf(o.orientation) * creature_speed;
+			glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
 			fluid.velocities.front().addnorm(fluidloc, &push.x);
 			o.velocity = flow * idt;
 
@@ -411,6 +552,7 @@ void onUnloadGPU() {
 	fluidTex.dest_closing();
 	densityTex.dest_closing();
 	distanceTex.dest_closing();
+	fungusTex.dest_closing();
 	landTex.dest_closing();
 
 	gBuffer.dest_closing();
@@ -495,13 +637,16 @@ void draw_scene(int width, int height) {
 		landShader.uniform("uNearClip", near_clip);
 		landShader.uniform("uFarClip", far_clip);
 		landShader.uniform("uDistanceTex", 4);
-		landShader.uniform("uLandTex", 5);
+		landShader.uniform("uFungusTex", 5);
+		landShader.uniform("uLandTex", 6);
 		landShader.uniform("uLandMatrix", world2fluid);
 		distanceTex.bind(4);
-		landTex.bind(5);
+		fungusTex.bind(5);
+		landTex.bind(6);
 		quadMesh.draw();
 		distanceTex.unbind(4);
-		landTex.unbind(5);
+		fungusTex.unbind(5);
+		landTex.unbind(6);
 	}
 
 	objectShader.use();
@@ -546,7 +691,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f)", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS());
 
-	if (alice.isSimulating) {
+	if (alice.isSimulating && isRunning) {
 		// keep the simulation in here to absolute minimum
 		// since it detracts from frame rate
 		// here we should only be extrapolating visible features
@@ -606,7 +751,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		densityTex.submit(field_dim, state->density_back);
-		landTex.submit(field_dim, &state->landscape[0]);
+		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->fungus[0]);
+		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 
 		const ColourFrame& image = alice.cloudDevice->colourFrame();
@@ -744,9 +890,28 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
-
-				
 		}else if(camMode % camModeMax == 4){
+			
+			if(camForward){
+				newCamLoc = cameraLoc + quat_uf(cameraOri)* (camSpeed * 0.01f);}
+			else if(camBackwards){
+				 newCamLoc = cameraLoc + quat_uf(cameraOri)* -(camSpeed * 0.01f);}
+
+			newCamLoc = glm::vec3 (newCamLoc.x, camUp*0.01f, newCamLoc.z);
+			cameraLoc = glm::mix(cameraLoc,newCamLoc, 0.5f);
+
+			
+			glm::quat newCamRot = glm::angleAxis(camYaw*0.01f, glm::vec3(0, 1, 0)) * glm::angleAxis(camPitch*0.01f, glm::vec3(1, 0, 0));
+			newCamRot = glm::normalize(newCamRot);
+			//glm::quat (0.f, camYaw*0.01f, 0.f , camPitch*0.01f);
+			cameraOri = glm::mix(cameraOri,newCamRot, 0.5f);
+
+			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.3, 0.75)));
+			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+
+			camForward = false;
+			camBackwards = false;
+		}else{
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
 				world_centre + 
@@ -789,7 +954,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("gNormal", 1);
 			deferShader.uniform("gPosition", 2);
 			deferShader.uniform("uDistanceTex", 4);
-			deferShader.uniform("uLandTex", 5);
+			//deferShader.uniform("uFungusTex", 5);
 			deferShader.uniform("uDensityTex", 6);
 			deferShader.uniform("uFluidTex", 7);
 
@@ -802,14 +967,14 @@ void onFrame(uint32_t width, uint32_t height) {
 			deferShader.uniform("uDim", glm::vec2(gBuffer.dim.x, gBuffer.dim.y));
 			deferShader.uniform("uTexTransform", glm::vec2(1., 0.));
 			distanceTex.bind(4);
-			landTex.bind(5);
+			//fungusTex.bind(5);
 			densityTex.bind(6);
 			fluidTex.bind(7);
 			gBuffer.bindTextures();
 			quadMesh.draw();
 
 			distanceTex.unbind(4);
-			landTex.unbind(5);
+			//fungusTex.unbind(5);
 			densityTex.unbind(6);
 			fluidTex.unbind(7);
 			gBuffer.unbindTextures();
@@ -873,31 +1038,53 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			//state->objects[0].velocity -= state->objects[0].velocity * glm::vec3(2.);
 			decel = 1;
 		} break;
-		//yaw left
+		
 		case GLFW_KEY_LEFT: {
-
-
+			
 		} break;
-		//yaw right
+		
 		case GLFW_KEY_RIGHT: {
-
-
+			
 		} break;
 		//pitch up
 		case GLFW_KEY_KP_8: {
-
+			camPitch += camSpeed;
 		} break;
 		//pitch down
 		case GLFW_KEY_KP_2: {
-
+			camPitch -= camSpeed;
 		} break;
-		//roll left
+		//yaw left
 		case GLFW_KEY_KP_4: {
-
+			camYaw += camSpeed;
 		} break;
-		//roll right
+		//yaw right
 		case GLFW_KEY_KP_6: {
-
+			camYaw -= camSpeed;
+		} break;
+		//Go left
+		case GLFW_KEY_KP_7: {
+			camStrafe -= camSpeed;
+		} break;
+		//Go right
+		case GLFW_KEY_KP_9: {
+			camStrafe += camSpeed;
+		} break;
+		//Go Up
+		case GLFW_KEY_KP_ADD: {
+			camUp += camSpeed;
+		} break;
+		//Go down
+		case GLFW_KEY_KP_SUBTRACT: { 
+			camUp -= camSpeed;
+		} break;
+		//Go Forward
+		case GLFW_KEY_KP_1: {
+			camForward = true;
+		} break;
+		//Go Back
+		case GLFW_KEY_KP_3: {
+			camBackwards = true;
 		} break;
 		// default:
 		//state->objects[0].velocity = glm::vec3(0.);
@@ -907,8 +1094,33 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 
 }
 
+
+void threads_begin() {
+	console.log("starting threads");
+	// allow threads to run
+	isRunning = true;
+	simThread.begin(sim_update);
+	fluidThread.begin(fluid_update);
+	console.log("started threads");
+}
+
+void threads_end() {
+	// release threads:
+	isRunning = false;
+	console.log("ending threads");
+	simThread.end();
+	fluidThread.end();
+	console.log("ended threads");
+}
+
 // The onReset event is triggered when pressing the "Backspace" key in Alice
 void onReset() {
+
+	threads_end();
+
+	// zero by default:
+	memset(state, 0, sizeof(State));
+
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
 		o.location = world_centre+glm::ballRand(1.f);
@@ -929,20 +1141,19 @@ void onReset() {
 		o.color = glm::vec3(1.f);
 	}
 
-	//al_field3d_zero(field_dim, state->density);
 
 	{
 		int i=0;
-		glm::ivec3 dim = field_dim;
+		glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 		for (size_t y=0;y<dim.y;y++) {
 			for (size_t x=0;x<dim.x;x++) {
-				// a flat plane at floor level
-				state->land[i] = glm::vec4(0, 1, 0, 0);
+				state->fungus[i] = rnd::uni();
+				state->fungus_old[i] = rnd::uni();
 			}
 		}
 	}
 
-
+	//al_field3d_zero(field_dim, state->density);
 	{
 		int i=0;
 		glm::ivec3 dim = field_dim;
@@ -951,23 +1162,11 @@ void onReset() {
 				for (size_t x=0;x<dim.x;x++) {
 					glm::vec3 coord = glm::vec3(x, y, z);
 					glm::vec3 norm = coord/glm::vec3(dim);
-					glm::vec3 snorm = norm*2.f-1.f;
-					glm::vec3 snormhalf = snorm * 0.5f;
+					//glm::vec3 snorm = norm*2.f-1.f;
+					//glm::vec3 snormhalf = snorm * 0.5f;
 					state->density[i] = glm::vec3(0.f);//norm * 0.000001f;
 					state->density_back[i] = state->density[i];
 
-
-					float dome = 1. + glm::abs(5. * sin(norm.z * M_PI) * sin(norm.x * M_PI));
-					// default scene is a flat plane:
-					//state->landscape[i] = coord.y < dome ? 0. : 1.; // + 0.5; // - 1. + cos(snorm.z * M_PI * 2.) * cos(snorm.x * M_PI * 4.) * 0.02; // + 4.f*cos(snorm.x * M_PI)*cos(snorm.y * M_PI);
-
-					if (norm.x < 0.25 && norm.y < 0.25) {
-						state->landscape[i] = coord.y < 6. ? 0. : 1.;
-					} else {
-						state->landscape[i] = coord.y < 1. ? 0. : 1.;
-					}
-
-					state->landscape_back[i] = state->landscape[i];
 					i++;
 				}
 			}
@@ -976,37 +1175,70 @@ void onReset() {
 
 	{
 		int i=0;
-		glm::ivec3 dim = land_dim;
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+		for (size_t y=0;y<dim2.y;y++) {
+			for (size_t x=0;x<dim2.x;x++, i++) {
+				glm::vec2 coord = glm::vec2(x, y);
+				glm::vec2 norm = coord/glm::vec2(dim2);
+				glm::vec2 snorm = norm*2.f-1.f;
+
+				// plane height (in normed 0..1 to LAND_DIM):
+				float w = glm::abs(sin(M_PI * snorm.x)*snorm.y*0.15) + 0.01;
+				state->land[i].w = w;
+			}
+		}
+	}
+	{
+		// generate SDF from state->land height:
+		int i=0;
+		glm::ivec3 dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
 		for (size_t z=0;z<dim.z;z++) {
 			for (size_t y=0;y<dim.y;y++) {
 				for (size_t x=0;x<dim.x;x++) {
 					glm::vec3 coord = glm::vec3(x, y, z);
 					glm::vec3 norm = coord/glm::vec3(dim);
-					glm::vec3 snorm = norm*2.f-1.f;
-					glm::vec3 snormhalf = snorm * 0.5f;
+					
+					int ii = al_field2d_index(dim2, glm::ivec2(x, z));
+					float w = state->land[ ii ].w;
 
-					float bd = sdf_box(snormhalf, glm::vec3(0.2f));
-					float bs = sdf_sphere(snormhalf, 0.25f);
-					float bp = sdf_plane(snormhalf, glm::normalize(glm::vec3(-0.1,1,0.2)), 0.55f);
-
-
-					//state->distance[i] = //sdf_union(bp, bd);
-
-					state->distance[i] = norm.y < glm::abs(sin(M_PI * snorm.x)*snorm.z*0.1) + 0.01 ? -1. : 1.;
-
+					state->distance[i] = norm.y < w ? -1. : 1.;
 					state->distance_binary[i] = state->distance[i] < 0.f ? 0.f : 1.f;
 
 					i++;
 				}
 			}
 		}
+		sdf_from_binary(land_dim, state->distance_binary, state->distance);
+		//sdf_from_binary_deadreckoning(land_dim, state->distance_binary, state->distance);
+		al_field3d_scale(land_dim, state->distance, 1.f/land_dim.x);
+	}
+	{
+		// generate state->land normals:
+		int i=0;
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+		for (size_t y=0;y<dim2.y;y++) {
+			for (size_t x=0;x<dim2.x;x++, i++) {
+				glm::vec2 coord = glm::vec2(x, y);
+				glm::vec2 norm = coord/glm::vec2(dim2);
+				glm::vec2 snorm = norm*2.f-1.f;
+
+				float w = state->land[i].w;
+
+				glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
+
+				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm3, 2.f/LAND_DIM);
+				state->land[i] = glm::vec4(normal, w);
+			}
+		}
 	}
 
-	sdf_from_binary(land_dim, state->distance_binary, state->distance);
-	//sdf_from_binary_deadreckoning(land_dim, state->distance_binary, state->distance);
-	al_field3d_scale(land_dim, state->distance, 1.f/land_dim.x);
+	
+	
 
 	onReloadGPU();
+
+	threads_begin();
 }
 
 void test() {
@@ -1030,6 +1262,7 @@ void test() {
 	t *= 0.1;
 }
 
+
 extern "C" {
     AL_EXPORT int onload() {
 
@@ -1049,16 +1282,9 @@ extern "C" {
 
 		// TODO currently this is a memory leak on unload:
 		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-		for (int i = 0; i<FIELD_VOXELS; i++) {
-			//glm::vec4 * n = (glm::vec4 *)noisefield[i];
-			//*n = glm::linearRand(glm::vec4(0.), glm::vec4(1.));
-			boundary[i] = glm::vec4(glm::sphericalRand(1.f), 1.f);
-		}
-
-		// allow threads to run
-		isRunning = true;
-
 		
+
+		threads_begin();
 
 		world2fluid = glm::scale(glm::vec3(0.1f));
 		// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
@@ -1072,9 +1298,7 @@ extern "C" {
 		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(0.f, 0.f, -3.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 
-		simThread.begin(sim_update);
-		fluidThread.begin(fluid_update);
-
+		
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
@@ -1108,12 +1332,7 @@ extern "C" {
     AL_EXPORT int onunload() {
 		Alice& alice = Alice::Instance();
 
-		// release threads:
-		isRunning = false;
-		console.log("joining threads");
-		simThread.end();
-		fluidThread.end();
-		console.log("joined threads");
+		threads_end();
 
     	// free resources:
     	onUnloadGPU();

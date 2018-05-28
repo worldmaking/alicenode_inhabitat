@@ -317,7 +317,49 @@ vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 	
 	float tr = (p.z + r) / (l + r*2);
 	uv.x = clamp(tr, 0., 1.);
-	
+
+	float gridripple = 0.01 * dot(sin(p.xyz * PI * 8.), cos(p.zxy * PI * 32.));
+	//d += gridripple;
+
+/*
+	// a repetitive object:
+	vec3 pt = p * 10.;
+	vec3 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+
+	d += tiledeform;
+	*/
+
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d += tiledeform;
 	return vec3(uv, d - r);
 
 	
@@ -390,7 +432,7 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	*/
 	
 	// add some ripple:
-	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
+	float h1 = h + 0.2*sin(PI * 1. * (t*t + phase* 0.3));
 	h1 = clamp( h1, 0.0, 1.0 );
 	// TODO should clamp after ripple really
 	
@@ -409,6 +451,49 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	uv.x = clamp(tab, 0., 1.);
 	
 	d = d - mix(ra, rb, h1);
+
+	/*
+	// a repetitive object:
+	vec3 pt = p * 10.;
+	vec3 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	*/
+
+	//d -= tiledeform;
+
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d += tiledeform;
+
+	
+
 	return vec3(uv, d);
 
 	//Previous code, does the same thing as above but with a positive l
@@ -652,6 +737,13 @@ vec3 fScene_tex_z(vec3 p) {
 
 	//return d * world_scale;
 	//return scl * ssub(d, mouth, 0.125);
+
+	
+	float gridripple = 0.01 * dot(sin(p.xyz * PI * 8.), cos(p.zxy * PI * 32.));
+
+	//d.z += gridripple;
+	//d.z -= tiledeform;
+
 	return vec3(d.xy, d.z * scl);
 }
  
@@ -753,7 +845,7 @@ void main() {
 		vec3 pn = normalize(p);
 		FragColor.xy = -pn.zy*0.5+0.5;
 
-		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
+		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .003));
 		
 	} else if (t >= maxd) {
     	// shot through to background

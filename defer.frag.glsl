@@ -20,7 +20,7 @@ uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
 uniform sampler3D uDistanceTex;
-uniform sampler3D uLandTex;
+//uniform sampler3D uLandTex;
 uniform sampler3D uDensityTex;
 uniform sampler3D uFluidTex;
 
@@ -77,7 +77,7 @@ void main() {
 	//vec3 fluidtexcoord = position; //
 	vec3 fluid = texture(uFluidTex, fluidtexcoord).xyz;
 	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
-	float land = texture(uLandTex, fluidtexcoord).x;
+	//float land = texture(uLandTex, fluidtexcoord).x;
 
 	float dist = texture(uDistanceTex, fluidtexcoord).x;
 	
@@ -134,7 +134,7 @@ void main() {
 
 	// get environmental light from emissive sources
 	// by lookup in the normal direction
-	float nearby = .5;
+	float nearby = .25;
 	vec3 texcoord_for_normal = (uFluidMatrix * vec4(position + normal*nearby, 1.)).xyz;
 	vec3 envcolor = texture(uDensityTex, texcoord_for_normal).rgb;
 	vec3 texcoord_for_ref = (uFluidMatrix * vec4(position + ref*nearby, 1.)).xyz;
@@ -143,15 +143,15 @@ void main() {
 	//float metallic = acute;
 	float metallic = acute;
 	//color.rgb = mix(vec3(0.5), normal*0.5+0.5, 0.2);
-	color.rgb *= mix(sky(ref), sky(normal), metallic);
+	//color.rgb *= mix(sky(ref), sky(normal), metallic);
 	
 	// edge finding by depth difference:
 	//float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
 	//color.rgb *= edges;
 
 	// env color
-	//color.rgb = envcolor;
-	color.rgb = envcolor_ref;
+	color.rgb = envcolor;
+	//color.rgb = envcolor_ref;
 	color.rgb += 0.1*basecolor.xyz;
 
 	//color.rgb = color.rgb * 0.1 + density;

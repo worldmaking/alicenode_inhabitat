@@ -919,9 +919,6 @@ void onFrame(uint32_t width, uint32_t height) {
 				world_centre, 
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-		} else {
-			
-
 		}
 		
 		viewProjMat = projMat * viewMat;

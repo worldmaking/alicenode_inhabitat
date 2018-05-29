@@ -83,7 +83,7 @@ State * state;
 Mmap<State> statemap;
 
 Fluid3D<> fluid;
-int fluid_passes = 9;
+int fluid_passes = 14;
 int fluid_noise_count = 32;
 float fluid_decay = 0.9999f;
 double fluid_viscosity = 0.00000001; //0.00001;

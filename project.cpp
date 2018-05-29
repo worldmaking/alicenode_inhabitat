@@ -1145,22 +1145,22 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 		} break;
 		//Go Up
 		case GLFW_KEY_KP_ADD:
-		case GLFW_KEY_LEFT_BRACKET: {
+		case GLFW_KEY_W: {
 			camUp += camSpeed;
 		} break;
 		//Go down
 		case GLFW_KEY_KP_SUBTRACT:
-		case GLFW_KEY_RIGHT_BRACKET: { 
+		case GLFW_KEY_Q: { 
 			camUp -= camSpeed;
 		} break;
 		//Go Forward
 		case GLFW_KEY_KP_1:
-		case GLFW_KEY_K: {
+		case GLFW_KEY_S: {
 			camForward = true;
 		} break;
 		//Go Back
 		case GLFW_KEY_KP_3:
-		case GLFW_KEY_L: {
+		case GLFW_KEY_A: {
 			camBackwards = true;
 		} break;
 		// default:

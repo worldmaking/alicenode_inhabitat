@@ -25,6 +25,7 @@ struct Object {
 	glm::quat orientation;
 	float phase;
 	glm::vec3 velocity;
+	glm::vec3 accel;
 	glm::vec3 color;
 };
 

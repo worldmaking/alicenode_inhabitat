@@ -12,6 +12,34 @@
 #include "state.h"
 
 
+// re-orient a vector `v` to the nearest direction 
+// that it is orthogonal to a given `normal`
+// without changing the vector's length
+glm::vec3 make_orthogonal_to(glm::vec3 const v, glm::vec3 const normal) {
+	// get component of v along normal:
+	glm::vec3 normal_component = normal * (dot(v, normal));
+	// remove this component from v:
+	glm::vec3 without_normal_component = v - normal_component;
+	// and re-scale to original magnitude:
+	return safe_normalize(without_normal_component) * glm::length(v);
+}
+
+// re-orient a quaternion `q` to the nearest orientation 
+// whose "up" vector (+Y) aligns to a given `normal`
+glm::quat align_upvector_to(glm::quat const q, glm::vec3 const normal) {
+	// get q's up vector:
+	glm::vec3 uy = quat_uy(q);
+	// get similarity with normal:
+	float dp = glm::dot(uy, normal);
+	// find an orthogonal axis to rotate around:
+	// (if dp is almost 1 or -1 this can be ambiguous, so pick q's z vector)
+	glm::vec3 axis = (fabsf(dp) < 0.999f) ? glm::cross(uy, normal) : quat_uz(q);
+	// get the rotation needed around this axis:
+	glm::quat diff = glm::angleAxis(acosf(dp), axis);
+	// rotate the original quat to align to the normal:
+	return safe_normalize(diff * q);
+}
+
 Shader objectShader;
 Shader segmentShader;
 Shader particleShader;
@@ -47,7 +75,7 @@ VBO particlesVBO(sizeof(State::particles));
 
 float near_clip = 0.1f;
 float far_clip = 12.f;
-float particleSize = 1.f/196;
+float particleSize = 1.f/512;
 float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
@@ -249,77 +277,23 @@ void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float
 				float dist = fabsf(sdist);
 
 				// generate a normalized influence factor -- the closer we are to the surface, the greater this is
-				float influence = glm::smoothstep(0.2f, 0.f, dist);
+				float influence = glm::smoothstep(0.1f, 0.f, dist);
 
+				glm::vec3& vel = velocities[i];
 				
 				// get a normal for the land:
 				// TODO: or read from state->land xyz?
 				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 2.f/LAND_DIM);
 
-				glm::vec3& vel = velocities[i];
-				//glm::vec3 veln = safe_normalize(vel);
-				float speed = glm::length(vel);
-
-				// get the projection of vel onto normal axis
-				// i.e. the component of vel that points in either normal direction:
-				glm::vec3 normal_component = normal * (dot(vel, normal));
-
-				// remove this component from the original velocity:
-				glm::vec3 without_normal_component = vel - normal_component;
-
-				// and re-scale to original magnitude:
-				glm::vec3 rescaled = safe_normalize(without_normal_component) * speed;
+				// re-orient to be orthogonal to the land normal:
+				glm::vec3 rescaled = make_orthogonal_to(vel, normal);
 
 				// update:
 				vel = mix(vel, rescaled, influence);	
 			}
 		}
 	}
-	
 }
-
-/*
-void apply_fluid_boundary2(glm::vec3 * velocities, const glm::vec4 * landscape, const size_t dim0, const size_t dim1, const size_t dim2) {
-
-	const float influence_offset = -(float)fluid_boundary_damping;
-	const float influence_scale = 1.f / (float)fluid_boundary_damping;
-
-	// probably don't need the triple loop here -- could do it cell by cell.
-	int i = 0;
-	for (size_t z = 0; z<dim2; z++) {
-		for (size_t y = 0; y<dim1; y++) {
-			for (size_t x = 0; x<dim0; x++, i++) {
-
-				const glm::vec4 land = landscape[i];
-				const double distance = fabs(land.w);
-				//const float inside = sign(land.w);	// do we care?
-				const double influence = glm::clamp((distance + influence_offset) * influence_scale, 0., 1.);
-				
-
-				glm::vec3& vel = velocities[i];
-				//glm::vec3 veln = safe_normalize(vel);
-				float speed = glm::length(vel);
-
-				// already normalized.
-				const glm::vec3 normal = glm::vec3(land);	
-
-				// get the projection of vel onto normal axis
-				// i.e. the component of vel that points in either normal direction:
-				glm::vec3 normal_component = normal * (dot(vel, normal));
-
-				// remove this component from the original velocity:
-				glm::vec3 without_normal_component = vel - normal_component;
-
-				// and re-scale to original magnitude:
-				glm::vec3 rescaled = safe_normalize(without_normal_component) * speed;
-
-				// update:
-				vel = mix(rescaled, vel, influence);
-				
-			}
-		}
-	}
-}*/
 
 void fluid_update(double dt) {
 	// update fluid
@@ -412,7 +386,7 @@ void fungus_update(float dt) {
 	//fungus_write = !fungus_write;
 }
 
-void sim_update(double dt) {
+void sim_update(float dt) {
 
 	// inverse dt gives rate (per second)
 	float idt = 1.f/dt;
@@ -464,7 +438,13 @@ void sim_update(double dt) {
 				o.location = p;
 				o.color = glm::vec3(uv, 0.5f);
 			}
-		} 
+		} else {
+			// sometimes assign to a random creature?
+			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
+				int idx = i % NUM_OBJECTS;
+				o.location = state->objects[idx].location;
+			}
+		}
 	}
 
 	// simulate creatures:
@@ -483,66 +463,34 @@ void sim_update(double dt) {
 		al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
 
 		// convert to meters per second:
+		// (why is this needed? shouldn't it be m/s already?)
 		flow *= idt;
 
-		// if below ground, rise up;
-		// if above ground, sink down:
-		float gravity = 0.1f;
-		flow.y += sdist < 0.1f ? gravity : -gravity;
+		float gravity = 0.2f;
+		o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
+		if (sdist < (o.scale * 0.5f)) { //(o.scale * rnd::uni(2.f))) {
+			// jump!
+			float jump = rnd::uni();
+			o.accel.y = jump * gravity * 500.f * o.scale;
 
+			// this is a good time to also emit a pulse:
+			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale * jump);
+		}
 
 		// set my velocity, in meters per second:
-		o.velocity = flow;
-		//if(accel == 1) o.velocity += o.velocity;
-		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
-
-
-		// use this to sample the landscape:
+		o.velocity = flow + o.accel*dt;
 		
-		// get normal here too
+		// wander:
+		o.orientation = safe_normalize(glm::slerp(o.orientation, quat_random() * o.orientation, 0.025f));
+
 		// get a normal for the land:
-		glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
-
-		glm::vec3 v0 = normal; //up vec
-		glm::vec3 v1 = quat_uy(o.orientation);
-		float dotProd = glm::dot( v0, v1 );
-		if (fabsf(dotProd) < 0.99f) {
-			//get axis - cross product b/w up and world vec
-			glm::vec3 axis = glm::cross(v1,v0);
-
-			//get angle - dot product and cosine
-			float angle = acos( dotProd );
-
-			//make quaternium 
-			glm::quat diff = glm::angleAxis(angle, axis);
-
-			/*
-			if (i == 0) {
-				console.log("axis: %f %f %f", axis.x, axis.y, axis.z);
-				console.log("angle: %f", angle);
-				console.log("dot product %f", dotProd);
-				
-			}*/
-
-			//glm::quat tempNorm = safe_normalize(o.orientation * diff);
-			glm::quat tempNorm = safe_normalize(diff * o.orientation);
+		glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.05f/LAND_DIM);
+		// re-orient relative to ground:
+		o.orientation = glm::slerp(o.orientation, align_upvector_to(o.orientation, normal), 0.2f);
 			
-			o.orientation = glm::slerp(o.orientation, tempNorm, 0.04f);
-			//o.orientation = glm::normalize(o.orientation * diff);
-
-			o.orientation = safe_normalize(o.orientation * glm::angleAxis(rnd::bi(0.1f), axis));
-
-		}
-
-		//o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-		
- 		// add my direction to the fluid current
+		// add my direction to the fluid current
 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
 		fluid.velocities.front().addnorm(norm, &push.x);
-		if (fmod(o.phase, 1.f) < 0.02f) {
-			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale);
-		}
-
 	}
 
 
@@ -592,29 +540,10 @@ void sim_update(double dt) {
 
 			// use this to sample the landscape:
 			
-			// get normal here too
 			// get a normal for the land:
-			glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
-
-			glm::vec3 v0 = normal; 
-			glm::vec3 v1 = quat_uy(o.orientation);
-			float dotProd = glm::dot( v0, v1 );
-			if (fabsf(dotProd) < 0.99f) {
-				//get axis - cross product b/w up and world vec
-				glm::vec3 axis = glm::cross(v0,v1);
-
-				//get angle - dot product and cosine
-				float angle = acos( dotProd );
-
-				//make quaternium 
-				glm::quat diff = glm::angleAxis(angle, axis);
-
-				glm::quat tempNorm = glm::normalize(o.orientation * diff);
-				
-				o.orientation = glm::slerp(o.orientation, tempNorm, 0.2f);
-		}
-
-
+			glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.05f/LAND_DIM);
+			// re-orient relative to ground:
+			o.orientation = glm::slerp(o.orientation, align_upvector_to(o.orientation, normal), 0.2f);
 			
 		} else {
 			auto& p = state->segments[i-1];
@@ -881,15 +810,15 @@ void onFrame(uint32_t width, uint32_t height) {
 		//change mode to have object[0], segement[0], or nothing in focus
 		if(debugMode % 3 == 1){
 			state->objects[0].location = world_centre;
-			state->objects[0].scale = 1;
-			state->segments[0].scale = 0.25;
+			state->objects[0].scale = state->segments[1].scale;
+			state->segments[0].scale = state->objects[1].scale;
 		}else if(debugMode % 3 == 2){
 			state->segments[0].location = world_centre;
-			state->segments[0].scale = 1;
-			state->objects[0].scale = 0.25;
+			state->segments[0].scale = state->segments[1].scale;
+			state->objects[0].scale = state->objects[1].scale;
 		}else{
-			state->segments[0].scale = 0.25;
-			state->objects[0].scale = 0.25;
+			state->segments[0].scale = state->segments[1].scale;
+			state->objects[0].scale = state->objects[1].scale;
 		}
 
 		
@@ -1268,7 +1197,8 @@ void onReset() {
 		o.location = world_centre+glm::ballRand(1.f);
 		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
-		o.scale = 0.25;
+		o.scale = 0.1;
+		o.accel = glm::vec3(0.f);
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto& o = state->segments[i];

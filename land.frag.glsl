@@ -165,7 +165,7 @@ float fScene(vec3 p) {
 	pt -= vec3(0.3, 0.123, 0.89324);
 	pf = fract(pt)-0.5;
 	ptpt = min(ptpt, dot(pf, pf));
-	float tiledeform = (0.5 - ptpt)*0.05;
+	float tiledeform = ptpt * -0.02 - 0.01;
 
 	d -= tiledeform;
 
@@ -205,6 +205,7 @@ vec3 normal4(in vec3 p, float eps) {
 void main() {
 	vec3 rd = normalize(ray);
 	vec3 ro = origin; // plus a little ray? 
+
 	
 
 	#define MAX_STEPS 256
@@ -233,8 +234,14 @@ void main() {
     }
 	
 	vec3 fogcolor = sky(rd);
+
+	//.if (d < 0.) discard;
 	
 	if (d < precis) {
+
+		// DEBUG!!
+		if (mod(p.x*4.f, 1.f) < 0.75 && mod(p.z*4.f, 1.f) < 0.75) discard;
+	
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);
@@ -280,6 +287,8 @@ void main() {
 		FragColor.rgb = vec3(1.);
 		FragNormal.xyz = -rd1;
 	}
+
+	
 	
     	
 	FragPosition.xyz = p;

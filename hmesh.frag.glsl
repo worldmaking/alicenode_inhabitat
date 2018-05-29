@@ -8,8 +8,8 @@ layout (location = 2) out vec3 FragPosition;
 
 
 void main() {
-	FragColor.rgb = vec3(cheap_self_occlusion);
-	FragNormal.xyz = normal4(p, .01);
-	FragPosition.xyz = p;
-	gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
+	FragColor.rgb = vec3(texCoord, 0.5);
+	FragNormal.xyz = normal;
+	FragPosition.xyz = position;
+	//gl_FragDepth = computeDepth(p, uViewProjectionMatrix);
 }

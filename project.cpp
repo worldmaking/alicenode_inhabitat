@@ -95,9 +95,9 @@ bool decel = 0;
 const float MOVEMENT_SPEED = 0.1f;
 
 
-glm::vec3 world_min(-4.f, 0.f, 0.f);
-glm::vec3 world_max(4.f, 8.f, 8.f);
-glm::vec3 world_centre(0.f, 1.8f, 4.f);
+glm::vec3 world_min(0.f, 0.f, 0.f);
+glm::vec3 world_max(8.f, 8.f, 8.f);
+glm::vec3 world_centre(4.f, 1.8f, 4.f);
 glm::vec3 prevVel = glm::vec3(0.);
 glm::vec3  newCamLoc;
 
@@ -277,7 +277,7 @@ void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float
 				float dist = fabsf(sdist);
 
 				// generate a normalized influence factor -- the closer we are to the surface, the greater this is
-				float influence = glm::smoothstep(0.1f, 0.f, dist);
+				float influence = glm::smoothstep(0.05f, 0.f, dist);
 
 				glm::vec3& vel = velocities[i];
 				
@@ -419,10 +419,11 @@ void sim_update(float dt) {
 
 		glm::vec3 flow;
 		fluid.velocities.front().readnorm(transform(world2fluid, o.location), &flow.x);
+
+		// noise:
+		flow += glm::sphericalRand(0.0002f);
 		
-		//glm::vec3 noise;// = glm::sphericalRand(0.02f);
 		o.velocity = flow * idt;
-			// + noise;
 
 		if (alice.cloudDevice->capturing) {
 			uint64_t idx = i % max_cloud_points;
@@ -468,10 +469,10 @@ void sim_update(float dt) {
 
 		float gravity = 0.2f;
 		o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
-		if (sdist < (o.scale * 0.5f)) { //(o.scale * rnd::uni(2.f))) {
+		if (sdist < (o.scale * 0.25f)) { //(o.scale * rnd::uni(2.f))) {
 			// jump!
 			float jump = rnd::uni();
-			o.accel.y = jump * gravity * 500.f * o.scale;
+			o.accel.y = jump * gravity * 200.f * o.scale;
 
 			// this is a good time to also emit a pulse:
 			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale * jump);
@@ -604,13 +605,15 @@ void onReloadGPU() {
 	{
 		const int dim = LAND_DIM+1;
 		Vertex grid[dim*dim];
+		const glm::vec3 normalizer = 1.f/glm::vec3(dim, 1.f, dim);
+
 		for (int i=0, y=0; y<dim; y++) {
 			for (int x=0; x<dim; x++) {
 				Vertex& v = grid[i++];
-				v.position = glm::vec3(x, 0, y);
+				v.position = glm::vec3(x, 0, y) * normalizer;
 				v.normal = glm::vec3(0, 1, 0);
 				// depends whether wrapping or not, divide dim or dim+1?
-				v.texcoord = glm::vec2(x, y) / glm::vec2(dim, dim);
+				v.texcoord = glm::vec2(v.position.x, v.position.z);
 			}
 		}
 		gridVBO.submit((void *)grid, sizeof(grid));
@@ -698,15 +701,6 @@ void onReloadGPU() {
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
 
-	if (0) {
-		heightMeshShader.use();
-		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-
-		gridVAO.drawElements(grid_elements);
-
-	} else {
-
 	landShader.use();
 	landShader.uniform("time", t);
 	landShader.uniform("uViewProjectionMatrix", viewProjMat);
@@ -724,8 +718,23 @@ void draw_scene(int width, int height) {
 	distanceTex.unbind(4);
 	fungusTex.unbind(5);
 	landTex.unbind(6);
-
 	
+	if (1) {
+		heightMeshShader.use();
+		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		heightMeshShader.uniform("uLandMatrix", world2fluid);
+		heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
+		heightMeshShader.uniform("uLandTex", 6);
+
+		landTex.bind(6);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		gridVAO.drawElements(grid_elements);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		landTex.unbind(6);
+
+	} 
+
 
 	objectShader.use();
 	objectShader.uniform("time", t);
@@ -760,7 +769,6 @@ void draw_scene(int width, int height) {
 
 	glDisable(GL_CULL_FACE);
 
-	}
 }
 
 void onFrame(uint32_t width, uint32_t height) {
@@ -922,6 +930,9 @@ void onFrame(uint32_t width, uint32_t height) {
 		double a = M_PI * t / 30.;
 		//when c is pressed, swap between normal camera, objects[0] camera, segments[0] camera, and a sine wave movement
 		if(camMode % camModeMax == 1){
+
+			// follow a creature mode:
+
 			/*viewMat = glm::lookAt(
 				glm::vec3(state->objects[0].location), 
 				state->objects[0].location + (state->objects[0].velocity + prevVel)/glm::vec3(2.), 
@@ -938,7 +949,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			//TODO: Once creatures follow the ground, fix boom going into the earth
 			
 
-			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.3, 0.75)));
+			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.1, 0.75)));
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 			prevVel = glm::vec3(o.velocity);
 
@@ -1001,10 +1012,10 @@ void onFrame(uint32_t width, uint32_t height) {
 			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 		} else { //top down camera view
 			viewMat = glm::lookAt(
-				glm::vec3(0.0f, 7.0f, 3.0f), 
+				world_centre + glm::vec3(0.0f, 6.0f, 0.0f), 
   		   		world_centre, 
   		   		glm::vec3(0.0f, 0.0f, 1.0f));
-			projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+			projMat = glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
 		}
 		
 		viewProjMat = projMat * viewMat;
@@ -1245,7 +1256,11 @@ void onReset() {
 		}
 	}
 
-	{
+
+	/*
+		Create the initial landscape:
+	*/
+	{	
 		int i=0;
 		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
 		for (size_t y=0;y<dim2.y;y++) {
@@ -1254,9 +1269,39 @@ void onReset() {
 				glm::vec2 norm = coord/glm::vec2(dim2);
 				glm::vec2 snorm = norm*2.f-1.f;
 
-				// plane height (in normed 0..1 to LAND_DIM):
-				float w = glm::abs(sin(M_PI * snorm.x)*snorm.y*0.15) + 0.01;
-				state->land[i].w = w;
+				float w = 0.f;
+
+				glm::vec2 p = snorm;
+				//w += pow((cos(M_PI * p.x)+1.)*(cos(M_PI * p.y)+1.)*0.25, 0.5);
+
+				p = p * 2.f;
+				p += glm::vec2(0.234f, 0.567f);
+				p = glm::rotate(p, 2.f);
+				w += pow((cos(M_PI * p.x)+1.)*(cos(M_PI * p.y)+1.)*0.25, 0.5) * 0.5;
+
+
+				p = p * 2.f;
+				p += glm::vec2(0.234f, 0.567f);
+				p = glm::rotate(p, 2.f);
+				w += pow((cos(M_PI * p.x)+1.)*(cos(M_PI * p.y)+1.)*0.25, 0.5) * 0.25;
+
+				p = p * 2.f;
+				p += glm::vec2(0.234f, 0.567f);
+				p = glm::rotate(p, 2.f);
+				w += pow((cos(M_PI * p.x)+1.)*(cos(M_PI * p.y)+1.)*0.25, 0.5) * 0.125;
+
+				p = p * glm::length(snorm);
+				p += glm::vec2(0.234f, 0.567f);
+				p = glm::rotate(p, 2.f);
+				w += pow((cos(M_PI * p.x)+1.)*(cos(M_PI * p.y)+1.)*0.25, 0.5) * 0.125;
+
+
+				w *= pow((cos(M_PI * snorm.x)+1.1)*(cos(M_PI * snorm.y)+1.1)*0.25, 0.35);
+
+
+				w = glm::max(w - 0.2f, 0.f);
+
+				state->land[i].w = w * 0.3 + 0.01;
 			}
 		}
 	}

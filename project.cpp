@@ -75,7 +75,7 @@ VBO particlesVBO(sizeof(State::particles));
 
 float near_clip = 0.1f;
 float far_clip = 12.f;
-float particleSize = 1.f/512;
+float particleSize = 0.0001;
 float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
@@ -277,7 +277,10 @@ void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float
 				float dist = fabsf(sdist);
 
 				// generate a normalized influence factor -- the closer we are to the surface, the greater this is
-				float influence = glm::smoothstep(0.05f, 0.f, dist);
+				//float influence = glm::smoothstep(0.05f, 0.f, dist);
+				// s is the amount of dist where the influence is 50%
+				float s = 0.01f;
+				float influence = s / (s + dist);
 
 				glm::vec3& vel = velocities[i];
 				
@@ -682,6 +685,9 @@ void onReloadGPU() {
 	particlesVAO.attr(0, &Particle::location);
 	particlesVAO.attr(1, &Particle::color);
 
+	landTex.wrap = GL_CLAMP_TO_EDGE;
+	distanceTex.wrap = GL_CLAMP_TO_EDGE;
+
 	{
 		glGenTextures(1, &colorTex);
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -701,6 +707,10 @@ void onReloadGPU() {
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
 
+	distanceTex.bind(4);
+	fungusTex.bind(5);
+	landTex.bind(6);
+	
 	landShader.use();
 	landShader.uniform("time", t);
 	landShader.uniform("uViewProjectionMatrix", viewProjMat);
@@ -711,13 +721,7 @@ void draw_scene(int width, int height) {
 	landShader.uniform("uFungusTex", 5);
 	landShader.uniform("uLandTex", 6);
 	landShader.uniform("uLandMatrix", world2fluid);
-	distanceTex.bind(4);
-	fungusTex.bind(5);
-	landTex.bind(6);
 	quadMesh.draw();
-	distanceTex.unbind(4);
-	fungusTex.unbind(5);
-	landTex.unbind(6);
 	
 	if (1) {
 		heightMeshShader.use();
@@ -725,15 +729,20 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 		heightMeshShader.uniform("uLandMatrix", world2fluid);
 		heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
+		heightMeshShader.uniform("uDistanceTex", 4);
+		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
 
 		landTex.bind(6);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		landTex.unbind(6);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	} 
+
+	distanceTex.unbind(4);
+	fungusTex.unbind(5);
+	landTex.unbind(6);
 
 
 	objectShader.use();
@@ -1206,7 +1215,7 @@ void onReset() {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
 		o.location = world_centre+glm::ballRand(1.f);
-		o.color = glm::ballRand(1.f)*0.5f+0.5f;
+		o.color = glm::mix(glm::ballRand(1.f)*0.5f+0.5f, glm::vec3(0.3, 0.2, 0.8), 0.5f);
 		o.phase = rnd::uni();
 		o.scale = 0.1;
 		o.accel = glm::vec3(0.f);
@@ -1344,7 +1353,7 @@ void onReset() {
 
 				glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
 
-				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm3, 2.f/LAND_DIM);
+				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm3, 1.f/LAND_DIM);
 				state->land[i] = glm::vec4(normal, w);
 			}
 		}

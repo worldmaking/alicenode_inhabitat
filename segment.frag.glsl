@@ -222,6 +222,23 @@ vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 	float tr = (p.z + r) / (l + r*2);
 	uv.x = clamp(tr, 0., 1.);
 	
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d += tiledeform;
 	return vec3(uv, d - r);
 }
 
@@ -275,6 +292,25 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	uv.x = clamp(tab, 0., 1.);
 	
 	d = d - mix(ra, rb, h1);
+
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d -= tiledeform;
+
 	return vec3(uv, d);
 }
 

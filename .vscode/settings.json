@@ -11,7 +11,8 @@
         "vector": "cpp",
         "xstring": "cpp",
         "xutility": "cpp",
-        "xlocale": "cpp"
+        "xlocale": "cpp",
+        "functional": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

@@ -590,7 +590,7 @@ void onUnloadGPU() {
 void onReloadGPU() {
 
 	onUnloadGPU();
-
+	
 	objectShader.readFiles("object.vert.glsl", "object.frag.glsl");
 	segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
@@ -648,6 +648,10 @@ void onReloadGPU() {
 		}
 		gridEBO.submit(&elements[0], num_elements);
 	}
+
+		console.log("--Locate Error--");
+	return;
+
 	gridVBO.bind();
 	gridEBO.bind();
 	gridVAO.attr(0, &Vertex::position);
@@ -693,6 +697,7 @@ void onReloadGPU() {
 	gBuffer.dest_changed();
 	
 	Alice::Instance().hmd->dest_changed();
+
 }
 
 void draw_scene(int width, int height) {
@@ -1374,7 +1379,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

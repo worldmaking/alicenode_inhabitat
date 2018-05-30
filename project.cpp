@@ -60,6 +60,9 @@ FloatTexture2D landTex;
 
 SimpleOBJ tableObj("island.obj", true, 1.f);
 
+std::vector<Vertex> gridVertices;
+std::vector<unsigned int> gridElements;
+
 VAO gridVAO;
 VBO gridVBO;
 EBO gridEBO;
@@ -627,19 +630,20 @@ void onReloadGPU() {
 	gridVAO.bind();
 	{
 		const int dim = LAND_DIM+1;
-		Vertex grid[dim*dim];
+		gridVertices.resize(dim*dim);
+		
 		const glm::vec3 normalizer = 1.f/glm::vec3(dim, 1.f, dim);
 
 		for (int i=0, y=0; y<dim; y++) {
 			for (int x=0; x<dim; x++) {
-				Vertex& v = grid[i++];
+				Vertex& v = gridVertices[i++];
 				v.position = glm::vec3(x, 0, y) * normalizer;
 				v.normal = glm::vec3(0, 1, 0);
 				// depends whether wrapping or not, divide dim or dim+1?
 				v.texcoord = glm::vec2(v.position.x, v.position.z);
 			}
 		}
-		gridVBO.submit((void *)grid, sizeof(grid));
+		gridVBO.submit((void *)&gridVertices[0], sizeof(Vertex) * gridVertices.size());
 
 		/*
 			e.g.: 2x2 squares:
@@ -652,9 +656,8 @@ void onReloadGPU() {
 			034 410, 145 521
 			367 743, 478 854
 		*/
-		const unsigned int num_elements = (dim-1) * (dim-1) * 6;
-		grid_elements = num_elements;
-		unsigned int elements[num_elements];
+		grid_elements = (dim-1) * (dim-1) * 6;
+		gridElements.resize(grid_elements);
 		int i=0;
 		for (unsigned int y=0; y<dim-1; y++) {
 			for (unsigned int x=0; x<dim-1; x++) {
@@ -663,16 +666,16 @@ void onReloadGPU() {
 				unsigned int p10 = p00 + dim;
 				unsigned int p11 = p00 + dim + 1;
 				// tri 1:
-				elements[i++] = p00;
-				elements[i++] = p10;
-				elements[i++] = p11;
+				gridElements[i++] = p00;
+				gridElements[i++] = p10;
+				gridElements[i++] = p11;
 				// tri 2:
-				elements[i++] = p11;
-				elements[i++] = p01;
-				elements[i++] = p00;
+				gridElements[i++] = p11;
+				gridElements[i++] = p01;
+				gridElements[i++] = p00;
 			}
 		}
-		gridEBO.submit(&elements[0], num_elements);
+		gridEBO.submit(&gridElements[0], gridElements.size());
 	}
 
 	gridVBO.bind();

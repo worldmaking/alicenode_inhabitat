@@ -4,6 +4,7 @@
 #include "al/al_field3d.h"
 #include "al/al_field2d.h"
 #include "al/al_gl.h"
+#include "al/al_obj.h"
 #include "al/al_kinect2.h"
 #include "al/al_mmap.h"
 #include "al/al_hmd.h"
@@ -46,6 +47,7 @@ Shader particleShader;
 Shader landShader;
 Shader heightMeshShader;
 Shader deferShader; 
+Shader simpleShader;
 
 QuadMesh quadMesh;
 GLuint colorTex;
@@ -56,11 +58,17 @@ FloatTexture3D distanceTex;
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
 
+SimpleOBJ tableObj("island.obj", true, 1.f);
 
 VAO gridVAO;
 VBO gridVBO;
 EBO gridEBO;
 unsigned int grid_elements;
+
+VAO tableVAO;
+VBO tableVBO;
+EBO tableEBO;
+unsigned int table_elements;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 
@@ -565,6 +573,8 @@ void onUnloadGPU() {
 	objectShader.dest_closing();
 	segmentShader.dest_closing();
 	deferShader.dest_closing();
+	simpleShader.dest_closing();
+
 	quadMesh.dest_closing();
 	cubeVBO.dest_closing();
 	objectInstancesVBO.dest_closing();
@@ -595,6 +605,7 @@ void onReloadGPU() {
 
 	onUnloadGPU();
 
+	simpleShader.readFiles("simple.vert.glsl", "simple.frag.glsl");
 	objectShader.readFiles("object.vert.glsl", "object.frag.glsl");
 	segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
@@ -603,6 +614,15 @@ void onReloadGPU() {
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
 	
 	quadMesh.dest_changed();
+
+	tableVAO.bind();
+	tableVBO.bind();
+	tableVBO.submit(&tableObj.vertices[0], sizeof(Vertex) * tableObj.vertices.size());
+	tableEBO.submit(&tableObj.indices[0], tableObj.indices.size());
+	tableEBO.bind();
+	tableVAO.attr(0, &Vertex::position);
+	tableVAO.attr(1, &Vertex::normal);
+	tableVAO.attr(2, &Vertex::texcoord);
 
 	gridVAO.bind();
 	{
@@ -710,6 +730,28 @@ void draw_scene(int width, int height) {
 	distanceTex.bind(4);
 	fungusTex.bind(5);
 	landTex.bind(6);
+
+	if (0) {
+		simpleShader.use();
+		simpleShader.uniform("uViewProjectionMatrix", viewProjMat);
+		tableVAO.drawElements(tableObj.indices.size());
+	}
+
+	heightMeshShader.use();
+	heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+	heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+	heightMeshShader.uniform("uLandMatrix", world2fluid);
+	heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
+	heightMeshShader.uniform("uDistanceTex", 4);
+	heightMeshShader.uniform("uFungusTex", 5);
+	heightMeshShader.uniform("uLandTex", 6);
+
+	landTex.bind(6);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	gridVAO.drawElements(grid_elements);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	return;
 	
 	landShader.use();
 	landShader.uniform("time", t);
@@ -722,23 +764,8 @@ void draw_scene(int width, int height) {
 	landShader.uniform("uLandTex", 6);
 	landShader.uniform("uLandMatrix", world2fluid);
 	quadMesh.draw();
+
 	
-	if (1) {
-		heightMeshShader.use();
-		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", world2fluid);
-		heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
-		heightMeshShader.uniform("uDistanceTex", 4);
-		heightMeshShader.uniform("uFungusTex", 5);
-		heightMeshShader.uniform("uLandTex", 6);
-
-		landTex.bind(6);
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		gridVAO.drawElements(grid_elements);
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	} 
 
 	distanceTex.unbind(4);
 	fungusTex.unbind(5);

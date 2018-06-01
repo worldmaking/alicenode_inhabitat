@@ -756,7 +756,7 @@ void draw_scene(int width, int height) {
 	gridVAO.drawElements(grid_elements);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	return;
+	//return;
 	
 	landShader.use();
 	landShader.uniform("time", t);

@@ -240,7 +240,7 @@ void main() {
 	if (d < precis) {
 
 		// DEBUG!!
-		if (mod(p.x*4.f, 1.f) < 0.75 && mod(p.z*4.f, 1.f) < 0.75) discard;
+		//if (mod(p.x*4.f, 1.f) < 0.75 && mod(p.z*4.f, 1.f) < 0.75) discard;
 	
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);

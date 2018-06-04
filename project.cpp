@@ -750,12 +750,10 @@ void draw_scene(int width, int height) {
 	heightMeshShader.uniform("uLandTex", 6);
 
 	landTex.bind(6);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	gridVAO.drawElements(grid_elements);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	return;
-	
 	landShader.use();
 	landShader.uniform("time", t);
 	landShader.uniform("uViewProjectionMatrix", viewProjMat);

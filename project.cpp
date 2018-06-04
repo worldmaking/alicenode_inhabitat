@@ -97,7 +97,7 @@ bool camBackwards;
 float creature_fluid_push = 0.05f;
 
 int debugMode = 0;
-int camMode = 0;
+int camMode = 1;
 
 std::mutex sim_mutex;
 bool accel = 0;
@@ -740,19 +740,20 @@ void draw_scene(int width, int height) {
 		tableVAO.drawElements(tableObj.indices.size());
 	}
 
-	heightMeshShader.use();
-	heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-	heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-	heightMeshShader.uniform("uLandMatrix", world2fluid);
-	heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
-	heightMeshShader.uniform("uDistanceTex", 4);
-	heightMeshShader.uniform("uFungusTex", 5);
-	heightMeshShader.uniform("uLandTex", 6);
+	if (0) {
+		heightMeshShader.use();
+		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		heightMeshShader.uniform("uLandMatrix", world2fluid);
+		heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
+		heightMeshShader.uniform("uDistanceTex", 4);
+		heightMeshShader.uniform("uFungusTex", 5);
+		heightMeshShader.uniform("uLandTex", 6);
 
-	landTex.bind(6);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	gridVAO.drawElements(grid_elements);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		gridVAO.drawElements(grid_elements);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
 
 	landShader.use();
 	landShader.uniform("time", t);
@@ -766,12 +767,10 @@ void draw_scene(int width, int height) {
 	landShader.uniform("uLandMatrix", world2fluid);
 	quadMesh.draw();
 
-	
 
 	distanceTex.unbind(4);
 	fungusTex.unbind(5);
 	landTex.unbind(6);
-
 
 	objectShader.use();
 	objectShader.uniform("time", t);

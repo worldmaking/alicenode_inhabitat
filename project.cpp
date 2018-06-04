@@ -86,7 +86,7 @@ VBO particlesVBO(sizeof(State::particles));
 
 float near_clip = 0.1f;
 float far_clip = 12.f;
-float particleSize = 0.0001;
+float particleSize = 0.001;
 float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
@@ -677,6 +677,7 @@ void onReloadGPU() {
 		}
 		gridEBO.submit(&gridElements[0], gridElements.size());
 	}
+
 	gridVBO.bind();
 	gridEBO.bind();
 	gridVAO.attr(0, &Vertex::position);
@@ -725,6 +726,7 @@ void onReloadGPU() {
 	gBuffer.dest_changed();
 	
 	Alice::Instance().hmd->dest_changed();
+
 }
 
 void draw_scene(int width, int height) {
@@ -1448,14 +1450,14 @@ extern "C" {
 		// how to convert world positions into normalized texture coordinates in the fluid field:
 		world2fluid = glm::inverse(fluid2world);
 
-		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(0.f, 0.f, -3.f));
+		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-4.f, 0.f, -3.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 
 		
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

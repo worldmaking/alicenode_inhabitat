@@ -151,8 +151,8 @@ void main() {
 
 	// env color
 	color.rgb = mix(color.rgb, envcolor, 0.2);
-	//color.rgb = envcolor_ref;
-	//color.rgb += 0.1*basecolor.xyz;
+	color.rgb = envcolor_ref;
+	color.rgb += 0.1*basecolor.xyz;
 
 	//color.rgb = color.rgb * 0.1 + density;
 	

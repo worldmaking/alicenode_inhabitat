@@ -533,6 +533,21 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	*/
 }
 
+//https://www.shadertoy.com/view/Xds3zN
+float sdCone( in vec3 p, in vec3 c )
+{
+    vec2 q = vec2( length(p.xz), p.y );
+    float d1 = -q.y-c.z;
+    float d2 = max( dot(q,c.xy), q.y);
+    return length(max(vec2(d1,d2),0.0)) + min(max(d1,d2), 0.);
+}
+
+//https://www.shadertoy.com/view/Xds3zN
+vec3 opRep( vec3 p, vec3 c )
+{
+    return mod(p,c)-0.5*c;
+}
+
 //Rotate function by:
 // http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/
 mat4 rotateY(float theta) {
@@ -744,7 +759,70 @@ vec3 fScene_tex_z(vec3 p) {
 	//d.z += gridripple;
 	//d.z -= tiledeform;
 
-	return vec3(d.xy, d.z * scl);
+	//return vec3(d.xy, d.z * scl);
+	vec3 baseGeo = vec3(d.xy, d.z * scl);
+
+	//making grass/hair on the creature
+	//--------------------------------------------------
+	//--- from https://www.shadertoy.com/view/ltSyzd ---
+	//--------------------------------------------------
+	const float height = 0.25;
+	const float heightvar = 1.0;
+	const float density = 0.5;
+	const float thickness = 0.1;
+
+	const mat2 rot1 = mat2(0.99500416527,0.0998334166,-0.0998334166,0.99500416527);
+	const mat2 rot2 = mat2(0.98006657784,0.19866933079,-0.19866933079,0.98006657784);
+	const mat2 rot3 = mat2(0.95533648912,0.29552020666,-0.29552020666,0.95533648912);
+	const mat2 rot4 = mat2(0.921060994,0.3894183423,-0.3894183423,0.921060994);
+	const mat2 rot5 = mat2(0.87758256189,0.4794255386,-0.4794255386,0.87758256189);
+	const mat2 rot6 = mat2(0.82533561491,0.56464247339,-0.56464247339,0.82533561491);
+	const mat2 rot7 = mat2(0.76484218728,0.64421768723,-0.64421768723,0.76484218728);
+	const mat2 rot8 = mat2(0.69670670934,0.7173560909,-0.7173560909,0.69670670934);
+	const mat2 rot9 = mat2(0.62160996827,0.78332690962,-0.78332690962,0.62160996827);
+	const mat2 rot10 = mat2(0.54030230586,0.8414709848,-0.8414709848,0.54030230586);
+
+	vec3 baseGeometry = baseGeo;
+       
+    p.y = baseGeometry.y;
+    //float hvar = texture(iChannel0, p.xz*0.075).x;
+    float h = height + heightvar;//hvar*heightvar;
+    
+    vec2 t = phase * vec2(5.0, 4.3);
+    vec2 windNoise = sin(p.xz*2.5 + t);
+    vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
+    vec2 wind = (windNoise*0.45 + windNoise2*0.3) * (p.y);
+
+    //p.xz += wind;
+
+    vec3 p1 = opRep(p, vec3(density));
+    p1 = vec3(p1.x, p.y - h, p1.z);
+    float g1 = sdCone(p1, vec3(1.0, thickness, h));
+    
+    p.xz *= rot5;
+    vec3 p2 = opRep(p, vec3(density)*0.85);
+    p2 = vec3(p2.x, p.y - h, p2.z);
+    float g2 = sdCone(p2, vec3(1.0, thickness, h));
+    
+    p.xz *= rot10;
+    vec3 p3 = opRep(p, vec3(density)*0.7);
+    p3 = vec3(p3.x, p.y - h, p3.z);
+    float g3 = sdCone(p3, vec3(1.0, thickness, h));
+    
+    p.xz *= rot3;
+    vec3 p4 = opRep(p, vec3(density)*0.9);
+    p4 = vec3(p4.x, p.y - h, p4.z);
+    float g4 = sdCone(p4, vec3(1.0, thickness, h));
+    
+    float g = min(min(g1, g2), min(g3, g4));
+    
+    //float id = 1.0;
+    
+    //if(baseGeometry.z < epsilon)
+   //     id = 0.0;
+    
+	//return vec3(min(g, baseGeometry.x), id, h);
+	return vec3(baseGeometry.xy, min(g, baseGeometry.z));
 }
  
 float fScene1(vec3 p) {
@@ -778,7 +856,7 @@ float fScene1(vec3 p) {
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`
 // (cheaper than the usual technique of sampling 6 cardinal points)
-// `fScene` should be the SDF evaluator `float distance = fScene(vec3 pos)`  
+// `fScene` should be the SDF evaluator `float distance = fScene(vec3 p)`  
 // `eps` is the distance to compare points around the location `p` 
 // a smaller eps gives sharper edges, but it should be large enough to overcome sampling error
 // in theory, the gradient magnitude of an SDF should everywhere = 1, 

@@ -745,6 +745,7 @@ vec3 fScene_tex_z(vec3 p) {
 	//d = smin_tex(d, a, 0.05);
 	d = smin_tex(d, c, 0.3);
 	d = smin_tex(d, e, 0.4);
+	//d = a;
 
 	vec3 f = smin_tex(b, c, 0.5);
 
@@ -759,17 +760,18 @@ vec3 fScene_tex_z(vec3 p) {
 	//d.z += gridripple;
 	//d.z -= tiledeform;
 
-	//return vec3(d.xy, d.z * scl);
-	vec3 baseGeo = vec3(d.xy, d.z * scl);
+	return vec3(d.xy, d.z * scl);
+	
+	/*vec3 baseGeo = vec3(d.xy, d.z);
 
 	//making grass/hair on the creature
 	//--------------------------------------------------
 	//--- from https://www.shadertoy.com/view/ltSyzd ---
 	//--------------------------------------------------
-	const float height = 0.25;
-	const float heightvar = 1.0;
-	const float density = 0.5;
-	const float thickness = 0.1;
+	const float height = 0.1;
+	const float heightvar = 0.05;
+	const float density = 0.1;
+	const float thickness = 0.001;
 
 	const mat2 rot1 = mat2(0.99500416527,0.0998334166,-0.0998334166,0.99500416527);
 	const mat2 rot2 = mat2(0.98006657784,0.19866933079,-0.19866933079,0.98006657784);
@@ -784,7 +786,8 @@ vec3 fScene_tex_z(vec3 p) {
 
 	vec3 baseGeometry = baseGeo;
        
-    p.y = baseGeometry.y;
+    p.y = baseGeometry.z;
+	//p = baseGeometry.zzz;
     //float hvar = texture(iChannel0, p.xz*0.075).x;
     float h = height + heightvar;//hvar*heightvar;
     
@@ -793,7 +796,7 @@ vec3 fScene_tex_z(vec3 p) {
     vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
     vec2 wind = (windNoise*0.45 + windNoise2*0.3) * (p.y);
 
-    //p.xz += wind;
+    p.xz += wind;
 
     vec3 p1 = opRep(p, vec3(density));
     p1 = vec3(p1.x, p.y - h, p1.z);
@@ -818,11 +821,13 @@ vec3 fScene_tex_z(vec3 p) {
     
     //float id = 1.0;
     
-    //if(baseGeometry.z < epsilon)
+    //if(baseGeometry.z < epsilon)s
    //     id = 0.0;
     
 	//return vec3(min(g, baseGeometry.x), id, h);
-	return vec3(baseGeometry.xy, min(g, baseGeometry.z));
+	return vec3(baseGeometry.xy, min(g, baseGeometry.z) * scl);
+	//*/
+	
 }
  
 float fScene1(vec3 p) {

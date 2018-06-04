@@ -742,7 +742,7 @@ void draw_scene(int width, int height) {
 		tableVAO.drawElements(tableObj.indices.size());
 	}
 
-	heightMeshShader.use();
+	/*heightMeshShader.use();
 	heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 	heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 	heightMeshShader.uniform("uLandMatrix", world2fluid);
@@ -755,6 +755,7 @@ void draw_scene(int width, int height) {
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	gridVAO.drawElements(grid_elements);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	*/
 
 	//return;
 	

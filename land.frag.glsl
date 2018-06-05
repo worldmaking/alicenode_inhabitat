@@ -127,6 +127,11 @@ float fCapsule(vec3 p, float r, float c) {
 	return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
 }
 
+float smin( float a, float b, float k ) {
+	float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+	return mix( b, a, h ) - k*h*(1.0-h);
+}
+
 float fScene_test(vec3 p) {
 	
 	float x1 = min(0., sin(p.x * 4.)*sin(p.z* 4.));
@@ -164,6 +169,13 @@ float sdCone( in vec3 p, in vec3 c )
     float d1 = -q.y-c.z;
     float d2 = max( dot(q,c.xy), q.y);
     return length(max(vec2(d1,d2),0.0)) + min(max(d1,d2), 0.);
+}
+
+//https://www.shadertoy.com/view/Xds3zN
+float sdCylinder( vec3 p, vec2 h )
+{
+  vec2 d = abs(vec2(length(p.xz),p.y)) - h;
+  return min(max(d.x,d.y),0.0) + length(max(d,0.0));
 }
 
 //https://www.shadertoy.com/view/Xds3zN
@@ -221,9 +233,9 @@ float fScene(vec3 p) {
 	//--------------------------------------------------
 	//--- from https://www.shadertoy.com/view/ltSyzd ---
 	//--------------------------------------------------
-	const float height = 0.01;
+	const float height = 0.001;
 	const float heightvar = 0.005;
-	const float density = 0.1;
+	const float density = 1.0;
 	const float thickness = 0.9;
 
 	vec3 baseGeometry = baseGeo;
@@ -242,6 +254,7 @@ float fScene(vec3 p) {
     vec2 wind = (windNoise*0.95 + windNoise2*2.3) * (p.y);
 
     p.xz += wind;
+
 
     vec3 p1 = opRep(p, vec3(density));
     p1 = vec3(p1.x, p.y - h, p1.z);
@@ -262,8 +275,30 @@ float fScene(vec3 p) {
     vec3 p4 = opRep(p, vec3(density)*0.9);
     p4 = vec3(p4.x, p.y - h, p4.z);
     float g4 = sdCone(p4, vec3(1.0, thickness, h));
+
+	//Cylinder test*/
+	/*
+	vec3 p1 = opRep(p, vec3(density));
+    p1 = vec3(p1.x, p.y - h, p1.z);
+    float g1 = sdCylinder(p1, vec2(1.0, h));
     
+    p.xz *= rot5;
+    vec3 p2 = opRep(p, vec3(density)*0.85);
+    p2 = vec3(p2.x, p.y - h, p2.z);
+    float g2 = sdCylinder(p1, vec2(1.0, h));
+    
+    p.xz *= rot10;
+    vec3 p3 = opRep(p, vec3(density)*0.7);
+    p3 = vec3(p3.x, p.y - h, p3.z);
+    float g3 = sdCylinder(p1, vec2(1.0, h));
+    
+    p.xz *= rot3;
+    vec3 p4 = opRep(p, vec3(density)*0.9);
+    p4 = vec3(p4.x, p.y - h, p4.z);
+    float g4 = sdCylinder(p1, vec2(1.0, h));
+    */
     float g = min(min(g1, g2), min(g3, g4));
+	
     
     //float id = 1.0;
     
@@ -276,7 +311,7 @@ float fScene(vec3 p) {
 
 	//.float d3 = p.y + dot(sin(p/2. + cos(p.yzx/2. + 3.14159/2.)), vec3(.5)) - 0.1;
 
-	return min(d, g); //min(d, d3);
+	return smin(d, g, 0.5); //min(d, d3);
 }
 
 float fScene0(vec3 p) {

@@ -822,7 +822,7 @@ vec3 fScene_tex_z(vec3 p) {
     //float id = 1.0;
     
     //if(baseGeometry.z < epsilon)s
-   //     id = 0.0;
+   	//	id = 0.0;
     
 	//return vec3(min(g, baseGeometry.x), id, h);
 	return vec3(baseGeometry.xy, min(g, baseGeometry.z) * scl);

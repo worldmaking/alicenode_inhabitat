@@ -233,10 +233,10 @@ float fScene(vec3 p) {
 	//--------------------------------------------------
 	//--- from https://www.shadertoy.com/view/ltSyzd ---
 	//--------------------------------------------------
-	const float height = 0.001;
-	const float heightvar = 0.005;
-	const float density = 1.0;
-	const float thickness = 0.9;
+	const float height = 0.02;
+	const float heightvar = 0.000000005;
+	const float density = 0.1;
+	const float thickness = 1.0;
 
 	vec3 baseGeometry = baseGeo;
 
@@ -297,7 +297,8 @@ float fScene(vec3 p) {
     p4 = vec3(p4.x, p.y - h, p4.z);
     float g4 = sdCylinder(p1, vec2(1.0, h));
     */
-    float g = min(min(g1, g2), min(g3, g4));
+    //float g = smin(smin(g1, g2, 0.5), smin(g3, g4, 0.5), 0.5);
+	float g = min(min(g1, g2), min(g3, g4));
 	
     
     //float id = 1.0;
@@ -311,7 +312,8 @@ float fScene(vec3 p) {
 
 	//.float d3 = p.y + dot(sin(p/2. + cos(p.yzx/2. + 3.14159/2.)), vec3(.5)) - 0.1;
 
-	return smin(d, g, 0.5); //min(d, d3);
+	//return min(d, g);
+	return smin(d, g, 0.01); //min(d, d3);
 }
 
 float fScene0(vec3 p) {
@@ -350,7 +352,7 @@ void main() {
 
 	#define MAX_STEPS 256
 	#define STEP_SIZE 1./float(MAX_STEPS)
-	float precis = 1./100.; //EPS;
+	float precis = 1./1000.; //EPS;
 	float maxd = uFarClip-uNearClip;
 	
 	vec3 color = vec3(0.);

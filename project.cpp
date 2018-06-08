@@ -48,6 +48,7 @@ Shader landShader;
 Shader heightMeshShader;
 Shader deferShader; 
 Shader simpleShader;
+Shader debugShader;
 
 QuadMesh quadMesh;
 GLuint colorTex;
@@ -83,6 +84,9 @@ VBO segmentInstancesVBO(sizeof(State::segments));
 
 VAO particlesVAO;
 VBO particlesVBO(sizeof(State::particles));
+
+VAO debugVAO;
+VBO debugVBO(sizeof(State::debugdots));
 
 float near_clip = 0.1f;
 float far_clip = 12.f;
@@ -585,7 +589,7 @@ void onUnloadGPU() {
 	segmentInstancesVBO.dest_closing();
 	segmentVAO.dest_closing();
 	particlesVAO.dest_closing();
-	particlesVAO.dest_closing();
+	debugVAO.dest_closing();
 
 	fluidTex.dest_closing();
 	densityTex.dest_closing();
@@ -615,6 +619,7 @@ void onReloadGPU() {
 	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
 	heightMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
+	debugShader.readFiles("debug.vert.glsl", "debug.frag.glsl");
 	
 	quadMesh.dest_changed();
 
@@ -709,6 +714,11 @@ void onReloadGPU() {
 	particlesVAO.attr(0, &Particle::location);
 	particlesVAO.attr(1, &Particle::color);
 
+	debugVAO.bind();
+	debugVBO.bind();
+	debugVAO.attr(0, &DebugDot::location);
+	debugVAO.attr(1, &DebugDot::color);
+
 	landTex.wrap = GL_CLAMP_TO_EDGE;
 	distanceTex.wrap = GL_CLAMP_TO_EDGE;
 
@@ -742,7 +752,7 @@ void draw_scene(int width, int height) {
 		tableVAO.drawElements(tableObj.indices.size());
 	}
 
-	if (0) {
+	if (1) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
@@ -757,18 +767,19 @@ void draw_scene(int width, int height) {
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	landShader.use();
-	landShader.uniform("time", t);
-	landShader.uniform("uViewProjectionMatrix", viewProjMat);
-	landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-	landShader.uniform("uNearClip", near_clip);
-	landShader.uniform("uFarClip", far_clip);
-	landShader.uniform("uDistanceTex", 4);
-	landShader.uniform("uFungusTex", 5);
-	landShader.uniform("uLandTex", 6);
-	landShader.uniform("uLandMatrix", world2fluid);
-	quadMesh.draw();
-
+	if (0) {
+		landShader.use();
+		landShader.uniform("time", t);
+		landShader.uniform("uViewProjectionMatrix", viewProjMat);
+		landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		landShader.uniform("uNearClip", near_clip);
+		landShader.uniform("uFarClip", far_clip);
+		landShader.uniform("uDistanceTex", 4);
+		landShader.uniform("uFungusTex", 5);
+		landShader.uniform("uLandTex", 6);
+		landShader.uniform("uLandMatrix", world2fluid);
+		quadMesh.draw();
+	}
 
 	distanceTex.unbind(4);
 	fungusTex.unbind(5);
@@ -805,6 +816,24 @@ void draw_scene(int width, int height) {
 	glDisable(GL_POINT_SPRITE);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	debugShader.use(); 
+	debugShader.uniform("uViewMatrix", viewMat);
+	debugShader.uniform("uViewMatrixInverse", viewMatInverse);
+	debugShader.uniform("uProjectionMatrix", projMat);
+	debugShader.uniform("uViewProjectionMatrix", viewProjMat);
+	debugShader.uniform("uViewPortHeight", (float)height);
+	debugShader.uniform("uPointSize", particleSize * 10.);
+	debugShader.uniform("uColorTex", 0);
+
+	glBindTexture(GL_TEXTURE_2D, colorTex);
+	glEnable( GL_PROGRAM_POINT_SIZE );
+	glEnable(GL_POINT_SPRITE);
+	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+	debugVAO.draw(NUM_PARTICLES, GL_POINTS);
+	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glDisable(GL_POINT_SPRITE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 	glDisable(GL_CULL_FACE);
 
 }
@@ -816,6 +845,30 @@ void onFrame(uint32_t width, uint32_t height) {
 	float aspect = width/float(height);
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f)", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS());
+
+	if (alice.leap->isConnected) {
+		// copy bones into debugdots
+
+		int d=0;
+		for (int h=0; h<2; h++) {
+			auto& hand = alice.leap->hands[h];
+			glm::vec3 col = h ?  glm::vec3(1, 0, 0) :  glm::vec3(0, 1, 0);
+			if (!hand.isVisible) {
+				col = glm::vec3(0.);
+			};
+
+			for (int f=0; f<5; f++) {
+				auto& finger = hand.fingers[f];
+				for (int b=0; b<4; b++) {
+					auto& bone = finger.bones[b];
+					state->debugdots[d].location = transform(viewMatInverse, bone.center);
+					state->debugdots[d].color = col;
+
+					d++;
+				}
+			}
+		}
+	}
 
 	if (alice.isSimulating && isRunning) {
 		// keep the simulation in here to absolute minimum
@@ -873,6 +926,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
 		particlesVBO.submit(&state->particles[0], sizeof(state->particles));
+		debugVBO.submit(&state->debugdots[0], sizeof(state->debugdots));
 		
 		// upload texture data to GPU:
 		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
@@ -1457,7 +1511,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-		//alice.hmd->connect();
+		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

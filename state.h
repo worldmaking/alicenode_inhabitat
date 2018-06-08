@@ -5,6 +5,8 @@
 #define NUM_OBJECTS	32
 #define NUM_PARTICLES 1024*256
 
+#define NUM_DEBUGDOTS 2*5*4
+
 #define FIELD_DIM 32
 #define FIELD_TEXELS FIELD_DIM*FIELD_DIM
 #define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
@@ -44,10 +46,17 @@ struct Particle {
 	glm::vec3 velocity;
 };
 
+struct DebugDot {
+	glm::vec3 location;
+	glm::vec3 color;
+};
+
 struct State {
 	Particle particles[NUM_PARTICLES];
 	Object objects[NUM_OBJECTS];
 	Segment segments[NUM_SEGMENTS];
+
+	DebugDot debugdots[NUM_DEBUGDOTS];
 
 	// the density field is currently being used to store emissive light (as a form of smell)
 	glm::vec3 density[FIELD_VOXELS];

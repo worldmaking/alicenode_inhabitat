@@ -86,7 +86,7 @@ VBO particlesVBO(sizeof(State::particles));
 
 float near_clip = 0.1f;
 float far_clip = 12.f;
-float particleSize = 0.0001;
+float particleSize = 0.001;
 float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
@@ -97,7 +97,7 @@ bool camBackwards;
 float creature_fluid_push = 0.05f;
 
 int debugMode = 0;
-int camMode = 0;
+int camMode = 1;
 
 std::mutex sim_mutex;
 bool accel = 0;
@@ -677,6 +677,7 @@ void onReloadGPU() {
 		}
 		gridEBO.submit(&gridElements[0], gridElements.size());
 	}
+
 	gridVBO.bind();
 	gridEBO.bind();
 	gridVAO.attr(0, &Vertex::position);
@@ -725,6 +726,7 @@ void onReloadGPU() {
 	gBuffer.dest_changed();
 	
 	Alice::Instance().hmd->dest_changed();
+
 }
 
 void draw_scene(int width, int height) {
@@ -740,19 +742,20 @@ void draw_scene(int width, int height) {
 		tableVAO.drawElements(tableObj.indices.size());
 	}
 
-	heightMeshShader.use();
-	heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-	heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-	heightMeshShader.uniform("uLandMatrix", world2fluid);
-	heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
-	heightMeshShader.uniform("uDistanceTex", 4);
-	heightMeshShader.uniform("uFungusTex", 5);
-	heightMeshShader.uniform("uLandTex", 6);
+	if (0) {
+		heightMeshShader.use();
+		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		heightMeshShader.uniform("uLandMatrix", world2fluid);
+		heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
+		heightMeshShader.uniform("uDistanceTex", 4);
+		heightMeshShader.uniform("uFungusTex", 5);
+		heightMeshShader.uniform("uLandTex", 6);
 
-	landTex.bind(6);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	gridVAO.drawElements(grid_elements);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		gridVAO.drawElements(grid_elements);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
 
 	landShader.use();
 	landShader.uniform("time", t);
@@ -766,12 +769,10 @@ void draw_scene(int width, int height) {
 	landShader.uniform("uLandMatrix", world2fluid);
 	quadMesh.draw();
 
-	
 
 	distanceTex.unbind(4);
 	fungusTex.unbind(5);
 	landTex.unbind(6);
-
 
 	objectShader.use();
 	objectShader.uniform("time", t);
@@ -1449,14 +1450,14 @@ extern "C" {
 		// how to convert world positions into normalized texture coordinates in the fluid field:
 		world2fluid = glm::inverse(fluid2world);
 
-		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(0.f, 0.f, -3.f));
+		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-4.f, 0.f, -3.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 
 		
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

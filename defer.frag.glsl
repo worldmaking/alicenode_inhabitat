@@ -151,8 +151,8 @@ void main() {
 
 	// env color
 	color.rgb = mix(color.rgb, envcolor, 0.2);
-	//color.rgb = envcolor_ref;
-	//color.rgb += 0.1*basecolor.xyz;
+	color.rgb = envcolor_ref;
+	color.rgb += 0.1*basecolor.xyz;
 
 	//color.rgb = color.rgb * 0.1 + density;
 	
@@ -188,7 +188,7 @@ void main() {
 	// color.rgb = view_position;
 
 	// normal viz:
-	//color.rgb = normal*0.5+0.5;
+	color.rgb = normal*0.5+0.5;
 
 	// reflection vectors
 	//color.rgb = ref.xyz*0.5+0.5;

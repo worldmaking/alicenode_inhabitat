@@ -129,7 +129,7 @@ glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
-float mini2world = 20.;
+float mini2world = 1.;
 
 glm::vec3 cameraLoc;
 glm::quat cameraOri;
@@ -1009,7 +1009,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		//	vive.near_clip = near_clip;
 		//	vive.far_clip = far_clip;	
 				
-			vive.near_clip = near_clip / mini2world;
+			vive.near_clip = near_clip;;// / mini2world;
 			vive.far_clip = far_clip * mini2world;	
 			vive.update();
 			glEnable(GL_SCISSOR_TEST);
@@ -1250,7 +1250,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		fbo.draw();
 	}
-	
+
 	alice.hmd->submit();
 	
 	// openvr header recommends this after submit:
@@ -1616,7 +1616,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-		//alice.hmd->connect();
+		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

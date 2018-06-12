@@ -7,6 +7,7 @@ in float world_scale;
 in vec4 world_orientation;
 in float phase;
 in vec3 velocity;
+in vec3 vertexpos;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -504,6 +505,10 @@ void main() {
         count += STEP_SIZE;
     }
     FragColor = vec4(1.);
+
+//	FragPosition.xyz = vertexpos;
+	//FragColor.rgb = vec3(count);
+	//return;
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);

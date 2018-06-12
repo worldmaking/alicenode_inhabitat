@@ -18,6 +18,7 @@ out float phase;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
 out vec3 velocity;
+out vec3 vertexpos;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
@@ -63,7 +64,7 @@ void main() {
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;
-	vec3 vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
+	vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
 	// calculate gl_Position the usual way
 	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
 

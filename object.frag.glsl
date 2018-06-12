@@ -919,6 +919,8 @@ void main() {
         count += STEP_SIZE;
     }
     FragColor = vec4(count);
+	
+	
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);

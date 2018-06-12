@@ -756,7 +756,7 @@ void draw_scene(int width, int height) {
 		tableVAO.drawElements(tableObj.indices.size());
 	}
 
-	if (1) {
+	if (0) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
@@ -771,7 +771,7 @@ void draw_scene(int width, int height) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	if (0) {
+	if (1) {
 		landShader.use();
 		landShader.uniform("time", t);
 		landShader.uniform("uViewProjectionMatrix", viewProjMat);
@@ -853,7 +853,6 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (alice.leap->isConnected) {
 		// copy bones into debugdots
 		glm::mat4 trans = viewMatInverse * leap2view;
-
 
 		int d=0;
 		for (int h=0; h<2; h++) {
@@ -1619,7 +1618,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBuffer.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBuffer.dim = alice.hmd->fbo.dim;

@@ -129,7 +129,7 @@ glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
-float mini2world = 1.;
+float mini2world = 10.;
 
 glm::vec3 cameraLoc;
 glm::quat cameraOri;

@@ -100,7 +100,7 @@ bool camBackwards;
 float creature_fluid_push = 0.05f;
 
 int debugMode = 0;
-int camMode = 5;
+int camMode = 0;
 
 std::mutex sim_mutex;
 bool accel = 0;
@@ -128,9 +128,9 @@ glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
-float mini2world = 1.;
+float mini2world = 10.;
 float near_clip = 0.1f / mini2world;
-float far_clip = 12.f;// / mini2world;
+float far_clip = 12.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
 
 glm::vec3 cameraLoc;
@@ -800,6 +800,7 @@ void draw_scene(int width, int height) {
 	segmentShader.use();
 	segmentShader.uniform("time", t);
 	segmentShader.uniform("uEyePos", eyePos);
+	segmentShader.uniform("uMini2World", mini2world);
 	segmentShader.uniform("uViewMatrix", viewMat);
 	segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
 	segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);

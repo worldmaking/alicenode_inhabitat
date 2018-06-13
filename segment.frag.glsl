@@ -504,10 +504,9 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    FragColor = vec4(1.);
-
-//	FragPosition.xyz = vertexpos;
-	//FragColor.rgb = vec3(count);
+    FragColor = vec4(rd, 1.);
+	FragPosition.xyz = vertexpos;
+	
 	//return;
     
     if (d < precis) {
@@ -531,6 +530,6 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);
+	FragPosition.xyz = (world_position + quat_rotate(world_orientation, p));
 	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

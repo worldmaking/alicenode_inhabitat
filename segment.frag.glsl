@@ -7,6 +7,7 @@ in float world_scale;
 in vec4 world_orientation;
 in float phase;
 in vec3 velocity;
+in vec3 vertexpos;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -503,7 +504,10 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    FragColor = vec4(1.);
+    FragColor = vec4(rd, 1.);
+	FragPosition.xyz = vertexpos;
+	
+	//return;
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
@@ -526,6 +530,6 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);
+	FragPosition.xyz = (world_position + quat_rotate(world_orientation, p));
 	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

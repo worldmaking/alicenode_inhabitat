@@ -88,8 +88,7 @@ VBO particlesVBO(sizeof(State::particles));
 VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
-float near_clip = 0.1f;
-float far_clip = 12.f;
+
 float particleSize = 0.002;
 float camSpeed = 15.0f;
 float camPitch;
@@ -129,7 +128,10 @@ glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
-float mini2world = 20.;
+float mini2world = 1.;
+float near_clip = 0.1f / mini2world;
+float far_clip = 12.f;// / mini2world;
+glm::vec3 eyePos;
 
 glm::vec3 cameraLoc;
 glm::quat cameraOri;
@@ -797,6 +799,7 @@ void draw_scene(int width, int height) {
 
 	segmentShader.use();
 	segmentShader.uniform("time", t);
+	segmentShader.uniform("uEyePos", eyePos);
 	segmentShader.uniform("uViewMatrix", viewMat);
 	segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
 	segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
@@ -1113,7 +1116,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
 				//TODO: Once creatures follow the ground, fix boom going into the earth
 				
-
+				eyePos = cameraLoc;
 				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.1, 0.75)));
 				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				prevVel = glm::vec3(o.velocity);
@@ -1135,19 +1138,21 @@ void onFrame(uint32_t width, uint32_t height) {
 				cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
 				cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
 				//TODO: Once creatures follow the ground, fix boom going into the earth
-
+				eyePos = cameraLoc;
 				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.4, 1.)));
 				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				prevVel = glm::vec3(o.velocity);
 
 			}else if(camMode % camModeMax == 3){
+				eyePos = world_centre + 
+					glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a));
 				viewMat = glm::lookAt(
-					world_centre + 
-					glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
+					eyePos, 
 					world_centre, 
 					glm::vec3(0., 1., 0.));
 			}else if(camMode % camModeMax == 4){
 				
+				/// nav
 				if(camForward){
 					newCamLoc = cameraLoc + quat_uf(cameraOri)* (camSpeed * 0.01f);}
 				else if(camBackwards){
@@ -1162,26 +1167,30 @@ void onFrame(uint32_t width, uint32_t height) {
 				//glm::quat (0.f, camYaw*0.01f, 0.f , camPitch*0.01f);
 				cameraOri = glm::mix(cameraOri,newCamRot, 0.5f);
 
-				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.3, 0.75)));
+				eyePos = cameraLoc;
+				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
 				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 
 				camForward = false;
 				camBackwards = false;
 			}else if(camMode % camModeMax == 5){
 				double a = M_PI * t / 30.;
+				eyePos = world_centre + 
+					glm::vec3(3.*cos(a), 1., 4.*sin(a));
 				viewMat = glm::lookAt(
-					world_centre + 
-					glm::vec3(3.*cos(a), 1., 4.*sin(a)), 
+					eyePos, 
 					world_centre, 
 					glm::vec3(0., 1., 0.));
 				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 			} else { //top down camera view
+			eyePos = world_centre + glm::vec3(0.0f, 6.0f, 0.0f);
 				viewMat = glm::lookAt(
-					world_centre + glm::vec3(0.0f, 6.0f, 0.0f), 
+					eyePos, 
 					world_centre, 
 					glm::vec3(0.0f, 0.0f, 1.0f));
 				projMat = glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
 			}
+			viewMat = viewMat * glm::scale(glm::vec3(mini2world));
 			
 			viewProjMat = projMat * viewMat;
 

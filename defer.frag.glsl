@@ -221,6 +221,6 @@ void main() {
 
 	//color += normal*0.25;
 	
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
+	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 	FragColor.rgb = color;	
 }

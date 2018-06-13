@@ -859,12 +859,18 @@ void onFrame(uint32_t width, uint32_t height) {
 		// copy bones into debugdots
 		glm::mat4 trans = viewMatInverse * leap2view;
 
-		int d=0;
+		int num_ray_dots = 64;
+		int num_hand_dots = 5*4;
+
 		for (int h=0; h<2; h++) {
+
+			int d = h * (num_hand_dots + num_ray_dots);
+
 			auto& hand = alice.leap->hands[h];
+
 			//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 			float cf = fmod(hand.id / 6.f, 1.f);
-			glm::vec3 col = glm::vec3(cf, 1.-cf, 0.);
+			glm::vec3 col = glm::vec3(cf, 1.-cf, h);
 			if (!hand.isVisible) {
 				col = glm::vec3(0.2);
 			};
@@ -874,62 +880,60 @@ void onFrame(uint32_t width, uint32_t height) {
 				auto& finger = hand.fingers[f];
 				for (int b=0; b<4; b++) {
 					auto& bone = finger.bones[b];
-					state->debugdots[d].location = transform(trans, bone.center);
+					if (hand.isVisible) state->debugdots[d].location = transform(trans, bone.center);
 					state->debugdots[d].color = col;
 
 					d++;
 				}
 			}
 
-			if (hand.isVisible) {
+			//get hand position and direction and cast ray forward until it hits land
+			glm::vec3 handPos = hand.palmPos;
+			glm::vec3 handDir = hand.direction;
 
-				//get hand position and direction and cast ray forward until it hits land
-				glm::vec3 handPos = hand.palmPos;
-				glm::vec3 handDir = hand.direction;
+			// these are in 'leap' space, need to convert to world space
+			handPos = transform(trans, handPos);
+			handDir = transform(trans, handDir);
 
-				// these are in 'leap' space, need to convert to world space
-				handPos = transform(trans, handPos);
-				handDir = transform(trans, handDir);
+			auto a = hand.fingers[3].bones[0].center;
+			auto b = hand.fingers[3].bones[1].center;
 
-				auto a = hand.fingers[3].bones[0].center;
-				auto b = hand.fingers[3].bones[1].center;
-
-				a = transform(trans, a);
-				b = transform(trans, b);
+			a = transform(trans, a);
+			b = transform(trans, b);
 
 
-				handDir = glm::normalize(b - a);
-				//handDir = safe_normalize(glm::mix(handDir, glm::vec3(0,1,0), 0.25));
-				handPos = a;
+			handDir = glm::normalize(b - a);
+			//handDir = safe_normalize(glm::mix(handDir, glm::vec3(0,1,0), 0.25));
+			handPos = a;
 
-				auto rotaxis = safe_normalize(glm::cross(handDir, glm::vec3(0, 1, 0)));
-				auto warp = glm::rotate(-0.1f, rotaxis);
+			auto rotaxis = safe_normalize(glm::cross(handDir, glm::vec3(0, 1, 0)));
+			auto warp = glm::rotate(-0.1f, rotaxis);
 
-				glm::vec3 p = a;
+			glm::vec3 p = a;
 
-				for (int i=0; i<64; i++) {
-					glm::vec3& loc = state->debugdots[d].location;
-					loc = glm::mix(loc, p, 0.2f);
-					p = loc;
+			for (int i=0; i<num_ray_dots; i++) {
+				glm::vec3 loc = state->debugdots[d].location;
+				//loc = p;
+				if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
+				p = loc;
 
-					//handDir = safe_normalize(transform(warp, handDir));
-					handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
+				//handDir = safe_normalize(transform(warp, handDir));
+				handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
 
-					auto norm = transform(world2fluid, p);
-					float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
+				auto norm = transform(world2fluid, p);
+				float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
 
-					// distance in world coordinates:
-					//float dist_w = fluid2world_scale * dist;
+				// distance in world coordinates:
+				//float dist_w = fluid2world_scale * dist;
 
-					p = p + 0.01f * handDir;
+				p = p + 0.01f * handDir;
 
-					float c = 0.01;
-					c = c / (c + dist);
-					state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
-					if (dist <= 0) break;
+				float c = 0.01;
+				c = c / (c + dist);
+				state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
+				if (dist <= 0) break;
 
-					d++;
-				}
+				d++;
 			}
 		}
 	}

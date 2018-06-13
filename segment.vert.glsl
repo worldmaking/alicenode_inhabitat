@@ -21,7 +21,6 @@ out vec3 vertexpos;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
 out vec3 velocity;
-out vec3 vertexpos;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {

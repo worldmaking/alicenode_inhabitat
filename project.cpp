@@ -1,6 +1,6 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix, uViewMatrix;
-//michael code test
+
 // vertex in object space:
 layout (location = 0) in vec3 aPos;
 // object in world space:

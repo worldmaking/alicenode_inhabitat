@@ -433,7 +433,7 @@ float fScene_detail(vec3 p){
 	//.float d3 = p.y + dot(sin(p/2. + cos(p.yzx/2. + 3.14159/2.)), vec3(.5)) - 0.1;
 
 	//return min(d, g);
-	return g;//smin(d, g, 0.1); //min(d, d3);
+	return g;//smin(d, g, 0.5); //min(d, d3);
 
 }
 
@@ -508,22 +508,22 @@ void main() {
 		//if (mod(p.x*4.f, 1.f) < 0.75 && mod(p.z*4.f, 1.f) < 0.75) discard;
 
 		ro = p;
+		if(false){
+			for(int i=0; i<MAX_STEPS_2; i++){
 
-		/*for(int i=0; i<MAX_STEPS_2; i++){
+				d = fScene_detail(p);
 
-			//d = fScene_detail(p);
-
-        	if (d < precis2 || t > maxd ) {
-        		if (t <= maxd) count += STEP_SIZE * (d)/precis2;
-        		break; // continue;
-        	}
-        
-        // advance ray
-        t += d;
-        p = ro+rd*t;
-        count += STEP_SIZE;
-
-		}//*/
+        		if (d < precis2 || t > maxd ) {
+        			if (t <= maxd) count += STEP_SIZE * (d)/precis2;
+        			break; // continue;
+     		   	}
+	
+        	// advance ray
+        	t += d;
+        	p = ro+rd*t;
+        	count += STEP_SIZE;
+			}
+		}
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);

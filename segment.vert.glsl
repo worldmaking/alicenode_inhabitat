@@ -1,6 +1,7 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix, uViewMatrix;
 uniform vec3 uEyePos;
+uniform float uMini2World;
 
 // vertex in object space:
 layout (location = 0) in vec3 aPos;
@@ -65,12 +66,12 @@ void main() {
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;
-	vertexpos = (world_position + quat_rotate(world_orientation, scaledpos)) ;
+	vertexpos = (world_position + quat_rotate(world_orientation, scaledpos));
 	// calculate gl_Position the usual way
 	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.); 
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
-	vec3 eyepos = uEyePos;
+	vec3 eyepos = uEyePos / uMini2World;
 	//vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 	// we want the raymarching to operate in object-local space:

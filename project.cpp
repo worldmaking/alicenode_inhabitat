@@ -1033,6 +1033,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				// update nav
 				//viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * vive2world;
+				//viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * glm::scale(glm::vec3(mini2world)) * vive2world * glm::translate(glm::vec3(state->objects[0].location));//glm::translate(glm::vec3(.8, -1.7, -.4));
 				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * glm::scale(glm::vec3(mini2world)) * vive2world * glm::translate(glm::vec3(.8, -1.7, -.4));
 				projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
 

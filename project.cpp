@@ -1151,12 +1151,12 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			}else if(camMode % camModeMax == 3){
 				eyePos = world_centre + 
-					glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a));
+					glm::vec3(5.0*sin(t), 0.85*sin(0.5*a), 40.*sin(a));
 				viewMat = glm::lookAt(
 					eyePos, 
 					world_centre, 
 					glm::vec3(0., 1., 0.));
-			}else if(camMode % camModeMax == 4){
+			}else if(camMode % camModeMax == 40){
 				
 				/// nav
 				//console.log("Nav Mode Activated");
@@ -1183,7 +1183,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			}else if(camMode % camModeMax == 5){
 				double a = M_PI * t / 30.;
 				eyePos = world_centre + 
-					glm::vec3(3.*cos(a), 1., 4.*sin(a));
+					glm::vec3(30.*cos(a), 1., 40.*sin(a));
 				viewMat = glm::lookAt(
 					eyePos, 
 					world_centre, 

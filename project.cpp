@@ -89,7 +89,7 @@ VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
 
-float particleSize = 0.01;
+float particleSize = 0.002;
 float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
@@ -132,6 +132,9 @@ float mini2world = 1.;
 float near_clip = 0.1f / mini2world;
 float far_clip = 1200.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
+
+// the location of the VR person in the world
+glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
 
 glm::vec3 cameraLoc;
 glm::quat cameraOri;
@@ -493,7 +496,7 @@ void sim_update(float dt) {
 
 		float gravity = 0.2f;
 		o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
-		if (sdist < (o.scale * 0.25f)) { //(o.scale * rnd::uni(2.f))) {
+		if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
 			// jump!
 			float jump = rnd::uni();
 			o.accel.y = jump * gravity * 200.f * o.scale;
@@ -1017,10 +1020,13 @@ void onFrame(uint32_t width, uint32_t height) {
 		//	vive.far_clip = far_clip;	
 				
 			vive.near_clip = near_clip;;// / mini2world;
-			vive.far_clip = far_clip * mini2world;	
+			vive.far_clip = far_clip;	
 			vive.update();
 			glEnable(GL_SCISSOR_TEST);
 
+			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
+
+			
 			for (int eye = 0; eye < 2; eye++) {
 				gBuffer.begin();
 
@@ -1034,7 +1040,8 @@ void onFrame(uint32_t width, uint32_t height) {
 				// update nav
 				//viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * vive2world;
 				//viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * glm::scale(glm::vec3(mini2world)) * vive2world * glm::translate(glm::vec3(state->objects[0].location));//glm::translate(glm::vec3(.8, -1.7, -.4));
-				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * glm::scale(glm::vec3(mini2world)) * vive2world * glm::translate(glm::vec3(.8, -1.7, -.4));
+				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * glm::translate(-vrLocation);
+				//viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * glm::translate(glm::vec3(-(state->segments[1].location))) * glm::translate(-vrLocation);
 				projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
 
 				// shrink mode:
@@ -1623,7 +1630,7 @@ extern "C" {
 		// how to convert world positions into normalized texture coordinates in the fluid field:
 		world2fluid = glm::inverse(fluid2world);
 
-		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
+		//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 		leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
 

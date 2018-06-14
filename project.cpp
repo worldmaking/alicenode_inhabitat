@@ -445,7 +445,7 @@ void sim_update(float dt) {
 		fluid.velocities.front().readnorm(transform(world2fluid, o.location), &flow.x);
 
 		// noise:
-		flow += glm::sphericalRand(0.0002f);
+		flow += glm::sphericalRand(0.002f);
 		
 		o.velocity = flow * idt;
 
@@ -491,12 +491,12 @@ void sim_update(float dt) {
 		// (why is this needed? shouldn't it be m/s already?)
 		flow *= idt;
 
-		float gravity = 0.2f;
+		float gravity = 2.0f;
 		o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
-		if (sdist < (o.scale * 0.25f)) { //(o.scale * rnd::uni(2.f))) {
+		if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
 			// jump!
 			float jump = rnd::uni();
-			o.accel.y = jump * gravity * 200.f * o.scale;
+			o.accel.y = jump * gravity * 20.f * o.scale;
 
 			// this is a good time to also emit a pulse:
 			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale * jump);
@@ -976,17 +976,19 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 
 		//change mode to have object[0], segement[0], or nothing in focus
+		//float oScale = state->objects[0].scale;
+		//console.log("%f", oScale);
 		if(debugMode % 3 == 1){
 			state->objects[0].location = world_centre;
-			state->objects[0].scale = state->segments[1].scale;
-			state->segments[0].scale = state->objects[1].scale;
+			state->objects[0].scale = 2.0;
+			state->segments[0].scale = 2.5;
 		}else if(debugMode % 3 == 2){
 			state->segments[0].location = world_centre;
-			state->segments[0].scale = state->segments[1].scale;
-			state->objects[0].scale = state->objects[1].scale;
+			state->segments[0].scale = 5.0;
+			state->objects[0].scale = 1.0;
 		}else{
-			state->segments[0].scale = state->segments[1].scale;
-			state->objects[0].scale = state->objects[1].scale;
+			state->segments[0].scale = 2.5;
+			state->objects[0].scale = 1.0;
 		}
 
 		

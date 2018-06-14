@@ -74,8 +74,8 @@ void main() {
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
 
-	vec3 eyepos = uEyePos / uMini2World;
-	//vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
+	//vec3 eyepos = uEyePos / uMini2World;
+	vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 
 	// we want the raymarching to operate in object-local space:

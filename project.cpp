@@ -89,7 +89,7 @@ VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
 
-float particleSize = 0.002;
+float particleSize = 0.01;
 float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
@@ -97,7 +97,7 @@ float camUp;
 float camStrafe;
 bool camForward;
 bool camBackwards;
-float creature_fluid_push = 0.05f;
+float creature_fluid_push = 0.25f;
 
 int debugMode = 0;
 int camMode = 0;
@@ -110,8 +110,8 @@ const float MOVEMENT_SPEED = 0.1f;
 
 
 glm::vec3 world_min(0.f, 0.f, 0.f);
-glm::vec3 world_max(8.f, 8.f, 8.f);
-glm::vec3 world_centre(4.f, 1.8f, 4.f);
+glm::vec3 world_max(80.f, 80.f, 80.f);
+glm::vec3 world_centre(40.f, 18.f, 40.f);
 glm::vec3 prevVel = glm::vec3(0.);
 glm::vec3  newCamLoc;
 
@@ -128,9 +128,9 @@ glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
-float mini2world = 10.;
+float mini2world = 1.;
 float near_clip = 0.1f / mini2world;
-float far_clip = 12.f * mini2world;// / mini2world;
+float far_clip = 1200.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
 
 glm::vec3 cameraLoc;
@@ -758,7 +758,7 @@ void draw_scene(int width, int height) {
 		tableVAO.drawElements(tableObj.indices.size());
 	}
 
-	if (0) {
+	if (1) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
@@ -773,7 +773,7 @@ void draw_scene(int width, int height) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	if (1) {
+	if (0) {
 		landShader.use();
 		landShader.uniform("time", t);
 		landShader.uniform("uViewProjectionMatrix", viewProjMat);
@@ -1118,12 +1118,11 @@ void onFrame(uint32_t width, uint32_t height) {
 				//TODO: Once creatures follow the ground, fix boom going into the earth
 				
 				eyePos = cameraLoc;
-				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.1, 0.75)));
+				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 1., 7.5)));
 				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				prevVel = glm::vec3(o.velocity);
 
 			}else if(camMode % camModeMax == 2){
-				double a = M_PI * t / 30.;
 				/*viewMat = glm::lookAt(
 					glm::vec3(state->segments[0].location), 
 					state->segments[0].location + (state->segments[0].velocity + prevVel)/glm::vec3(2.), 
@@ -1140,7 +1139,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
 				//TODO: Once creatures follow the ground, fix boom going into the earth
 				eyePos = cameraLoc;
-				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 0.4, 1.)));
+				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 4., 10.)));
 				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				prevVel = glm::vec3(o.velocity);
 
@@ -1154,12 +1153,13 @@ void onFrame(uint32_t width, uint32_t height) {
 			}else if(camMode % camModeMax == 4){
 				
 				/// nav
+				//console.log("Nav Mode Activated");
 				if(camForward){
 					newCamLoc = cameraLoc + quat_uf(cameraOri)* (camSpeed * 0.01f);}
 				else if(camBackwards){
 					newCamLoc = cameraLoc + quat_uf(cameraOri)* -(camSpeed * 0.01f);}
 
-				newCamLoc = glm::vec3 (newCamLoc.x, camUp*0.01f, newCamLoc.z);
+				newCamLoc = glm::vec3(newCamLoc.x, camUp*0.01f, newCamLoc.z);
 				cameraLoc = glm::mix(cameraLoc,newCamLoc, 0.5f);
 
 				
@@ -1380,22 +1380,22 @@ void onReset() {
 
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
-		o.location = world_centre+glm::ballRand(1.f);
+		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::mix(glm::ballRand(1.f)*0.5f+0.5f, glm::vec3(0.3, 0.2, 0.8), 0.5f);
 		o.phase = rnd::uni();
-		o.scale = 0.1;
+		o.scale = 1.;
 		o.accel = glm::vec3(0.f);
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto& o = state->segments[i];
-		o.location = world_centre+glm::ballRand(1.f);
+		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
-		o.scale = 0.25;
+		o.scale = 2.5;
 	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = state->particles[i];
-		o.location = world_centre+glm::ballRand(1.f);
+		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::vec3(1.f);
 	}
 
@@ -1618,7 +1618,7 @@ extern "C" {
 		// how to convert world positions into normalized texture coordinates in the fluid field:
 		world2fluid = glm::inverse(fluid2world);
 
-		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-4.f, 0.f, -3.f));
+		vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 		leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
 

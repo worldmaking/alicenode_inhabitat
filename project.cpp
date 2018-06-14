@@ -97,7 +97,7 @@ float camUp;
 float camStrafe;
 bool camForward;
 bool camBackwards;
-float creature_fluid_push = 0.25f;
+float creature_fluid_push = 0.75f;
 
 int debugMode = 0;
 int camMode = 0;
@@ -499,7 +499,7 @@ void sim_update(float dt) {
 		if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
 			// jump!
 			float jump = rnd::uni();
-			o.accel.y = jump * gravity * 20.f * o.scale;
+			o.accel.y = jump * gravity * 2.f * o.scale;
 
 			// this is a good time to also emit a pulse:
 			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale * jump);
@@ -979,6 +979,11 @@ void onFrame(uint32_t width, uint32_t height) {
 			// TODO: dt-ify this:	
 			
 			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+
+			glm::vec3 norm = transform(world2fluid, o.location);
+			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+			o.location = transform(fluid2world, glm::vec3(norm.x, landpt.w, norm.z));
+
 			o.phase += dt;
 		}
 

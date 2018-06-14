@@ -188,7 +188,7 @@ void main() {
 	// color.rgb = view_position;
 
 	// normal viz:
-	color.rgb = normal*0.5+0.5;
+	//color.rgb = normal*0.5+0.5;
 
 	// reflection vectors
 	//color.rgb = ref.xyz*0.5+0.5;

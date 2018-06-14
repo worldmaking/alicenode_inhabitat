@@ -813,9 +813,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	const Alice& alice = Alice::Instance();
 	double t = alice.simTime;
 	float dt = alice.dt;
-	float aspect = width/float(height);
+	float aspect = gBuffer.dim.x / (float)gBuffer.dim.y;
 
-	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f)", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS());
+	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f), %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
 
 	if (alice.isSimulating && isRunning) {
 		// keep the simulation in here to absolute minimum
@@ -952,6 +952,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 		glDisable(GL_SCISSOR_TEST);
 	} else {
+		
+
 		// draw the scene into the GBuffer:
 		gBuffer.begin();
 		glEnable(GL_SCISSOR_TEST);

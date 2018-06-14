@@ -868,8 +868,30 @@ void onFrame(uint32_t width, uint32_t height) {
 		for (int h=0; h<2; h++) {
 
 			int d = h * (num_hand_dots + num_ray_dots);
-
 			auto& hand = alice.leap->hands[h];
+
+			if (hand.pinch == 1) {
+				vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
+			} else if (hand.pinch = 0) {
+				//vrLocation = glm::vec3(34.5, 17., 33.);
+				/*
+				float idt = 1.f/dt;
+				glm::vec3 flow;
+				flow *= idt;
+				glm::vec3 norm = transform(world2fluid, state->objects[1].location);
+				// get my distance from the ground:
+				float sdist; // creature's distance above the ground (or negative if below)
+				al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
+				// if below ground, rise up;
+				// if above ground, sink down:
+				float gravity = 0.1f;
+				flow.y += sdist < 0.1f ? gravity : -gravity;
+				// set my velocity, in meters per second:
+				state->objects[1].velocity = flow;
+				vrLocation = vrLocation - sdist;
+				*/
+
+			}
 
 			//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 			float cf = fmod(hand.id / 6.f, 1.f);
@@ -877,7 +899,6 @@ void onFrame(uint32_t width, uint32_t height) {
 			if (!hand.isVisible) {
 				col = glm::vec3(0.2);
 			};
-		
 
 			for (int f=0; f<5; f++) {
 				auto& finger = hand.fingers[f];
@@ -1028,7 +1049,6 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
 
-			
 			for (int eye = 0; eye < 2; eye++) {
 				gBuffer.begin();
 
@@ -1036,8 +1056,6 @@ void onFrame(uint32_t width, uint32_t height) {
 				glViewport(eye * gBuffer.dim.x / 2, 0, gBuffer.dim.x / 2, gBuffer.dim.y);
 				glEnable(GL_DEPTH_TEST);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
 
 				// update nav
 				//viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * vive2world;
@@ -1048,8 +1066,6 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				// shrink mode:
 				//viewMat = viewMat * glm::inverse(mini2world);
-
-
 
 				viewProjMat = projMat * viewMat;
 				projMatInverse = glm::inverse(projMat);

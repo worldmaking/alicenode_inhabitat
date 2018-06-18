@@ -1,7 +1,7 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
 
-in vec3 ray_direction, ray_origin;
+in vec3 ray_direction, ray_origin, eyepos;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
@@ -936,7 +936,10 @@ void main() {
         count += STEP_SIZE;
     }
     FragColor = vec4(count);
-	
+	vec3 worldpos = world_position + quat_rotate(world_orientation, p);
+	FragPosition.xyz = worldpos;
+
+	float world_distance = length(worldpos - eyepos);
 	
     
     if (d < precis) {
@@ -951,7 +954,7 @@ void main() {
 		FragColor.rgb = vec3(d_tex.x, d_tex.y, 0.5);
 		//FragColor.rgb = vec3(acos(sin(d_tex.x)) * 0.5, d_tex.y, 0.5);
 
-		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .003));
+		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .003 * world_distance / 2.));
 		
 	} else if (t >= maxd) {
     	// shot through to background
@@ -972,6 +975,6 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);
+	
 	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

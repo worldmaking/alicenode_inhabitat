@@ -18,7 +18,7 @@ out float phase;
 out vec4 world_orientation;
 out vec3 flow;
 // starting ray for this vertex, in object space.
-out vec3 ray_direction, ray_origin;
+out vec3 ray_direction, ray_origin, eyepos;
 out vec3 basecolor;
 
 //	q must be a normalized quaternion
@@ -76,7 +76,7 @@ void main() {
 
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
-	vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
+	eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 	// we want the raymarching to operate in object-local space:
 	ray_origin = scaledpos;

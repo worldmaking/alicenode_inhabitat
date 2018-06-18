@@ -8,6 +8,7 @@ in vec4 world_orientation;
 in float phase;
 in vec3 basecolor;
 in vec3 flow;
+in float species;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -754,7 +755,11 @@ vec3 fScene_tex_z(vec3 p) {
 	d = smin_tex(d, e, 0.4);
 	//d = a;
 
-	vec3 f = smin_tex(b, c, 0.5);
+	vec3 f = smin_tex(a, c, 0.4);
+	f = smin_tex(f, e, 0.2);
+
+	vec3 j = smin_tex(b, c, 0.3);
+	j = smin_tex(j, f, 0.4);
 
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
 
@@ -768,8 +773,32 @@ vec3 fScene_tex_z(vec3 p) {
 	//d.z -= tiledeform;
 
 	//return vec3(d.xy, d.z * scl);
+	vec3 baseGeo;
+
+	/*
+	switch(species){
+		case 0.0: {
+			baseGeo = d;
+		}break;
+		case 1.0: {
+			baseGeo = f;
+		}break;
+		case 2.0: {
+			baseGeo = j;
+		}break;
+
+	}//*/
+
+	if(species <= 0){
+		baseGeo = d;
+	}else if (species <= 1){
+		baseGeo = e;
+	}else if (species <= 2){
+		baseGeo = c;
+	}else{
+		baseGeo = d;
+	}
 	
-	vec3 baseGeo = vec3(d.xy, d.z);
 
 	//making grass/hair on the creature
 	//--------------------------------------------------
@@ -951,10 +980,10 @@ void main() {
 		//FragColor.xy = -pn.zy*0.5+0.5;
 		d_tex.xy = -pn.zy*0.5+0.5;
 		//d_tex.y = (acos(sin(50*d_tex.y + 1.5)) * 0.05);
-		FragColor.rgb = vec3(d_tex.x, d_tex.y, 0.5);
+		FragColor.rgb = vec3(d_tex.x, d_tex.y, (species) / 3.);
 		//FragColor.rgb = vec3(acos(sin(d_tex.x)) * 0.5, d_tex.y, 0.5);
 
-		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .003 * world_distance / 2.));
+		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .0015 * world_distance));
 		
 	} else if (t >= maxd) {
     	// shot through to background

@@ -20,6 +20,7 @@ out vec3 flow;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin, eyepos;
 out vec3 basecolor;
+out float species;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
@@ -63,7 +64,8 @@ void main() {
 	phase = iPhase;
 	basecolor = iColor;
 
-
+	int id = gl_InstanceID;
+	species = id % 3;
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;

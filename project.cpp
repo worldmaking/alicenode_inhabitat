@@ -153,7 +153,7 @@ double fluid_noise = 8.;
 
 float density_decay = 0.98f;
 float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
-float density_scale = 50.;
+float density_scale = 0.5;
 
 MetroThread simThread(30);
 MetroThread fluidThread(10);

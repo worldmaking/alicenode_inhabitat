@@ -1,5 +1,6 @@
 #version 330 core
-uniform mat4 uViewProjectionMatrix, uViewMatrix;
+uniform mat4 uViewProjectionMatrix, uViewMatrix, uFluidMatrix;
+uniform sampler3D uFluidTex;
 
 // vertex in object space:
 layout (location = 0) in vec3 aPos;
@@ -15,6 +16,7 @@ out vec3 world_position;
 out float world_scale;
 out float phase;
 out vec4 world_orientation;
+out vec3 flow;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
 out vec3 basecolor;
@@ -61,11 +63,16 @@ void main() {
 	phase = iPhase;
 	basecolor = iColor;
 
+
+
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;
 	vec3 vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
 	// calculate gl_Position the usual way
 	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
+
+	vec3 tc = (uFluidMatrix * vec4(vertexpos, 1.)).xyz;
+	flow = texture(uFluidTex, tc).xyz;
 
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)

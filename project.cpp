@@ -754,6 +754,7 @@ void draw_scene(int width, int height) {
 	distanceTex.bind(4);
 	fungusTex.bind(5);
 	landTex.bind(6);
+	fluidTex.bind(7);
 
 	if (0) {
 		simpleShader.use();
@@ -798,6 +799,8 @@ void draw_scene(int width, int height) {
 	objectShader.uniform("time", t);
 	objectShader.uniform("uViewMatrix", viewMat);
 	objectShader.uniform("uViewProjectionMatrix", viewProjMat);
+	objectShader.uniform("uFluidTex", 7);
+	objectShader.uniform("uFluidMatrix", world2fluid);
 	objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
 
 	segmentShader.use();
@@ -1153,7 +1156,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				//TODO: Once creatures follow the ground, fix boom going into the earth
 				
 				eyePos = cameraLoc;
-				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 1., 7.5)));
+				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 1., 2.5)));
 				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				prevVel = glm::vec3(o.velocity);
 

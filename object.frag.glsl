@@ -7,6 +7,7 @@ in float world_scale;
 in vec4 world_orientation;
 in float phase;
 in vec3 basecolor;
+in vec3 flow;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -760,9 +761,9 @@ vec3 fScene_tex_z(vec3 p) {
 	//d.z += gridripple;
 	//d.z -= tiledeform;
 
-	return vec3(d.xy, d.z * scl);
+	//return vec3(d.xy, d.z * scl);
 	
-	/*vec3 baseGeo = vec3(d.xy, d.z);
+	vec3 baseGeo = vec3(d.xy, d.z);
 
 	//making grass/hair on the creature
 	//--------------------------------------------------
@@ -770,8 +771,8 @@ vec3 fScene_tex_z(vec3 p) {
 	//--------------------------------------------------
 	const float height = 0.1;
 	const float heightvar = 0.05;
-	const float density = 0.1;
-	const float thickness = 0.001;
+	const float density = 0.2;
+	const float thickness = 0.2;
 
 	const mat2 rot1 = mat2(0.99500416527,0.0998334166,-0.0998334166,0.99500416527);
 	const mat2 rot2 = mat2(0.98006657784,0.19866933079,-0.19866933079,0.98006657784);
@@ -796,13 +797,16 @@ vec3 fScene_tex_z(vec3 p) {
     vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
     vec2 wind = (windNoise*0.45 + windNoise2*0.3) * (p.y);
 
-    p.xz += wind;
+    p.xz += wind;// + flow.xy;
+	
+	//TODO: Replace wind with flow
 
     vec3 p1 = opRep(p, vec3(density));
     p1 = vec3(p1.x, p.y - h, p1.z);
     float g1 = sdCone(p1, vec3(1.0, thickness, h));
     
     p.xz *= rot5;
+	//p.xz *= the normal of baseGeometry.z TODO
     vec3 p2 = opRep(p, vec3(density)*0.85);
     p2 = vec3(p2.x, p.y - h, p2.z);
     float g2 = sdCone(p2, vec3(1.0, thickness, h));
@@ -925,10 +929,12 @@ void main() {
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
 		//FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
-		FragColor.rgb = vec3(d_tex.xy, 0);// * basecolor;
+		//FragColor.rgb = vec3(d_tex.xy, 0);// * basecolor;
 
 		vec3 pn = normalize(p);
-		FragColor.xy = -pn.zy*0.5+0.5;
+		//FragColor.xy = -pn.zy*0.5+0.5;
+		d_tex.xy = -pn.zy*0.5+0.5;
+		FragColor.rgb = vec3(d_tex.x, d_tex.y, 0.5);
 
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .003));
 		

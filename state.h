@@ -1,7 +1,19 @@
 #ifndef STATE_H
 #define STATE_H
 
-#include "al/al_math.h"
+#ifndef ALICE_H
+namespace glm {
+
+	struct vec2 { float x, y; };
+	struct vec3 { float x, y, z; };
+	struct vec4 { float x, y, z, w; };
+	struct quat { float x, y, z, w; };
+
+	struct ivec2 { int x, y; };
+	struct ivec3 { int x, y, z; };
+	struct ivec4 { int x, y, z, w; };
+}
+#endif
 
 #define NUM_SEGMENTS 64
 #define NUM_OBJECTS	32

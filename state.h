@@ -1,7 +1,6 @@
 #ifndef STATE_H
 #define STATE_H
 
-<<<<<<< HEAD
 #ifndef ALICE_H
 namespace glm {
 
@@ -15,9 +14,6 @@ namespace glm {
 	struct ivec4 { int x, y, z, w; };
 }
 #endif
-=======
-#include "al/al_math.h"
->>>>>>> db38444e655f5b2301d9bbf71cf0febb593903da
 
 #define NUM_SEGMENTS 64
 #define NUM_OBJECTS	32

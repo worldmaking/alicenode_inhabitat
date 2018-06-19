@@ -14,7 +14,8 @@
         "xlocale": "cpp",
         "functional": "cpp",
         "algorithm": "cpp",
-        "xiosbase": "cpp"
+        "xiosbase": "cpp",
+        "xtree": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

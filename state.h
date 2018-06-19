@@ -1,6 +1,20 @@
 #ifndef STATE_H
 #define STATE_H
 
+#ifndef ALICE_H
+namespace glm {
+
+	struct vec2 { float x, y; };
+	struct vec3 { float x, y, z; };
+	struct vec4 { float x, y, z, w; };
+	struct quat { float x, y, z, w; };
+
+	struct ivec2 { int x, y; };
+	struct ivec3 { int x, y, z; };
+	struct ivec4 { int x, y, z, w; };
+}
+#endif
+
 #define NUM_SEGMENTS 64
 #define NUM_OBJECTS	32
 #define NUM_PARTICLES 1024*256
@@ -19,8 +33,8 @@
 #define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
 
-static const glm::ivec3 field_dim = glm::vec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-static const glm::ivec3 land_dim = glm::vec3(LAND_DIM, LAND_DIM, LAND_DIM);
+static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
+static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
 
 struct Object {
 	glm::vec3 location;
@@ -45,6 +59,7 @@ struct Particle {
 	glm::vec3 location;
 	glm::vec3 color;
 	glm::vec3 velocity;
+	float phase, unused;
 };
 
 struct DebugDot {
@@ -80,6 +95,8 @@ struct State {
 	// the state of the lichen CA over the world
 	float fungus[FUNGUS_TEXELS];
 	float fungus_old[FUNGUS_TEXELS];
+
+	float dummy = 10;
 };
 
 #endif

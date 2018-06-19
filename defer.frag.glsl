@@ -46,7 +46,7 @@ vec3 sky(vec3 dir) {
 	// simplify
 	n.g = mix(n.g, n.r, 0.5);
 	// lighten
-	return mix(n, vec3(0.), 0.75);
+	return mix(n, vec3(0.), 0.5);
 }
 
 float fScene(vec3 p) {
@@ -130,11 +130,11 @@ void main() {
 	vec3 ref = reflect(rd, normal);
 	float acute = abs(dot(normal, rd)); // how much surface faces us
 	float oblique = 1.0 - acute; // how much surface is perpendicular to us
-	//color *= 1. - 0.5*oblique;	
+	color *= 1. - 0.5*oblique;	
 
 	// get environmental light from emissive sources
 	// by lookup in the normal direction
-	float nearby = .5;
+	float nearby = .25;
 	vec3 texcoord_for_normal = (uFluidMatrix * vec4(position + normal*nearby, 1.)).xyz;
 	vec3 envcolor = texture(uDensityTex, texcoord_for_normal).rgb;
 	vec3 texcoord_for_ref = (uFluidMatrix * vec4(position + ref*nearby, 1.)).xyz;
@@ -143,16 +143,23 @@ void main() {
 	//float metallic = acute;
 	float metallic = acute;
 	//color.rgb = mix(vec3(0.5), normal*0.5+0.5, 0.2);
-	color.rgb *= mix(sky(ref), sky(normal), metallic);
+	color.rgb = mix(sky(ref), sky(normal), metallic);
 	
 	// edge finding by depth difference:
 	//float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
 	//color.rgb *= edges;
 
+	// patterning
+	vec2 tc = basecolor.xy;
+	tc = tc * 4.5/4.;
+	tc = mod(tc, 2.) - 1.;
+	float d = length(tc) - 0.9;
+	color.rgb += d < -0.1 ? vec3(0.3) : vec3(0.);
+
 	// env color
+	//color.rgb = mix(color.rgb, envcolor, clamp(d + 0.5, 0., 1.));
 	//color.rgb = envcolor;
-	color.rgb = envcolor_ref;
-	color.rgb += 0.1*basecolor.xyz;
+	//color.rgb += 0.1*basecolor.xyz;
 
 	//color.rgb = color.rgb * 0.1 + density;
 	
@@ -165,11 +172,11 @@ void main() {
 
 	// base viz:
 	//color.rgb = basecolor.xyz;
-
+	
 	
 
 	// uv grid viz:
-	//vec2 uvgrid = clamp(pow((mod(8.*basecolor.xy,1.)-0.5)*2., vec2(16.)), 0., 1.);
+	vec2 uvgrid = clamp(pow((mod(8.*basecolor.xy,1.)-0.5)*2., vec2(16.)), 0., 1.);
 	//color.rgb = vec3(uvgrid.y);
 	//color.rgb = vec3(sin(basecolor.xy * 2 * PI) *0.5 + 0.5, 0.);
 	//color.rgb += vec3(max(uvgrid.x, uvgrid.y));
@@ -185,7 +192,7 @@ void main() {
 	//color.rgb = mod(position.xyz * vec3(1.), 1.);
 	
 	// viewspace:
-	// color.rgb = view_position;
+	//color.rgb = view_position;
 
 	// normal viz:
 	//color.rgb = normal*0.5+0.5;
@@ -219,7 +226,7 @@ void main() {
 
 	//color.rgb = vec3(vec2(mod(dist * 16., 1.)), mod(position.x, 1.));
 
-	//color = normal*0.5+0.5;
+	//color += normal*0.25;
 	
 	color.rgb = mix(color.rgb, fogcolor, fogmix);
 	FragColor.rgb = color;	

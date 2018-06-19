@@ -1,29 +1,34 @@
 #version 330 core
 
-uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
+uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix, uLandMatrix, uLandMatrixInverse;
+uniform sampler2D uLandTex;
 
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec2 aTexCoord;
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoord;
 
 out vec2 texCoord;
-out vec3 ray, origin, eyepos;
+out vec3 normal, position;
+out float steepness;
 
 void main() {
-	gl_Position = vec4(aPos, 0., 1.0);
 	texCoord = aTexCoord;
+	normal = aNormal;
+
+	// basic grid mesh is 0..1, need to scale that to the world
+	position = (uLandMatrixInverse * vec4(aPos, 1.)).xyz;
+
+	// get the landscape data (normal + height) from the texture:
+	vec4 land = texture(uLandTex, texCoord.xy);
+
+	// height (land.w) needs to be scaled to the world
+	vec3 deform = (uLandMatrixInverse * vec4(0., land.w, 0., 1.)).xyz;
+	position += deform;
+	normal = land.xyz;
+
+	// steepness depends on normal:
+	//steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
+	steepness = abs(1. - normal.y);
 	
-	// project a clip coordinate out into the world
-	vec4 near = uViewProjectionMatrixInverse * vec4(gl_Position.xy, -1, 1);
-	vec4 far = uViewProjectionMatrixInverse * vec4(gl_Position.xy, 1, 1);
-	vec3 near3 = near.xyz/near.w;
-	vec3 far3 = far.xyz/far.w;
-	// get ray from this:
-	ray = far3 - near3;
-	
-	// in theory origin is just the world-position
-	// in practice we might want to add near-clip... 
-	origin = near3;
-	
-	// derive eye location in world space from current (model)view matrix:
-    eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
+	gl_Position = uViewProjectionMatrix * vec4(position, 1.);
 }

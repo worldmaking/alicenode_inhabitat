@@ -7,6 +7,7 @@ in float world_scale;
 in vec4 world_orientation;
 in float phase;
 in vec3 velocity;
+in vec3 vertexpos;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -222,6 +223,23 @@ vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
 	float tr = (p.z + r) / (l + r*2);
 	uv.x = clamp(tr, 0., 1.);
 	
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d += tiledeform;
 	return vec3(uv, d - r);
 }
 
@@ -275,6 +293,25 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	uv.x = clamp(tab, 0., 1.);
 	
 	d = d - mix(ra, rb, h1);
+
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d -= tiledeform;
+
 	return vec3(uv, d);
 }
 
@@ -467,11 +504,14 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    FragColor = vec4(1.);
+    FragColor = vec4(rd, 1.);
+	FragPosition.xyz = vertexpos;
+	
+	//return;
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
-		FragColor.rgb = vec3(d_tex.xy, 0);
+		FragColor.rgb = vec3(d_tex.xy, 0.5);
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
 
 		vec3 pn = normalize(p);
@@ -490,6 +530,6 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);
+	FragPosition.xyz = (world_position + quat_rotate(world_orientation, p));
 	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

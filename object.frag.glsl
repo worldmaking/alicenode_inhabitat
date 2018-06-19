@@ -1,12 +1,14 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
 
-in vec3 ray_direction, ray_origin;
+in vec3 ray_direction, ray_origin, eyepos;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
 in float phase;
 in vec3 basecolor;
+in vec3 flow;
+in float species;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -124,6 +126,11 @@ vec3 pRotYZ(in vec3 p, float a) {
 
 vec3 pRotXZ(in vec3 p, float a) {
 	p.xz = cos(a)*p.xz + sin(a)*vec2(p.z, -p.x);
+	return p;
+}
+
+vec3 pRotXY(in vec3 p, float a) {
+	p.xy = cos(a)*p.xy + sin(a)*vec2(p.y, -p.x);
 	return p;
 }
 
@@ -533,6 +540,21 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	*/
 }
 
+//https://www.shadertoy.com/view/Xds3zN
+float sdCone( in vec3 p, in vec3 c )
+{
+    vec2 q = vec2( length(p.xz), p.y );
+    float d1 = -q.y-c.z;
+    float d2 = max( dot(q,c.xy), q.y);
+    return length(max(vec2(d1,d2),0.0)) + min(max(d1,d2), 0.);
+}
+
+//https://www.shadertoy.com/view/Xds3zN
+vec3 opRep( vec3 p, vec3 c )
+{
+    return mod(p,c)-0.5*c;
+}
+
 //Rotate function by:
 // http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/
 mat4 rotateY(float theta) {
@@ -702,6 +724,7 @@ vec3 fScene_tex_z(vec3 p) {
 	float scl = world_scale;
 
 	p /= scl;
+	vec3 copyP = p;
 
 	//p = p.yxz;
 	// basic symmetry:
@@ -730,8 +753,13 @@ vec3 fScene_tex_z(vec3 p) {
 	//d = smin_tex(d, a, 0.05);
 	d = smin_tex(d, c, 0.3);
 	d = smin_tex(d, e, 0.4);
+	//d = a;
 
-	vec3 f = smin_tex(b, c, 0.5);
+	vec3 f = smin_tex(a, c, 0.4);
+	f = smin_tex(f, e, 0.2);
+
+	vec3 j = smin_tex(b, c, 0.3);
+	j = smin_tex(j, f, 0.4);
 
 	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
 
@@ -744,7 +772,108 @@ vec3 fScene_tex_z(vec3 p) {
 	//d.z += gridripple;
 	//d.z -= tiledeform;
 
-	return vec3(d.xy, d.z * scl);
+	//return vec3(d.xy, d.z * scl);
+	vec3 baseGeo;
+
+	/*
+	switch(species){
+		case 0.0: {
+			baseGeo = d;
+		}break;
+		case 1.0: {
+			baseGeo = f;
+		}break;
+		case 2.0: {
+			baseGeo = j;
+		}break;
+
+	}//*/
+
+	if(species <= 0){
+		baseGeo = d;
+	}else if (species <= 1){
+		baseGeo = e;
+	}else if (species <= 2){
+		baseGeo = c;
+	}else{
+		baseGeo = d;
+	}
+	
+
+	//making grass/hair on the creature
+	//--------------------------------------------------
+	//--- from https://www.shadertoy.com/view/ltSyzd ---
+	//--------------------------------------------------
+	vec3 norm = (p);
+	float height = 0.12;// * d.y;
+	float heightvar = 0.05;// * d.y;
+	float density = 0.05 * (p.y + 0.2);
+	float thickness = 0.5;// * d.y;
+
+	const mat2 rot1 = mat2(0.99500416527,0.0998334166,-0.0998334166,0.99500416527);
+	const mat2 rot2 = mat2(0.98006657784,0.19866933079,-0.19866933079,0.98006657784);
+	const mat2 rot3 = mat2(0.95533648912,0.29552020666,-0.29552020666,0.95533648912);
+	const mat2 rot4 = mat2(0.921060994,0.3894183423,-0.3894183423,0.921060994);
+	const mat2 rot5 = mat2(0.87758256189,0.4794255386,-0.4794255386,0.87758256189);
+	const mat2 rot6 = mat2(0.82533561491,0.56464247339,-0.56464247339,0.82533561491);
+	const mat2 rot7 = mat2(0.76484218728,0.64421768723,-0.64421768723,0.76484218728);
+	const mat2 rot8 = mat2(0.69670670934,0.7173560909,-0.7173560909,0.69670670934);
+	const mat2 rot9 = mat2(0.62160996827,0.78332690962,-0.78332690962,0.62160996827);
+	const mat2 rot10 = mat2(0.54030230586,0.8414709848,-0.8414709848,0.54030230586);
+
+	vec3 baseGeometry = baseGeo;
+    vec3 normP = normalize(p);
+	float angleP = acos(normP.y);
+
+	p = pRotXZ(p, angleP);
+	//p = pRotXZ(p, angleP);
+    p.y = baseGeometry.z;
+	//p = baseGeometry.zzz;
+    //float hvar = texture(iChannel0, p.xz*0.075).x;
+    float h = height + heightvar;//hvar*heightvar;
+    
+    vec2 t = phase * vec2(5.0, 4.3);
+    vec2 windNoise = sin(p.xz*2.5 + flow.xz);//sin(p.xz*2.5 + t);
+    //vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
+	vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
+    vec2 wind = (windNoise*0.45 + windNoise2*0.3) * (p.y);
+
+    //p.xz += wind;// + flow.xz;
+	
+	//TODO: Replace wind with flow
+
+    vec3 p1 = opRep(p, vec3(density));
+    p1 = vec3(p1.x, p.y - h, p1.z);
+    float g1 = sdCone(p1, vec3(1.0, thickness, h));
+    
+    p.xz *= rot5;
+	//p.xz *= the normal of baseGeometry.z ? TODO figure out how to wrap grass normals around creature normals
+    vec3 p2 = opRep(p, vec3(density)*0.85);
+    p2 = vec3(p2.x, p.y - h, p2.z);
+    float g2 = sdCone(p2, vec3(1.0, thickness, h));
+    
+    p.xz *= rot10;
+    vec3 p3 = opRep(p, vec3(density)*0.7);
+    p3 = vec3(p3.x, p.y - h, p3.z);
+    float g3 = sdCone(p3, vec3(1.0, thickness, h));
+    
+    p.xz *= rot3;
+    vec3 p4 = opRep(p, vec3(density)*0.9);
+    p4 = vec3(p4.x, p.y - h, p4.z);
+    float g4 = sdCone(p4, vec3(1.0, thickness, h));
+    
+    float g = min(min(g1, g2), min(g3, g4));
+    
+    //float id = 1.0;
+    
+    //if(baseGeometry.z < epsilon)s
+   	//	id = 0.0;
+
+	float gg = smin(g, baseGeometry.z, 0.24);
+	//return vec3(min(g, baseGeometry.x), id, h);
+	return vec3(baseGeometry.xy, gg * scl);
+	//*/
+	
 }
  
 float fScene1(vec3 p) {
@@ -778,7 +907,7 @@ float fScene1(vec3 p) {
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`
 // (cheaper than the usual technique of sampling 6 cardinal points)
-// `fScene` should be the SDF evaluator `float distance = fScene(vec3 pos)`  
+// `fScene` should be the SDF evaluator `float distance = fScene(vec3 p)`  
 // `eps` is the distance to compare points around the location `p` 
 // a smaller eps gives sharper edges, but it should be large enough to overcome sampling error
 // in theory, the gradient magnitude of an SDF should everywhere = 1, 
@@ -836,16 +965,25 @@ void main() {
         count += STEP_SIZE;
     }
     FragColor = vec4(count);
+	vec3 worldpos = world_position + quat_rotate(world_orientation, p);
+	FragPosition.xyz = worldpos;
+
+	float world_distance = length(worldpos - eyepos);
+	
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
 		//FragColor.rgb = vec3(d_tex.xy, 0.); //vec3(cheap_self_occlusion);
-		FragColor.rgb = vec3(d_tex.xy, 0);// * basecolor;
+		//FragColor.rgb = vec3(d_tex.xy, 0);// * basecolor;
 
 		vec3 pn = normalize(p);
-		FragColor.xy = -pn.zy*0.5+0.5;
+		//FragColor.xy = -pn.zy*0.5+0.5;
+		d_tex.xy = -pn.zy*0.5+0.5;
+		//d_tex.y = (acos(sin(50*d_tex.y + 1.5)) * 0.05);
+		FragColor.rgb = vec3(d_tex.x, d_tex.y, (species) / 3.);
+		//FragColor.rgb = vec3(acos(sin(d_tex.x)) * 0.5, d_tex.y, 0.5);
 
-		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .003));
+		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .0015 * world_distance));
 		
 	} else if (t >= maxd) {
     	// shot through to background
@@ -866,6 +1004,6 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);
+	
 	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

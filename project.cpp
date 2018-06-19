@@ -1150,13 +1150,13 @@ void onFrame(uint32_t width, uint32_t height) {
 	SimpleFBO& fbo = vive.fbo;
 	if (width && height) {
 		if (vive.connected) {	
-		//	vive.near_clip = near_clip;
-		//	vive.far_clip = far_clip;	
 				
-			vive.near_clip = near_clip;;// / mini2world;
+			vive.near_clip = near_clip;
 			vive.far_clip = far_clip;	
 			vive.update();
 			glEnable(GL_SCISSOR_TEST);
+
+			//console.log("VR!!!!");
 
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
 

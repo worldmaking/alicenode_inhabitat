@@ -1,6 +1,8 @@
 #ifndef STATE_H
 #define STATE_H
 
+#include "al/al_math.h"
+
 #define NUM_SEGMENTS 64
 #define NUM_OBJECTS	32
 #define NUM_PARTICLES 1024*256
@@ -16,8 +18,8 @@
 #define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
 
-static const glm::ivec3 field_dim = glm::vec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-static const glm::ivec3 land_dim = glm::vec3(LAND_DIM, LAND_DIM, LAND_DIM);
+static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
+static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
 
 struct Object {
 	glm::vec3 location;
@@ -70,6 +72,8 @@ struct State {
 	// the state of the lichen CA over the world
 	float fungus[FUNGUS_TEXELS];
 	float fungus_old[FUNGUS_TEXELS];
+
+	float dummy = 10;
 };
 
 #endif

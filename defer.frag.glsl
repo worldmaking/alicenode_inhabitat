@@ -164,7 +164,7 @@ void main() {
 
 
 	// base viz:
-	//color.rgb = basecolor.xyz;
+	color.rgb = basecolor.xyz;
 
 	
 
@@ -221,6 +221,6 @@ void main() {
 
 	//color = normal*0.5+0.5;
 	
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
+	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 	FragColor.rgb = color;	
 }

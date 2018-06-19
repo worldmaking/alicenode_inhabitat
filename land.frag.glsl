@@ -227,6 +227,126 @@ float fScene(vec3 p) {
 
 	//d -= tiledeform;*/
 
+/*
+	vec3 baseGeo = vec3(tc.xz, d);
+
+	//making grass/hair on the creature
+	//--------------------------------------------------
+	//--- from https://www.shadertoy.com/view/ltSyzd ---
+	//--------------------------------------------------
+	const float height = 0.02;
+	const float heightvar = 0.000000005;
+	const float density = 0.1;
+	const float thickness = 1.0;
+
+	vec3 baseGeometry = baseGeo;
+
+	float phase = time;
+       
+    p.y = baseGeometry.z;
+    //float hvar = sinNoise(p.xz * 100.).x; //texture(iChannel0, p.xz*0.075).x;
+	vec3 landtexcoord = (uLandMatrix * vec4(p, 1.)).xyz;
+	float fungus = texture(uFungusTex, landtexcoord.xz).r;
+    float h = height + fungus*heightvar;
+    
+    vec2 t = phase * vec2(5.0, 4.3);
+    vec2 windNoise = sinNoise(p.xz*6.5 + t);
+    vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
+    vec2 wind = (windNoise*0.95 + windNoise2*2.3) * (p.y);
+
+    p.xz += wind;
+
+
+    vec3 p1 = opRep(p, vec3(density));
+    p1 = vec3(p1.x, p.y - h, p1.z);
+    float g1 = sdCone(p1, vec3(1.0, thickness, h));
+	//float g1 = fCylinder(p1, thickness, h);
+    
+    p.xz *= rot5;
+    vec3 p2 = opRep(p, vec3(density)*0.85);
+    p2 = vec3(p2.x, p.y - h, p2.z);
+    float g2 = sdCone(p2, vec3(1.0, thickness, h));
+    
+    p.xz *= rot10;
+    vec3 p3 = opRep(p, vec3(density)*0.7);
+    p3 = vec3(p3.x, p.y - h, p3.z);
+    float g3 = sdCone(p3, vec3(1.0, thickness, h));
+    
+    p.xz *= rot3;
+    vec3 p4 = opRep(p, vec3(density)*0.9);
+    p4 = vec3(p4.x, p.y - h, p4.z);
+    float g4 = sdCone(p4, vec3(1.0, thickness, h));
+
+	//Cylinder test*/
+	/*
+	vec3 p1 = opRep(p, vec3(density));
+    p1 = vec3(p1.x, p.y - h, p1.z);
+    float g1 = sdCylinder(p1, vec2(1.0, h));
+    
+    p.xz *= rot5;
+    vec3 p2 = opRep(p, vec3(density)*0.85);
+    p2 = vec3(p2.x, p.y - h, p2.z);
+    float g2 = sdCylinder(p1, vec2(1.0, h));
+    
+    p.xz *= rot10;
+    vec3 p3 = opRep(p, vec3(density)*0.7);
+    p3 = vec3(p3.x, p.y - h, p3.z);
+    float g3 = sdCylinder(p1, vec2(1.0, h));
+    
+    p.xz *= rot3;
+    vec3 p4 = opRep(p, vec3(density)*0.9);
+    p4 = vec3(p4.x, p.y - h, p4.z);
+    float g4 = sdCylinder(p1, vec2(1.0, h));
+    
+    //float g = smin(smin(g1, g2, 0.5), smin(g3, g4, 0.5), 0.5);
+	float g = min(min(g1, g2), min(g3, g4))*/
+	
+    
+    //float id = 1.0;
+    
+    //if(baseGeometry.z < epsilon)s
+   //     id = 0.0;
+    
+	//return vec3(min(g, baseGeometry.x), id, h);
+	//return vec3(baseGeometry.xy, min(g, baseGeometry.z));
+	//*/
+
+	//.float d3 = p.y + dot(sin(p/2. + cos(p.yzx/2. + 3.14159/2.)), vec3(.5)) - 0.1;
+
+	//return min(d, g);
+	return d; //min(d, d3);
+}
+
+float fScene_detail(vec3 p){
+		vec3 tc = (uLandMatrix * vec4(p, 1.)).xyz;
+	// distance to nearest floor (not same as direct down)
+    float d = texture(uDistanceTex, tc).x;
+
+	// surface detail:
+	/*vec3 p1 = p * vec3(1,0,1) + vec3(0, d, 0);
+	float d0 = fScene_test(p);
+	float d1 = fScene_test(p1) + d;
+
+	// a repetitive object:
+	vec3 pt = p * 3.;
+	vec3 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec3(0.3, 0.123, 0.89324);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = ptpt * -0.02 - 0.01;
+
+	//d -= tiledeform;*/
+
 	vec3 baseGeo = vec3(tc.xz, d);
 
 	//making grass/hair on the creature
@@ -313,7 +433,8 @@ float fScene(vec3 p) {
 	//.float d3 = p.y + dot(sin(p/2. + cos(p.yzx/2. + 3.14159/2.)), vec3(.5)) - 0.1;
 
 	//return min(d, g);
-	return smin(d, g, 0.01); //min(d, d3);
+	return g;//smin(d, g, 0.5); //min(d, d3);
+
 }
 
 float fScene0(vec3 p) {
@@ -351,8 +472,10 @@ void main() {
 	
 
 	#define MAX_STEPS 256
+	#define MAX_STEPS_2 25
 	#define STEP_SIZE 1./float(MAX_STEPS)
-	float precis = 1./1000.; //EPS;
+	float precis = 1./100.; //EPS;
+	float precis2 = 1./2000.;
 	float maxd = uFarClip-uNearClip;
 	
 	vec3 color = vec3(0.);
@@ -383,7 +506,24 @@ void main() {
 
 		// DEBUG!!
 		//if (mod(p.x*4.f, 1.f) < 0.75 && mod(p.z*4.f, 1.f) < 0.75) discard;
+
+		ro = p;
+		if(false){
+			for(int i=0; i<MAX_STEPS_2; i++){
+
+				d = fScene_detail(p);
+
+        		if (d < precis2 || t > maxd ) {
+        			if (t <= maxd) count += STEP_SIZE * (d)/precis2;
+        			break; // continue;
+     		   	}
 	
+        	// advance ray
+        	t += d;
+        	p = ro+rd*t;
+        	count += STEP_SIZE;
+			}
+		}
 		
 		float cheap_self_occlusion = 1.-pow(count, 0.75);
 		FragColor.rgb = vec3(cheap_self_occlusion);

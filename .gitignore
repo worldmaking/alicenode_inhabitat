@@ -5,10 +5,10 @@ state.bin
 
 #worktrees
 +*
-?*
 worktrees.js
 
-
+userlist.json
+*/userlist.json
 *.d
 
 # Compiled Object files

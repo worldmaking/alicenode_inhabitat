@@ -12,7 +12,9 @@
         "xstring": "cpp",
         "xutility": "cpp",
         "xlocale": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "algorithm": "cpp",
+        "xiosbase": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

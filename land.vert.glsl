@@ -1,6 +1,8 @@
 #version 330 core
 
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix;
+uniform sampler2D uLandTex;
+uniform mat4 uLandMatrix;
 
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec2 aTexCoord;

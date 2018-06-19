@@ -1,6 +1,6 @@
 #version 330 core
-uniform mat4 uViewProjectionMatrix, uViewMatrix;
-uniform float time;
+uniform mat4 uViewProjectionMatrix, uViewMatrix, uFluidMatrix;
+uniform sampler3D uFluidTex;
 
 // vertex in object space:
 layout (location = 0) in vec3 aPos;
@@ -9,14 +9,18 @@ layout (location = 2) in vec3 iLocation;
 layout (location = 3) in vec4 iOrientation;
 layout (location = 4) in float iScale;
 layout (location = 5) in float iPhase;
+layout (location = 6) in vec3 iColor;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
 out float world_scale;
 out float phase;
 out vec4 world_orientation;
+out vec3 flow;
 // starting ray for this vertex, in object space.
-out vec3 ray_direction, ray_origin;
+out vec3 ray_direction, ray_origin, eyepos;
+out vec3 basecolor;
+out float species;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
@@ -58,6 +62,10 @@ void main() {
 	world_scale = iScale;
 	world_orientation = iOrientation;
 	phase = iPhase;
+	basecolor = iColor;
+
+	int id = gl_InstanceID;
+	species = id % 3;
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;
@@ -65,9 +73,12 @@ void main() {
 	// calculate gl_Position the usual way
 	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
 
+	vec3 tc = (uFluidMatrix * vec4(vertexpos, 1.)).xyz;
+	flow = texture(uFluidTex, tc).xyz;
+
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
-	vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
+	eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 	// we want the raymarching to operate in object-local space:
 	ray_origin = scaledpos;

@@ -1,19 +1,20 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
-uniform float time;
 
 in vec3 ray_direction, ray_origin;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
 in float phase;
+in vec3 velocity;
+in vec3 vertexpos;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
 
 #define PI 3.14159265359
-
+#define TWOPI 6.283185307
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;
@@ -52,6 +53,10 @@ vec3 quat_unrotate(in vec4 q, in vec3 v) {
 				p.w*q.y + p.y*q.w + p.z*q.x - p.x*q.z,  // y
 				p.w*q.z + p.z*q.w + p.x*q.y - p.y*q.x   // z
 				);
+}
+
+float quant(float v, float s) {
+	return floor(v/s)*s;
 }
 
 #define EPS 0.001
@@ -108,9 +113,28 @@ void pR(inout vec2 p, float a) {
 	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+vec2 pRot(in vec2 p, float a) {
+	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+	return p;
+}
+
+vec3 pRotYZ(in vec3 p, float a) {
+	p.yz = cos(a)*p.yz + sin(a)*vec2(p.z, -p.y);
+	return p;
+}
+
+vec3 pRotXZ(in vec3 p, float a) {
+	p.xz = cos(a)*p.xz + sin(a)*vec2(p.z, -p.x);
+	return p;
+}
+
 // Shortcut for 45-degrees rotation
 void pR45(inout vec2 p) {
 	p = (p + vec2(p.y, -p.x))*sqrt(0.5);
+}
+
+vec3 pTranslate(vec3 p, vec3 t) {
+	return p + t;
 }
 
 // Repeat around the origin by a fixed angle.
@@ -174,8 +198,53 @@ float sdCapsule1(vec3 p, vec3 a, vec3 b, float r) {
 	return distance(p, p1) - r;
 }
 
+vec3 sdCapsule1_tex_z(vec3 p, float l, float r) {
+
+	vec3 a = vec3(0);
+	vec3 b = vec3(0, 0, l);
+	vec2 uv;
+
+	vec3 pa = p, ba = b;
+	float t = p.z / l;
+	float h = clamp( t, 0.0, 1.0 );
+	
+	// add some ripple:
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
+	h1 = clamp( h1, 0.0, 1.0 );
+	
+	// basic distance:
+	vec3 rel = p - b*h;
+	float d = length(rel);
+
+	vec3 reln = rel/d;
+	float angle = atan(reln.y, reln.x);
+	uv.y = angle / TWOPI + 0.5;
+	
+	float tr = (p.z + r) / (l + r*2);
+	uv.x = clamp(tr, 0., 1.);
+	
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d += tiledeform;
+	return vec3(uv, d - r);
+}
+
 float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-	float timephase = time+phase;
+	float timephase = phase;
 	vec3 pa = p - a, ba = b - a;
 	float t = dot(pa,ba)/dot(ba,ba);	// phase on line from a to b
 	float h = clamp( t, 0.0, 1.0 );
@@ -192,14 +261,75 @@ float sdCapsule2(vec3 p, vec3 a, vec3 b, float ra, float rb) {
 	return d;
 }
 
+// assumes l is not zero
+// Leave l positive. Object seems to be using positive z as it's front, not negative z
+vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
+
+	vec3 a = vec3(0);
+	vec3 b = vec3(0, 0, l);
+	vec2 uv;
+	vec4 p1 = vec4(0.);
+
+	vec3 pa = p, ba = b;
+	float t = p.z / l;//(p.z * l) / (l * l)
+	float h = clamp( t, 0.0, 1.0 );
+	
+	// add some ripple:
+	float h1 = h + 0.2*sin(PI * 4. * (t*t + phase* 0.3));
+	h1 = clamp( h1, 0.0, 1.0 );
+	// TODO should clamp after ripple really
+	
+	// basic distance:
+	vec3 rel = p - b*h;
+	float d = length(rel);
+
+	vec3 reln = rel/d;
+	float angle = atan(reln.y, reln.x);
+	uv.y = angle / TWOPI + 0.5;
+	
+	
+	float lab = l + ra + rb;
+	float tab = (p.z + ra) / lab;
+	uv.x = clamp(tab, 0., 1.);
+	
+	d = d - mix(ra, rb, h1);
+
+	vec2 pt = uv * 10.;
+	vec2 pf = fract(pt)-0.5;
+	float ptpt = dot(pf, pf);
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	pt *= 0.7;
+	pt -= vec2(0.3, 0.123);
+	pf = fract(pt)-0.5;
+	ptpt = min(ptpt, dot(pf, pf));
+	float tiledeform = (0.5 - ptpt)*0.1;
+	d -= tiledeform;
+
+	return vec3(uv, d);
+}
+
 // iq has this version, which seems a lot simpler?
 float sdEllipsoid1( in vec3 p, in vec3 r ) {
 	return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
 }
 
+
+
 // polynomial smooth min (k = 0.1);
 float smin( float a, float b, float k ) {
 	float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+	return mix( b, a, h ) - k*h*(1.0-h);
+}
+
+vec3 smin_tex( vec3 a, vec3 b, float k ) {
+	float h = clamp( 0.5+0.5*(b.z-a.z)/k, 0.0, 1.0 );
 	return mix( b, a, h ) - k*h*(1.0-h);
 }
 
@@ -216,15 +346,18 @@ float ssub(in float A, in float B, float k) {
 
 // NOTE scale := f(p/s)*s
 
-float fScene(vec3 p) {
+float fScene(vec3 p0) {
 	float scl = world_scale;
-	float timephase = time + phase;
+	float timephase = phase;
 
-	p /= scl;
+	p0 /= scl;
+
+	vec3 p = p0;
 
 	// cheap symmetry:
 	p.xy = abs(p.xy);
 
+	
 	// blobbies
 	
 	vec3 A = vec3(0., 0., -0.5);
@@ -233,7 +366,7 @@ float fScene(vec3 p) {
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
-	float fz = sin(timephase*5.)*0.5+0.5;
+	float fz = sin(timephase*5.) * sign(p0.x)*0.5+0.5;
 
 	float w2 = w*w;
 	float a = sdCapsule1(p, vec3(0., 0., 1.-w2), vec3(0., 0., -1.+w2), w*w);
@@ -241,12 +374,50 @@ float fScene(vec3 p) {
 	//float a = 0.7;
 	//float b = 0.7;
 	float d = smin(a, b, 0.5);
+	
+	//d = length(p.xy) - d;
 
-	return scl * d; //ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
+	return scl * ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
+}
+
+
+vec3 fScene_tex_z(vec3 p0) {
+	float scl = world_scale;
+
+	p0 /= scl;
+
+	vec3 p = p0;	
+
+	// cheap symmetry:
+	p.xy = abs(p.xy);
+
+	//Segmented Creature shapes
+	
+	vec3 A = vec3(0., 0., -0.5);
+	vec3 B = vec3(0., 0., 0.5);
+	float w = 0.15*abs(2.+0.5*sin(14.*p.z - 8.8*phase));
+	//float w = 0.4;
+	float z = 0.25;
+	float y = 0.5;
+	float fz = sin(phase*5) * sign(p0.x)*0.5+0.5;
+	float fz0 = fz * 3;
+
+	float w2 = w*w;
+	//float a = sdCapsule1(p, vec3(0., 0., 1.-w2), vec3(0., 0., -1.+w2), w*w);
+	//float b = sdCapsule2(p, vec3(fz, fz, y), vec3(0., -0., -0.25), 0.125, 0.1);
+
+	vec3 a = sdCapsule1_tex_z(pTranslate(p, vec3(0.,0.,-0.25)), -1+w2, w*w);
+	vec3 b = sdCapsule2_tex_z(pRotXZ(pRotYZ(pTranslate(p, vec3(0., 0., 0.15)), PI / (fz0 - 5)), PI / -6), 0.65, 0.1, 0.1);
+
+	//float a = 0.7;
+	//float b = 0.7;
+	vec3 d = smin_tex(a, b, 0.3);
+
+	return vec3(d.xy, d.z * scl); //ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
 }
  
 float fScene1(vec3 p) {
-	float osc = (0.3+abs(sin(time*7.)));
+	float osc = (0.3+abs(sin(phase*7.)));
 	float s = fSphere(p, world_scale*osc);
 	float b = fBox(p, vec3(world_scale));
 	
@@ -263,7 +434,7 @@ float fScene1(vec3 p) {
 	
 	vec3 pc = p+vec3(0., 0., -world_scale*0.25);
 	float a = pModPolar(pc.xz, 36.);
-	pR(pc.yx, 0.+0.2*cos(time * 7. + abs(a*PI/3.)));
+	pR(pc.yx, 0.+0.2*cos(phase * 7. + abs(a*PI/3.)));
 	
 	
 	float c1 = fCylinder(pc.zxy, world_scale*.02, world_scale*0.7);
@@ -292,6 +463,17 @@ vec3 normal4(in vec3 p, float eps) {
 	return normalize(n);
 }
 
+vec3 normal4_tex(in vec3 p, float eps) {
+	vec2 e = vec2(-eps, eps);
+	// tetrahedral points
+	float t1 = fScene_tex_z(p + e.yxx).z, t2 = fScene_tex_z(p + e.xxy).z, t3 = fScene_tex_z(p + e.xyx).z, t4 = fScene_tex_z(p + e.yyy).z; 
+	vec3 n = (e.yxx*t1 + e.xxy*t2 + e.xyx*t3 + e.yyy*t4);
+	// normalize for a consistent SDF:
+	//return n / (4.*eps*eps);
+	// otherwise:
+	return normalize(n);
+}
+
 void main() {
 
 	vec3 rd = normalize(ray_direction);
@@ -305,9 +487,12 @@ void main() {
 	float d = maxd;
 	vec3 p = ro;
 	float count = 0.;
+	vec3 d_tex;
 	for( int i=0; i<MAX_STEPS; i++ ) {
 	
-        d = fScene(p);
+	    //d = fScene(p);
+		d_tex = fScene_tex_z(p);
+        d = d_tex.z;
         
         if (d < precis || t > maxd ) {
         	if (t <= maxd) count += STEP_SIZE * (d)/precis;
@@ -319,12 +504,18 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    FragColor = vec4(1.);
+    FragColor = vec4(rd, 1.);
+	FragPosition.xyz = vertexpos;
+	
+	//return;
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
-		FragColor.rgb = vec3(cheap_self_occlusion);
-		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
+		FragColor.rgb = vec3(d_tex.xy, 0.5);
+		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
+
+		vec3 pn = normalize(p);
+		//FragColor.xy = pn.zx*0.5+0.5;
 		
 	} else if (t >= maxd) {
     	// shot through to background
@@ -339,6 +530,6 @@ void main() {
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
-	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);
+	FragPosition.xyz = (world_position + quat_rotate(world_orientation, p));
 	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

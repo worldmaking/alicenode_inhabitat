@@ -1,6 +1,7 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix, uViewMatrix;
-uniform float time;
+uniform vec3 uEyePos;
+uniform float uMini2World;
 
 // vertex in object space:
 layout (location = 0) in vec3 aPos;
@@ -9,14 +10,17 @@ layout (location = 2) in vec3 iLocation;
 layout (location = 3) in vec4 iOrientation;
 layout (location = 4) in float iScale;
 layout (location = 5) in float iPhase;
+layout (location = 6) in vec3 iVelocity;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
 out float world_scale;
 out vec4 world_orientation;
 out float phase;
+out vec3 vertexpos;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin;
+out vec3 velocity;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
@@ -58,16 +62,21 @@ void main() {
 	world_scale = iScale;
 	world_orientation = iOrientation;
 	phase = iPhase;
+	velocity = iVelocity+0.5;
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;
-	vec3 vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
-	// calculate gl_Position the usual way
-	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
 
+	vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
+
+	// calculate gl_Position the usual way
+	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.); 
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
+
+	//vec3 eyepos = uEyePos / uMini2World;
 	vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
+
 
 	// we want the raymarching to operate in object-local space:
 	ray_origin = scaledpos;

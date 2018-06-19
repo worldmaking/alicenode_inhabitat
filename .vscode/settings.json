@@ -11,7 +11,10 @@
         "vector": "cpp",
         "xstring": "cpp",
         "xutility": "cpp",
-        "xlocale": "cpp"
+        "xlocale": "cpp",
+        "functional": "cpp",
+        "algorithm": "cpp",
+        "xiosbase": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

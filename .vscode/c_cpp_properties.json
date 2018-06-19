@@ -50,7 +50,8 @@
                 "databaseFilename": ""
             },
             "cStandard": "c11",
-            "cppStandard": "c++17"
+            "cppStandard": "c++17",
+            "compilerPath": "/usr/bin/clang"
         },
         {
             "name": "Win32",
@@ -81,7 +82,8 @@
                 "databaseFilename": ""
             },
             "cStandard": "c11",
-            "cppStandard": "c++17"
+            "cppStandard": "c++17",
+            "compilerPath": "/usr/bin/clang"
         }
     ],
     "version": 4

@@ -1056,6 +1056,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		//console.log("%f", oScale);
 
 		int speciesCount = 6;
+		speciesCount++;
 		if(debugMode % speciesCount == 1){
 			state->objects[0].location = world_centre;
 			state->objects[0].scale = 2.0;
@@ -1077,6 +1078,11 @@ void onFrame(uint32_t width, uint32_t height) {
 			state->segments[0].scale = 2.5;
 			console.log("Creature 4");
 		}else if(debugMode % speciesCount == 5){
+			state->objects[4].location = world_centre;
+			state->objects[4].scale = 2.0;
+			state->segments[0].scale = 2.5;
+			console.log("Creature 4");
+		}else if(debugMode % speciesCount == 6){
 			state->segments[0].location = world_centre;
 			state->segments[0].scale = 5.0;
 			state->objects[0].scale = 1.0;
@@ -1084,7 +1090,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			state->segments[0].scale = 2.5;
 			state->objects[0].scale = 1.0;
 		}
-
+	
 		
 
 		// upload VBO data to GPU:

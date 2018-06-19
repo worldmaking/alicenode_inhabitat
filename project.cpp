@@ -41,6 +41,8 @@ glm::quat align_upvector_to(glm::quat const q, glm::vec3 const normal) {
 	return safe_normalize(diff * q);
 }
 
+static int flip = 0;
+
 Shader objectShader;
 Shader segmentShader;
 Shader particleShader;
@@ -88,8 +90,7 @@ VBO particlesVBO(sizeof(State::particles));
 VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
-
-float particleSize = 0.002;
+float particleSize = 0.005;
 float camSpeed = 15.0f;
 float camPitch;
 float camYaw;
@@ -100,7 +101,7 @@ bool camBackwards;
 float creature_fluid_push = 0.75f;
 
 int debugMode = 0;
-int camMode = 0;
+int camMode = 5;
 
 std::mutex sim_mutex;
 bool accel = 0;
@@ -165,6 +166,8 @@ float angle=0.0;
 float lx=0.0f,lz=-1.0f;
 // XZ position of the camera
 float x=0.0f,z=5.0f;
+
+int kidx = 0;
 
 /*
 	A helper for deferred rendering
@@ -418,8 +421,12 @@ void sim_update(float dt) {
 	// inverse dt gives rate (per second)
 	float idt = 1.f/dt;
 
+
 	const Alice& alice = Alice::Instance();
 	if (!alice.isSimulating) return;
+
+	auto& kinect0 = alice.cloudDeviceManager.devices[0];
+	auto& kinect1 = alice.cloudDeviceManager.devices[1];
 
 
 	if (0) {
@@ -427,53 +434,75 @@ void sim_update(float dt) {
 		glm::mat4 ro = glm::rotate(glm::mat4(1.f), 1.8f, glm::vec3(1.f, 0.f, 0.f));
 		kinect2world = ro * tr;
 	}
-
-	// get the most recent complete frame:
-	const CloudFrame& cloudFrame = alice.cloudDevice->cloudFrame();
-	const glm::vec3 * cloud_points = cloudFrame.xyz;
-	const glm::vec2 * uv_points = cloudFrame.uv;
-	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
-
+	
 	// 
 	al_field3d_scale(field_dim, state->density, glm::vec3(density_decay));
 	al_field3d_diffuse(field_dim, state->density, state->density, density_diffuse);
 	memcpy(state->density_back, state->density, sizeof(glm::vec3) * FIELD_VOXELS);
 
 	fungus_update(dt);
+
+	// get the most recent complete frame:
 	
-	for (int i=0; i<NUM_PARTICLES; i++) {
-		Particle &o = state->particles[i];
-
-		glm::vec3 flow;
-		fluid.velocities.front().readnorm(transform(world2fluid, o.location), &flow.x);
-
-		// noise:
-		flow += glm::sphericalRand(0.002f);
+	flip = !flip;
+	const CloudDevice& cd = alice.cloudDeviceManager.devices[flip];
+	const CloudFrame& cloudFrame = cd.cloudFrame();
+	const glm::vec3 * cloud_points = cloudFrame.xyz;
+	const glm::vec2 * uv_points = cloudFrame.uv;
+	const glm::vec3 * rgb_points = cloudFrame.rgb;
+	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
+	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
 		
-		o.velocity = flow * idt;
+	if (1) {
+		for (int i=0; i<NUM_PARTICLES; i++) {
+			Particle &o = state->particles[i];
 
-		if (alice.cloudDevice->capturing) {
-			uint64_t idx = i % max_cloud_points;
-			glm::vec3 p = cloud_points[idx];
+			glm::vec3 flow;
+			fluid.velocities.front().readnorm(transform(world2fluid, o.location), &flow.x);
 
-			if (p.z > 1.f) {
+			// noise:
+			flow += glm::sphericalRand(0.0002f);
+			
+			o.velocity = flow * idt;
 
-				p = glm::vec3(kinect2world * glm::vec4(p, 1.f));
-				glm::vec2 uv = uv_points[idx];
-				// this is in meters, but that seems a bit limited for our world
-				glm::vec3 campos = glm::vec3(0., 1.1, 0.);
-				p = p + campos;
-				o.location = p;
-				o.color = glm::vec3(uv, 0.5f);
-			}
-		} else {
-			// sometimes assign to a random creature?
-			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
-				int idx = i % NUM_OBJECTS;
-				o.location = state->objects[idx].location;
+			if (cd.capturing && i < max_cloud_points) {
+				uint64_t idx = i % max_cloud_points;
+				glm::vec3 p = cloud_points[idx];
+
+				//if (i == rnd::integer(max_cloud_points)) { console.log("                        p.z %f %f %f", p.x, p.y, p.z); }
+
+				if (p.z > 1.f) {
+					o.location = p + kinectloc;
+					o.color =  glm::vec3(uv_points[idx], 0.5f);
+					// o.color = rgb_points[i] + 0.5f;
+					o.velocity = glm::vec3(0);
+				}
+			} else {
+				// sometimes assign to a random creature?
+				if (rnd::uni() < 0.0001/NUM_PARTICLES) {
+					int idx = i % NUM_OBJECTS;
+					o.location = state->objects[idx].location;
+				}
 			}
 		}
-	}
+	} else {
+
+		if (cd.capturing) {
+			for (int idx=0; idx<max_cloud_points; idx++) {
+				glm::vec3 p = cloud_points[idx];
+				if (p.z > 1.f) {
+					Particle &o = state->particles[kidx];
+					o.location = p + kinectloc;
+					o.color = glm::vec3(uv_points[idx], 0.5f);
+
+					if (idx == rnd::integer(max_cloud_points)) { console.log("p.z %f %d %d ||| %d %d", p.z, idx, kidx, cd.lastCloudFrame, cd.lastColourFrame); }
+
+					kidx++;
+					if (kidx >= NUM_PARTICLES) kidx = 0;
+				}
+			}
+		}
+	} 
 
 	// simulate creatures:
 	for (int i=0; i<NUM_OBJECTS; i++) {
@@ -821,6 +850,7 @@ void draw_scene(int width, int height) {
 	particleShader.uniform("uPointSize", particleSize);
 	particleShader.uniform("uColorTex", 0);
 
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, colorTex);
 	glEnable( GL_PROGRAM_POINT_SIZE );
 	glEnable(GL_POINT_SPRITE);
@@ -828,6 +858,7 @@ void draw_scene(int width, int height) {
 	particlesVAO.draw(NUM_PARTICLES, GL_POINTS);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	glDisable(GL_POINT_SPRITE);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	debugShader.use(); 
@@ -853,13 +884,25 @@ void draw_scene(int width, int height) {
 }
 
 void onFrame(uint32_t width, uint32_t height) {
-	const Alice& alice = Alice::Instance();
+	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
 	float dt = alice.dt;
-	float aspect = width/float(height);
+	float aspect = gBuffer.dim.x / (float)gBuffer.dim.y;
+	auto& kinect0 = alice.cloudDeviceManager.devices[0];
+	auto& kinect1 = alice.cloudDeviceManager.devices[1];
+
+	if (1) {
+		//kinect0.cloudTransform = 
+			//glm::scale(glm::vec3(0.1f)) * 
+			//glm::rotate(float(t), glm::vec3(1,0,0)) * 
+			//glm::translate(world_centre) *
+			//glm::scale(glm::vec3(0.1f)) * 
+			//glm::mat4();
+		
+		//kinect1.cloudTransform = kinect0.cloudTransform;
+	}
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
-
 
 	if (alice.leap->isConnected) {
 		// copy bones into debugdots
@@ -974,7 +1017,8 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = state->particles[i];
-			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+			//o.location = o.location + o.velocity * dt;
+			//o.location = wrap(o.location, world_min, world_max);
 		}
 	
 		for (int i=0; i<NUM_OBJECTS; i++) {
@@ -1055,11 +1099,17 @@ void onFrame(uint32_t width, uint32_t height) {
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->fungus[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
-
-		const ColourFrame& image = alice.cloudDevice->colourFrame();
-		glBindTexture(GL_TEXTURE_2D, colorTex);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image.color);
+		
+		//if (alice.cloudDevice->use_colour) {
+			const CloudDevice& cd = alice.cloudDeviceManager.devices[flip];
+			const ColourFrame& image = cd.colourFrame();
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, colorTex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, 
+			GL_UNSIGNED_BYTE, image.color);
+		//}
 	}
+
 	
 	Hmd& vive = *alice.hmd;
 	SimpleFBO& fbo = vive.fbo;
@@ -1206,7 +1256,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					eyePos, 
 					world_centre, 
 					glm::vec3(0., 1., 0.));
-			}else if(camMode % camModeMax == 40){
+			}else if(camMode % camModeMax == 4){
 				
 				/// nav
 				//console.log("Nav Mode Activated");
@@ -1308,15 +1358,17 @@ void onFrame(uint32_t width, uint32_t height) {
 			glDisable(GL_SCISSOR_TEST);
 			fbo.end();
 		}
+		glDisable(GL_SCISSOR_TEST);
+	} 
 		
-		glViewport(0, 0, width, height);
-		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.f, 0.f, 0.f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		fbo.draw();
-	}
-
 	alice.hmd->submit();
+	
+	glViewport(0, 0, width, height);
+	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	fbo.draw();
+
 	
 	// openvr header recommends this after submit:
 	//glFlush();

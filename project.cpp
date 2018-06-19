@@ -1511,6 +1511,7 @@ void onReset() {
 		auto& o = state->particles[i];
 		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::vec3(1.f);
+		o.phase = rnd::uni();
 	}
 
 

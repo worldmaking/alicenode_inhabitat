@@ -47,6 +47,7 @@ struct Particle {
 	glm::vec3 location;
 	glm::vec3 color;
 	glm::vec3 velocity;
+	float phase, unused;
 };
 
 struct DebugDot {

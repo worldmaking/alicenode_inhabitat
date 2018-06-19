@@ -242,6 +242,7 @@ float mini2world = 1.;
 float near_clip = 0.1f / mini2world;
 float far_clip = 1200.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
+Viewport viewport;
 
 // the location of the VR person in the world
 glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
@@ -891,8 +892,16 @@ void draw_scene(int width, int height) {
 void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
 
 	fbo.begin();
-	glScissor(0, 0, fbo.dim.x, fbo.dim.y);
-	glViewport(0, 0, fbo.dim.x, fbo.dim.y);
+	glScissor(
+		fbo.dim.x*viewport_offset.x, 
+		fbo.dim.y*viewport_offset.y, 
+		fbo.dim.x*viewport_scale.x, 
+		fbo.dim.y*viewport_scale.y);
+	glViewport(
+		fbo.dim.x*viewport_offset.x, 
+		fbo.dim.y*viewport_offset.y, 
+		fbo.dim.x*viewport_scale.x, 
+		fbo.dim.y*viewport_scale.y);
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1156,8 +1165,6 @@ void onFrame(uint32_t width, uint32_t height) {
 			vive.update();
 			glEnable(GL_SCISSOR_TEST);
 
-			//console.log("VR!!!!");
-
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
 
 			for (int eye = 0; eye < 2; eye++) {
@@ -1170,18 +1177,34 @@ void onFrame(uint32_t width, uint32_t height) {
 				viewMatInverse = glm::inverse(viewMat);
 				viewProjMatInverse = glm::inverse(viewProjMat);
 
+				glm::vec2 viewport_scale = glm::vec2(0.5f, 1.f);
+				glm::vec2 viewport_offset = glm::vec2(eye*0.5f, 0.f);
+
 				gBufferVR.begin();
 
-					glScissor(eye * gBufferVR.dim.x / 2, 0, gBufferVR.dim.x / 2, gBufferVR.dim.y);
-					glViewport(eye * gBufferVR.dim.x / 2, 0, gBufferVR.dim.x / 2, gBufferVR.dim.y);
+					viewport.pos = glm::ivec2(gBufferVR.dim.x * viewport_offset.x, gBufferVR.dim.y * viewport_offset.y);
+					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x, gBufferVR.dim.y * viewport_scale.y);
+
+					//console.log("eye %d vp %d %d %d %d", eye, viewport.pos.x, viewport.pos.y, viewport.dim.x, viewport.dim.y);
+
+					glScissor(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
+					glViewport(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
 					glEnable(GL_DEPTH_TEST);
 					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-					draw_scene(gBufferVR.dim.x / 2, gBufferVR.dim.y);
+					draw_scene(viewport.dim.x, viewport.dim.y);
 				gBufferVR.end();
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferVR, glm::vec2(0.5f, 1.f), glm::vec2(eye*0.5f, 0.f));
+				draw_gbuffer(fbo, gBufferVR, viewport_scale, viewport_offset);
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
@@ -1350,12 +1373,11 @@ void onFrame(uint32_t width, uint32_t height) {
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	projFBOs[0].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
-	
 	projFBOs[1].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
 
 	fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
 
-	fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
+	//fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
 
 
 	

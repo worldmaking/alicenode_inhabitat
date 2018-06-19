@@ -2,7 +2,7 @@
 #define STATE_H
 
 #define NUM_OBJECTS	32
-#define NUM_SEGMENTS 128
+#define NUM_SEGMENTS 16
 #define NUM_PARTICLES 1024*256
 #define FIELD_DIM 64
 #define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
@@ -24,6 +24,8 @@ struct Segment {
 struct Particle {
 	glm::vec3 location;
 	glm::vec3 color;
+	float phase;
+	float unused;
 };
 
 struct State {

@@ -22,13 +22,13 @@ VBO segmentInstancesVBO(sizeof(State::segments));
 VAO particlesVAO;
 VBO particlesVBO(sizeof(State::particles));
 
-float particleSize = 1.f/128;
+float particleSize = 1.f/160;
 float near_clip = 0.1f;
 float far_clip = 12.f;
 
 glm::vec3 world_min(-4.f, 0.f, 0.f);
 glm::vec3 world_max(4.f, 4.f, 8.f);
-glm::vec3 world_centre(0.f, 1.8f, 4.f);
+glm::vec3 world_centre(0.f, 1.8f, 2.f);
 float world2fluid = 8.f;
 
 glm::mat4 kinect2world; 
@@ -422,6 +422,7 @@ void draw_scene(int width, int height) {
 void onFrame(uint32_t width, uint32_t height) {
 	const Alice& alice = Alice::Instance();
 	double t = alice.simTime;
+	double dt = alice.dt;
 	float aspect = width/float(height);
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f", alice.fpsAvg, t);
@@ -460,19 +461,22 @@ void onFrame(uint32_t width, uint32_t height) {
 				o.location = wrap(
 					o.location + world2fluid * flow + noise, world_min, world_max);
 
-				if (alice.cloudDevice->capturing) {
+				o.phase += dt;
+
+				if (alice.cloudDevice->capturing && rnd::uni() < 0.05f) {
 					uint64_t idx = i % max_camera_points;
 					glm::vec3 p = camera_points[idx];
 
-					if (p.z > 1.f) {
+					if (p.z > 0.9f) {
 
 						p = glm::vec3(kinect2world * glm::vec4(p, 1.f));
 						glm::vec2 uv = uv_points[idx];
 						// this is in meters, but that seems a bit limited for our world
-						glm::vec3 campos = glm::vec3(0., 1.30, 0.);
+						glm::vec3 campos = glm::vec3(0., 0.8, 0.);
 						p = p + campos;
 						o.location = p;
 						o.color = glm::vec3(uv, 0.5f);
+						o.phase -= 1.f;
 					}
 				}
 			}
@@ -577,8 +581,10 @@ void onFrame(uint32_t width, uint32_t height) {
 			// update nav
 			double a = M_PI * t / 30.;
 			viewMat = glm::lookAt(
-				world_centre + 
-				glm::vec3(3.*cos(a), 0.85*sin(0.5*a), 4.*sin(a)), 
+				world_centre 
+				+ glm::vec3(0.f, 0.f, -.5f)
+				+  glm::vec3(.03*cos(a), .03*sin(0.5*a), .1*sin(a))
+				, 
 				world_centre, 
 				glm::vec3(0., 1., 0.));
 			projMat = glm::perspective(45.0f, aspect, near_clip, far_clip);
@@ -655,6 +661,7 @@ void onReset() {
 		auto& o = state->particles[i];
 		o.location = world_centre+glm::ballRand(1.f);
 		o.color = glm::vec3(1.f);
+		o.phase = rnd::uni();
 	}
 }
 
@@ -706,7 +713,6 @@ extern "C" {
 		console.log("onload fluid initialized");
 		
 		//alice.cloudDevice->record(1);
-		alice.cloudDevice->open();
 
 		alice.desiredFrameRate = 30;
 		gBuffer.dim = glm::ivec2(512, 512);

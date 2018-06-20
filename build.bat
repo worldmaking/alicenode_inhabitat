@@ -9,8 +9,11 @@ if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Professional\%VCVARS6
 if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Community\%VCVARS64%" call "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Community\%VCVARS64%"
 if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\BuildTools\%VCVARS64%" call "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\BuildTools\%VCVARS64%"
 
+rem /I "%KINECTSDK20_DIR%\inc" 
+rem "%KINECTSDK20_DIR%\lib\x64\kinect20.lib"
+
 REM compile & link:
-cl /nologo /LD /W3 /EHsc /O2 /I "%ALICE_DIR%\include" /I "%KINECTSDK20_DIR%\inc" "%ALICE_DIR%\alice.lib" "%ALICE_DIR%\lib\win64\openvr_api.lib" "%ALICE_DIR%\lib/win64/lib-vc2017/glfw3.lib" project.cpp user32.lib kernel32.lib shell32.lib gdi32.lib opengl32.lib "%KINECTSDK20_DIR%\lib\x64\kinect20.lib"
+cl /nologo /LD /W3 /EHsc /O2 /I "%ALICE_DIR%\include" "%ALICE_DIR%\alice.lib" "%ALICE_DIR%\lib\win64\openvr_api.lib" "%ALICE_DIR%\lib/win64/lib-vc2017/glfw3.lib" project.cpp user32.lib kernel32.lib shell32.lib gdi32.lib opengl32.lib 
 
 rem "%ALICE_DIR%\lib\win64\SpoutLibrary.lib" 
 

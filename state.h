@@ -68,6 +68,11 @@ struct DebugDot {
 };
 
 struct State {
+
+	float dummy = 10;
+	float test = 34;
+	
+
 	Particle particles[NUM_PARTICLES];
 	Object objects[NUM_OBJECTS];
 	Segment segments[NUM_SEGMENTS];
@@ -96,7 +101,6 @@ struct State {
 	float fungus[FUNGUS_TEXELS];
 	float fungus_old[FUNGUS_TEXELS];
 
-	float dummy = 10;
 };
 
 #endif

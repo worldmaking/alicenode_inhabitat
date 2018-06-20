@@ -134,18 +134,51 @@ glm::vec3 make_orthogonal_to(glm::vec3 const v, glm::vec3 const normal) {
 
 // re-orient a quaternion `q` to the nearest orientation 
 // whose "up" vector (+Y) aligns to a given `normal`
-glm::quat align_upvector_to(glm::quat const q, glm::vec3 const normal) {
+// assumes `normal` is already normalized (length == 1)
+glm::quat align_up_to(glm::quat const q, glm::vec3 const normal) {
+	const float eps = 0.00001f;
 	// get q's up vector:
 	glm::vec3 uy = quat_uy(q);
 	// get similarity with normal:
 	float dp = glm::dot(uy, normal);
+	// if `direction` is already similar to `dir`, leave as-is
+	if (fabsf(dp) < eps) return q; 
 	// find an orthogonal axis to rotate around:
-	// (if dp is almost 1 or -1 this can be ambiguous, so pick q's z vector)
-	glm::vec3 axis = (fabsf(dp) < 0.999f) ? glm::cross(uy, normal) : quat_uz(q);
+	glm::vec3 axis = glm::cross(uy, normal);
 	// get the rotation needed around this axis:
 	glm::quat diff = glm::angleAxis(acosf(dp), axis);
 	// rotate the original quat to align to the normal:
 	return safe_normalize(diff * q);
+}
+
+// re-orient a quaternion `q` to the nearest orientation 
+// whose "forward" vector (-Z) aligns to a given `direction`
+glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
+	const float eps = 0.00001f;
+	float d = glm::length(direction);
+	// if `direction` is too small, any direction is as good as any other... no change needed
+	if (fabsf(d) < eps) return q; 
+	// get similarity with direction:
+	glm::vec3 desired = safe_normalize(direction);
+	glm::vec3 uf = quat_uf(q);
+	float dp = glm::dot(uf, desired); 
+	// if `direction` is already similar to `dir`, leave as-is
+	if (fabsf(dp) < eps) return q; 
+	// get an orthogonal axis to rotate around:
+	glm::vec3 axis = glm::cross(uf, desired);
+	// get the rotation needed around this axis:
+	glm::quat diff = glm::angleAxis(acosf(dp), axis);
+	// rotate the original quat to align to the normal:
+	return safe_normalize(diff * q);	
+}
+
+// max should be >> 0.
+glm::vec2 limit(glm::vec2 v, float max) {
+	float len = glm::length(v);
+	if (len > max) {
+		return v * max/len;
+	}
+	return v;
 }
 
 static int flip = 0;
@@ -164,7 +197,6 @@ GLuint colorTex;
 FloatTexture3D fluidTex;
 FloatTexture3D densityTex;
 FloatTexture3D distanceTex;
-
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
 
@@ -200,30 +232,20 @@ VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
 float particleSize = 0.005;
-float camSpeed = 15.0f;
-float camPitch;
-float camYaw;
-float camUp;
-float camStrafe;
-bool camForward;
-bool camBackwards;
 float creature_fluid_push = 0.75f;
 
 int debugMode = 0;
-int camMode = 5;
+int camMode = 0;
+int camModeMax = 4;
+glm::vec3 camVel, camTurn;
+glm::vec3 cameraLoc;
+glm::quat cameraOri;
 
 std::mutex sim_mutex;
-bool accel = 0;
-bool decel = 0;
-
-const float MOVEMENT_SPEED = 0.1f;
-
 
 glm::vec3 world_min(0.f, 0.f, 0.f);
 glm::vec3 world_max(80.f, 80.f, 80.f);
 glm::vec3 world_centre(40.f, 18.f, 40.f);
-glm::vec3 prevVel = glm::vec3(0.);
-glm::vec3 newCamLoc;
 
 // how to convert world positions into fluid texture coordinates:
 float field2world_scale;
@@ -247,9 +269,7 @@ Viewport viewport;
 // the location of the VR person in the world
 glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
 
-glm::vec3 cameraLoc;
-glm::quat cameraOri;
-glm::vec3 cameraLoc2;
+int kidx = 0;
 
 State * state;
 Mmap<State> statemap;
@@ -268,15 +288,6 @@ float density_scale = 0.5;
 MetroThread simThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
-
-// angle of rotation for the camera direction
-float angle=0.0;
-// actual vector representing the camera's direction
-float lx=0.0f,lz=-1.0f;
-// XZ position of the camera
-float x=0.0f,z=5.0f;
-
-int kidx = 0;
 
 GBuffer gBufferVR;
 GBuffer gBufferProj;
@@ -575,7 +586,7 @@ void sim_update(float dt) {
 		// get a normal for the land:
 		glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.05f/LAND_DIM);
 		// re-orient relative to ground:
-		o.orientation = glm::slerp(o.orientation, align_upvector_to(o.orientation, normal), 0.2f);
+		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
 			
 		// add my direction to the fluid current
 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
@@ -634,7 +645,7 @@ void sim_update(float dt) {
 			// get a normal for the land:
 			glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.05f/LAND_DIM);
 			// re-orient relative to ground:
-			o.orientation = glm::slerp(o.orientation, align_upvector_to(o.orientation, normal), 0.2f);
+			o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
 			
 		} else {
 			auto& p = state->segments[i-1];
@@ -866,7 +877,7 @@ void draw_scene(int width, int height) {
 	fungusTex.unbind(5);
 	landTex.unbind(6);
 
-	if (0) {
+	if (1) {
 		objectShader.use();
 		objectShader.uniform("time", t);
 		objectShader.uniform("uViewMatrix", viewMat);
@@ -876,7 +887,7 @@ void draw_scene(int width, int height) {
 		objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
 	}
 
-	if (0) {
+	if (1) {
 		segmentShader.use();
 		segmentShader.uniform("time", t);
 		segmentShader.uniform("uEyePos", eyePos);
@@ -1283,109 +1294,82 @@ void onFrame(uint32_t width, uint32_t height) {
 			glDisable(GL_SCISSOR_TEST);
 		} else {
 			
+			switch (camMode){
+				case 0: {
+					// WASD mode:
+					float camera_turnangle = 1.f;
+					float camera_speed = 4.f;
 
-			// update nav
+					// move camera:
+					cameraLoc += quat_rotate(cameraOri, camVel) * (camera_speed * dt);
+					// wrap to world:
+					cameraLoc = wrap(cameraLoc, world_min, world_max);
 
-			int camModeMax = 6;
-			double a = M_PI * t / 30.;
-			//when c is pressed, swap between normal camera, objects[0] camera, segments[0] camera, and a sine wave movement
-			if(camMode % camModeMax == 1){
+					// stick to floor:
+					glm::vec3 norm = transform(world2field, cameraLoc);
+					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+					cameraLoc = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
+			
+					// rotate camera:
+					cameraOri = safe_normalize(cameraOri * glm::angleAxis(camera_turnangle * dt, camTurn));
+					// now orient to floor:
+					glm::vec3 up = glm::vec3(landpt);
+					up = glm::mix(up, glm::vec3(0,1,0), 0.5);
+					cameraOri = align_up_to(cameraOri, glm::normalize(up));
 
-				// follow a creature mode:
-
-				/*viewMat = glm::lookAt(
-					glm::vec3(state->objects[0].location), 
-					state->objects[0].location + (state->objects[0].velocity + prevVel)/glm::vec3(2.), 
-					glm::vec3(0., 1., 0.));*/
-				auto& o = state->objects[0];
-
-				glm::vec3 fluidloc = transform(world2field, o.location);
-				//glm::vec3 flow;
-				//fluid.velocities.front().readnorm(fluidloc, &flow.x);
-				glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
-
-				flow = flow * dt * 100.0f;
+					// now create view matrix:
+					glm::vec3 boom = glm::vec3(0., 1.7, 1.7);
+					//glm::vec3 boom = glm::vec3(0.);
+					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
+					projMat = glm::perspective(glm::radians(110.0f), aspect, near_clip, far_clip);
 				
-				cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
-				cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
-				//TODO: Once creatures follow the ground, fix boom going into the earth
+				} break;
+				case 1: {
+					// follow a creature mode:
+					auto& o = state->objects[0];
+
+					glm::vec3 fluidloc = transform(world2field, o.location);
+					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
+					flow = flow * dt * 100.0f;
+					
+					cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
+					cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
+					//TODO: Once creatures follow the ground, fix boom going into the earth
+					
+					auto boom = glm::vec3(0., o.scale*2.f, o.scale*4.);
+					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
+					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				
-				eyePos = cameraLoc;
-				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 1., 2.5)));
-				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-				prevVel = glm::vec3(o.velocity);
+				} break;
+				case 2: {
+					// follow a predator
+					double a = M_PI * t / 30.;
+					auto& o = state->segments[0];
 
-			}else if(camMode % camModeMax == 2){
-				/*viewMat = glm::lookAt(
-					glm::vec3(state->segments[0].location), 
-					state->segments[0].location + (state->segments[0].velocity + prevVel)/glm::vec3(2.), 
-					glm::vec3(0., 1., 0.));*/
+					glm::vec3 fluidloc = transform(world2field, o.location);
+					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
+					flow = flow * dt * 100.0f;
+					
+					cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
+					cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
+					//TODO: Once creatures follow the ground, fix boom going into the earth
 
-				auto& o = state->segments[0];
-
-				glm::vec3 fluidloc = transform(world2field, o.location);
-				//glm::vec3 flow;
-				//fluid.velocities.front().readnorm(fluidloc, &flow.x);
-				glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
-				flow = flow * dt * 100.0f;
+					auto boom = glm::vec3(0., o.scale*2.f, o.scale*4.);
+					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
+					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				
-				cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
-				cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
-				//TODO: Once creatures follow the ground, fix boom going into the earth
-				eyePos = cameraLoc;
-				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(glm::vec3(0., 4., 10.)));
-				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-				prevVel = glm::vec3(o.velocity);
-
-			}else if(camMode % camModeMax == 3){
-				eyePos = world_centre + 
-					glm::vec3(5.0*sin(t), 0.85*sin(0.5*a), 40.*sin(a));
-				viewMat = glm::lookAt(
-					eyePos, 
-					world_centre, 
-					glm::vec3(0., 1., 0.));
-			}else if(camMode % camModeMax == 444){
-				
-				/// nav
-				//console.log("Nav Mode Activated");
-				if(camForward){
-					newCamLoc = cameraLoc + quat_uf(cameraOri)* (camSpeed * 0.01f);}
-				else if(camBackwards){
-					newCamLoc = cameraLoc + quat_uf(cameraOri)* -(camSpeed * 0.01f);}
-
-				newCamLoc = glm::vec3(newCamLoc.x, camUp*0.01f, newCamLoc.z);
-				cameraLoc = glm::mix(cameraLoc,newCamLoc, 0.5f);
-
-				
-				glm::quat newCamRot = glm::angleAxis(camYaw*0.01f, glm::vec3(0, 1, 0)) * glm::angleAxis(camPitch*0.01f, glm::vec3(1, 0, 0));
-				newCamRot = glm::normalize(newCamRot);
-				//glm::quat (0.f, camYaw*0.01f, 0.f , camPitch*0.01f);
-				cameraOri = glm::mix(cameraOri,newCamRot, 0.5f);
-
-				eyePos = cameraLoc;
-				viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
-				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-
-				camForward = false;
-				camBackwards = false;
-			}else if(camMode % camModeMax == 5){
-				double a = M_PI * t / 30.;
-				eyePos = world_centre + 
-					glm::vec3(30.*cos(a), 1., 40.*sin(a));
-				viewMat = glm::lookAt(
-					eyePos, 
-					world_centre, 
-					glm::vec3(0., 1., 0.));
-				projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
-			} else { 
-				//top down camera view
-				eyePos = world_centre + glm::vec3(0.0f, 6.0f, 0.0f);
-				viewMat = glm::lookAt(
-					eyePos, 
-					world_centre, 
-					glm::vec3(0.0f, 0.0f, 1.0f));
-				projMat = glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
+				} break;
+				default: {
+					// orbit around
+					double a = M_PI * t / 30.;
+					viewMat = glm::lookAt(
+						world_centre + 
+						glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
+						world_centre, 
+						glm::vec3(0., 1., 0.));
+				}
 			}
+
 			viewMat = viewMat * glm::scale(glm::vec3(mini2world));
 			viewProjMat = projMat * viewMat;
 			projMatInverse = glm::inverse(projMat);
@@ -1480,15 +1464,49 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 				}
 			}
 		} break;
-		case GLFW_KEY_D: {
+
+		// ? key to switch debug modes
+		case GLFW_KEY_SLASH: {
 			//console.log("D was pressed");
 			if (downup) debugMode++;
 		} break;
+		
 		case GLFW_KEY_C: {
-			//console.log("C was pressed");
-			if (downup) camMode++;
+			if (downup) { 
+				camMode = (camMode+1) % camModeMax;
+				console.log("Cam mode %d", camMode);
+			}
 		} break;
+
+		// WASD+arrows for nav:
+		case GLFW_KEY_UP:
+		case GLFW_KEY_W:
+			if (downup) camVel.z = -1.f; 
+			else camVel.z = 0.f; 
+			break;
+		case GLFW_KEY_DOWN:
+		case GLFW_KEY_S:
+			if (downup) camVel.z =  1.f; 
+			else camVel.z = 0.f; 
+			break;
+		case GLFW_KEY_RIGHT:
+			if (downup) camTurn.y = -1.f; 
+			else camTurn.y = 0.f; 
+			break;
+		case GLFW_KEY_LEFT:
+			if (downup) camTurn.y =  1.f; 
+			else camTurn.y = 0.f; 
+			break;
+		case GLFW_KEY_A:
+			if (downup) camVel.x = -1.f; 
+			else camVel.x = 0.f; 
+			break;
+		case GLFW_KEY_D:
+			if (downup) camVel.x =  1.f; 
+			else camVel.x = 0.f; 
+			break;
 	
+	/*
 		//pitch up
 		case GLFW_KEY_KP_8:
 		case GLFW_KEY_UP:{
@@ -1543,6 +1561,7 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 		//state->objects[0].velocity = glm::vec3(0.);
 		accel = 0;
 		decel = 0;
+		*/
 	}
 
 }

@@ -1,6 +1,6 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrixInverse, uViewMatrix;
-uniform vec2 uTexTransform;
+uniform vec2 uTexScale, uTexOffset;
 
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec2 aTexCoord;
@@ -10,8 +10,8 @@ out vec3 ray_direction, ray_origin, eye_position;
 
 void main() {
 	gl_Position = vec4(aPos, 0., 1.0);
-	texCoord.y = aTexCoord.y;
-	texCoord.x = aTexCoord.x*uTexTransform.x + uTexTransform.y;
+
+	texCoord = aTexCoord*uTexScale + uTexOffset;
 
 	// project a clip coordinate out into the world
 	vec4 near = uViewProjectionMatrixInverse * vec4(gl_Position.xy, -1, 1);

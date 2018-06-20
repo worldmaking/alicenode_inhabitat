@@ -230,4 +230,5 @@ void main() {
 	
 	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 	FragColor.rgb = color;	
+	//FragColor.rgb += vec3(texCoord, 0.);
 }

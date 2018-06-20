@@ -1055,36 +1055,42 @@ void onFrame(uint32_t width, uint32_t height) {
 		//float oScale = state->objects[0].scale;
 		//console.log("%f", oScale);
 
+
 		int speciesCount = 6;
 		speciesCount++;
 		if(debugMode % speciesCount == 1){
 			state->objects[0].location = world_centre;
 			state->objects[0].scale = 2.0;
 			state->segments[0].scale = 2.5;
-			console.log("Creature 1");
+			//console.log("Creature 1");
 		}else if(debugMode % speciesCount == 2){
 			state->objects[1].location = world_centre;
 			state->objects[1].scale = 2.0;
+			state->objects[0].scale = 1.0;
 			state->segments[0].scale = 2.5;
-			console.log("Creature 2");
+			//console.log("Creature 2");
 		}else if(debugMode % speciesCount == 3){
 			state->objects[2].location = world_centre;
 			state->objects[2].scale = 2.0;
+			state->objects[1].scale = 1.0;
 			state->segments[0].scale = 2.5;
-			console.log("Creature 3");
+			//console.log("Creature 3");
 		}else if(debugMode % speciesCount == 4){
 			state->objects[3].location = world_centre;
 			state->objects[3].scale = 2.0;
+			state->objects[2].scale = 1.0;
 			state->segments[0].scale = 2.5;
-			console.log("Creature 4");
+			//console.log("Creature 4");
 		}else if(debugMode % speciesCount == 5){
 			state->objects[4].location = world_centre;
 			state->objects[4].scale = 2.0;
+			state->objects[3].scale = 1.0;
 			state->segments[0].scale = 2.5;
-			console.log("Creature 4");
+			//console.log("Creature 5");
 		}else if(debugMode % speciesCount == 6){
 			state->segments[0].location = world_centre;
 			state->segments[0].scale = 5.0;
+			state->objects[4].scale = 1.0;
 			state->objects[0].scale = 1.0;
 		}else{
 			state->segments[0].scale = 2.5;
@@ -1262,7 +1268,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					eyePos, 
 					world_centre, 
 					glm::vec3(0., 1., 0.));
-			}else if(camMode % camModeMax == 4){
+			}else if(camMode % camModeMax == 444){
 				
 				/// nav
 				//console.log("Nav Mode Activated");
@@ -1511,7 +1517,6 @@ void onReset() {
 		auto& o = state->particles[i];
 		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::vec3(1.f);
-		o.phase = rnd::uni();
 	}
 
 

@@ -8,7 +8,7 @@ in vec4 world_orientation;
 in float phase;
 in vec3 basecolor;
 in vec3 flow;
-in float species;
+flat in int species;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -791,15 +791,20 @@ vec3 fScene_tex_z(vec3 p) {
 		}break;
 
 	}//*/
+	int speciesInt = int(species);
 
-	if(species <= 0){
+	if(species == 0){
 		baseGeo = d;
 	}else if (species <= 1){
 		baseGeo = e;
 	}else if (species <= 2){
 		baseGeo = c;
+	}else if (species <= 3){
+		baseGeo = testFinal;
+	}else if (species <= 4){
+		baseGeo = a;
 	}else{
-		baseGeo = d;
+		//baseGeo = d;
 	}
 
 	//baseGeo = test;//testFinal;
@@ -987,7 +992,8 @@ void main() {
 		//FragColor.xy = -pn.zy*0.5+0.5;
 		d_tex.xy = -pn.zy*0.5+0.5;
 		//d_tex.y = (acos(sin(50*d_tex.y + 1.5)) * 0.05);
-		FragColor.rgb = vec3(d_tex.x, d_tex.y, (species) / 3.);
+		FragColor.rgb = vec3(d_tex.x, d_tex.y, (species) / 6.);
+		//FragColor.rgb = vec3((species) / 6.);
 		//FragColor.rgb = vec3(acos(sin(d_tex.x)) * 0.5, d_tex.y, 0.5);
 
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .0015 * world_distance));

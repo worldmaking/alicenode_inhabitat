@@ -38,5 +38,5 @@ void main() {
 
 
 	color = vertex_color;
-	color = texture(uColorTex, vertex_color.xy).rgb;
+	//color = texture(uColorTex, vertex_color.xy).rgb;
 }  

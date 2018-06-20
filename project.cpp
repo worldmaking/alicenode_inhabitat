@@ -830,62 +830,70 @@ void draw_scene(int width, int height) {
 	fungusTex.unbind(5);
 	landTex.unbind(6);
 
-	objectShader.use();
-	objectShader.uniform("time", t);
-	objectShader.uniform("uViewMatrix", viewMat);
-	objectShader.uniform("uViewProjectionMatrix", viewProjMat);
-	objectShader.uniform("uFluidTex", 7);
-	objectShader.uniform("uFluidMatrix", world2fluid);
-	objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
+	if (0) {
+		objectShader.use();
+		objectShader.uniform("time", t);
+		objectShader.uniform("uViewMatrix", viewMat);
+		objectShader.uniform("uViewProjectionMatrix", viewProjMat);
+		objectShader.uniform("uFluidTex", 7);
+		objectShader.uniform("uFluidMatrix", world2fluid);
+		objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
+	}
 
-	segmentShader.use();
-	segmentShader.uniform("time", t);
-	segmentShader.uniform("uEyePos", eyePos);
-	segmentShader.uniform("uMini2World", mini2world);
-	segmentShader.uniform("uViewMatrix", viewMat);
-	segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
-	segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
+	if (0) {
+		segmentShader.use();
+		segmentShader.uniform("time", t);
+		segmentShader.uniform("uEyePos", eyePos);
+		segmentShader.uniform("uMini2World", mini2world);
+		segmentShader.uniform("uViewMatrix", viewMat);
+		segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
+		segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
+	}
 
-	particleShader.use(); 
-	particleShader.uniform("time", t);
-	particleShader.uniform("uViewMatrix", viewMat);
-	particleShader.uniform("uViewMatrixInverse", viewMatInverse);
-	particleShader.uniform("uProjectionMatrix", projMat);
-	particleShader.uniform("uViewProjectionMatrix", viewProjMat);
-	particleShader.uniform("uViewPortHeight", (float)height);
-	particleShader.uniform("uPointSize", particleSize);
-	particleShader.uniform("uColorTex", 0);
+	if (0) {
+		particleShader.use(); 
+		particleShader.uniform("time", t);
+		particleShader.uniform("uViewMatrix", viewMat);
+		particleShader.uniform("uViewMatrixInverse", viewMatInverse);
+		particleShader.uniform("uProjectionMatrix", projMat);
+		particleShader.uniform("uViewProjectionMatrix", viewProjMat);
+		particleShader.uniform("uViewPortHeight", (float)height);
+		particleShader.uniform("uPointSize", particleSize);
+		particleShader.uniform("uColorTex", 0);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glEnable( GL_PROGRAM_POINT_SIZE );
-	glEnable(GL_POINT_SPRITE);
-	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-	particlesVAO.draw(NUM_PARTICLES, GL_POINTS);
-	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-	glDisable(GL_POINT_SPRITE);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, colorTex);
+		glEnable( GL_PROGRAM_POINT_SIZE );
+		glEnable(GL_POINT_SPRITE);
+		glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+		particlesVAO.draw(NUM_PARTICLES, GL_POINTS);
+		glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+		glDisable(GL_POINT_SPRITE);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 
-	debugShader.use(); 
-	debugShader.uniform("uViewMatrix", viewMat);
-	debugShader.uniform("uViewMatrixInverse", viewMatInverse);
-	debugShader.uniform("uProjectionMatrix", projMat);
-	debugShader.uniform("uViewProjectionMatrix", viewProjMat);
-	debugShader.uniform("uViewPortHeight", (float)height);
-	debugShader.uniform("uPointSize", particleSize * 8.);
-	debugShader.uniform("uColorTex", 0);
+	if (1) {
+		debugShader.use(); 
+		debugShader.uniform("uViewMatrix", viewMat);
+		debugShader.uniform("uViewMatrixInverse", viewMatInverse);
+		debugShader.uniform("uProjectionMatrix", projMat);
+		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
+		debugShader.uniform("uViewPortHeight", (float)height);
+		debugShader.uniform("uPointSize", particleSize * 8.);
+		debugShader.uniform("uColorTex", 0);
 
-	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glEnable( GL_PROGRAM_POINT_SIZE );
-	glEnable(GL_POINT_SPRITE);
-	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-	debugVAO.draw(NUM_PARTICLES, GL_POINTS);
-	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-	glDisable(GL_POINT_SPRITE);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, colorTex);
+		glEnable( GL_PROGRAM_POINT_SIZE );
+		glEnable(GL_POINT_SPRITE);
+		glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+		debugVAO.draw(NUM_PARTICLES, GL_POINTS);
+		glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+		glDisable(GL_POINT_SPRITE);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-	glDisable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE);
+	}
 
 }
 
@@ -1754,6 +1762,8 @@ extern "C" {
 
 		// TODO currently this is a memory leak on unload:
 		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
+
+		onReset();
 		
 		projFBOs[0].dim.x = projFBOs[1].dim.x = 1920;
 		projFBOs[0].dim.y = projFBOs[1].dim.y = 1080;

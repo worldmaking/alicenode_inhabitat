@@ -8,7 +8,7 @@ in vec4 world_orientation;
 in float phase;
 in vec3 basecolor;
 in vec3 flow;
-in float species;
+flat in int species;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -748,6 +748,10 @@ vec3 fScene_tex_z(vec3 p) {
 	//vec3 b2 = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.35)), PI / -2.), 0.25, 0.02, 0.025);
 	vec3 c = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), PI / -7.), 0.3, 0.1, 0.2);
 	vec3 e = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0.2, 0)), PI / -8.), 0.4, w*w*0.8);
+
+	vec3 test = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), PI / 0.5), 0.4, w*0.9);
+	vec3 testWing = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.1, 0., -0.4)), (3. * PI) / 2.), 0.4, w*0.9);
+	vec3 testFinal = smin_tex(test, testWing, 0.2);
 	
 	vec3 d = smin_tex(a, b, 0.4);
 	//d = smin_tex(d, a, 0.05);
@@ -774,7 +778,6 @@ vec3 fScene_tex_z(vec3 p) {
 
 	//return vec3(d.xy, d.z * scl);
 	vec3 baseGeo;
-
 	/*
 	switch(species){
 		case 0.0: {
@@ -788,16 +791,25 @@ vec3 fScene_tex_z(vec3 p) {
 		}break;
 
 	}//*/
+	int speciesInt = int(species);
 
-	if(species <= 0){
+	if(species == 0){
 		baseGeo = d;
 	}else if (species <= 1){
 		baseGeo = e;
 	}else if (species <= 2){
 		baseGeo = c;
+	}else if (species <= 3){
+		baseGeo = testFinal;
+	}else if (species <= 4){
+		baseGeo = a;
 	}else{
-		baseGeo = d;
+		//baseGeo = d;
 	}
+
+	//baseGeo = test;//testFinal;
+
+	//return vec3(baseGeo.xy, baseGeo.z * scl);
 	
 
 	//making grass/hair on the creature
@@ -838,7 +850,7 @@ vec3 fScene_tex_z(vec3 p) {
 	vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
     vec2 wind = (windNoise*0.45 + windNoise2*0.3) * (p.y);
 
-    //p.xz += wind;// + flow.xz;
+    p.xz += wind;// + flow.xz;
 	
 	//TODO: Replace wind with flow
 
@@ -866,10 +878,10 @@ vec3 fScene_tex_z(vec3 p) {
     
     //float id = 1.0;
     
-    //if(baseGeometry.z < epsilon)s
+    //if(baseGeometry.z < epsilon)
    	//	id = 0.0;
 
-	float gg = smin(g, baseGeometry.z, 0.24);
+	float gg = smin(g, baseGeometry.z, 0.01);
 	//return vec3(min(g, baseGeometry.x), id, h);
 	return vec3(baseGeometry.xy, gg * scl);
 	//*/
@@ -980,15 +992,15 @@ void main() {
 		//FragColor.xy = -pn.zy*0.5+0.5;
 		d_tex.xy = -pn.zy*0.5+0.5;
 		//d_tex.y = (acos(sin(50*d_tex.y + 1.5)) * 0.05);
-		FragColor.rgb = vec3(d_tex.x, d_tex.y, (species) / 3.);
+		FragColor.rgb = vec3(d_tex.x, d_tex.y, (species) / 6.);
+		//FragColor.rgb = vec3((species) / 6.);
 		//FragColor.rgb = vec3(acos(sin(d_tex.x)) * 0.5, d_tex.y, 0.5);
 
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .0015 * world_distance));
 		
 	} else if (t >= maxd) {
     	// shot through to background
-
-		FragColor.b = 1.;
+		
     	discard;
 		
     	
@@ -1005,5 +1017,8 @@ void main() {
 	
 	// also write to depth buffer, so that landscape occludes other creatures:
 	
+	/*p=ro;
+	FragPosition.xyz = world_position + quat_rotate(world_orientation, p);;
+	FragColor.rgb = ro+0.5;//1.;*/
 	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
 }

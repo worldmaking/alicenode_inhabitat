@@ -15,7 +15,12 @@ namespace glm {
 }
 #endif
 
-#define NUM_SEGMENTS 64
+#define NUM_PREDATORS 124
+#define NUM_CREATURES NUM_PREDATORS
+
+#define PREDATOR_SEGMENTS_EACH 1
+#define NUM_SEGMENTS (NUM_PREDATORS*PREDATOR_SEGMENTS_EACH)
+
 #define NUM_OBJECTS	32
 #define NUM_PARTICLES 1024*256
 
@@ -35,6 +40,53 @@ namespace glm {
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+static const glm::ivec2 fungus_dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
+
+template<int DIM=32, typename T=float>
+struct Field3DPod {
+
+	Field3DPod() { reset(); }
+
+	void reset() {
+		memset(data0, 0, sizeof(data0));
+		memset(data1, 0, sizeof(data1));
+	}
+
+	T * data(bool back=false) { return (!isSwapped != !back) ? data1 : data0; }
+	const T * data(bool back=false) const { return (!isSwapped != !back) ? data1 : data0; }
+
+	T * front() { return data(0); }
+	T * back() { return data(1); }
+
+	size_t length() const { return DIM*DIM*DIM; }
+	glm::ivec3 dim() const { return glm::ivec3(DIM, DIM, DIM); }
+
+	void swap() { isSwapped = !isSwapped; }
+
+	T data0[DIM*DIM*DIM];
+	T data1[DIM*DIM*DIM];
+	int isSwapped = 0;
+};
+
+template<int DIM=32>
+struct Fluid3DPod {
+
+	Fluid3DPod() { reset(); }
+
+	void reset() {
+		velocities.reset();
+		gradient.reset();
+	}
+
+	size_t length() const { return DIM*DIM*DIM; }
+	glm::ivec3 dim() const { return glm::ivec3(DIM, DIM, DIM); }
+
+	// TODO: I guess a clever thing would be to use vec4, xyz=velocity, w=gradient... 
+	Field3DPod<DIM, glm::vec3> velocities;
+	Field3DPod<DIM, float> gradient;
+
+	bool isFlipped = 0;
+};
 
 struct Object {
 	glm::vec3 location;
@@ -96,7 +148,12 @@ struct State {
 	float fungus[FUNGUS_TEXELS];
 	float fungus_old[FUNGUS_TEXELS];
 
+	// the fluid simulation:
+	Fluid3DPod<> fluidpod;
+
 	float dummy = 10;
+
+	void fluid_update(float dt);
 };
 
 #endif

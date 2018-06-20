@@ -226,9 +226,9 @@ glm::vec3 prevVel = glm::vec3(0.);
 glm::vec3 newCamLoc;
 
 // how to convert world positions into fluid texture coordinates:
-float fluid2world_scale;
-glm::mat4 world2fluid;
-glm::mat4 fluid2world;
+float field2world_scale;
+glm::mat4 world2field;
+glm::mat4 field2world;
 glm::mat4 vive2world;
 glm::mat4 kinect2world; 
 glm::mat4 viewMat;
@@ -254,7 +254,6 @@ glm::vec3 cameraLoc2;
 State * state;
 Mmap<State> statemap;
 
-Fluid3D<> fluid;
 int fluid_passes = 14;
 int fluid_noise_count = 32;
 float fluid_decay = 0.9999f;
@@ -330,7 +329,36 @@ void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float
 	}
 }
 
-void fluid_update(double dt) {
+void fluid_update(double dt) { state->fluid_update(dt); }
+
+void State::fluid_update(float dt) {
+	
+	const glm::ivec3 dim = fluidpod.dim();
+	// diffuse the velocities (viscosity)
+	fluidpod.velocities.swap();
+	al_field3d_diffuse(dim, fluidpod.velocities.back(), fluidpod.velocities.front(), fluid_viscosity, fluid_passes);
+
+	// stabilize:
+	// prepare new gradient data:
+	al_field3d_zero(dim, fluidpod.gradient.back());
+	al_field3d_derive_gradient(dim, fluidpod.velocities.back(), fluidpod.gradient.back()); 
+	// diffuse it:
+	al_field3d_diffuse(dim, fluidpod.gradient.back(), fluidpod.gradient.front(), 0.5, fluid_passes / 2);
+	// subtract from current velocities:
+	al_field3d_subtract_gradient(dim, fluidpod.gradient.front(), fluidpod.velocities.front());
+	
+	// advect:
+	fluidpod.velocities.swap(); 
+	al_field3d_advect(dim, fluidpod.velocities.front(), fluidpod.velocities.back(), fluidpod.velocities.front(), 1.);
+
+	// apply boundaries:
+	fluid_land_resist(fluidpod.velocities.front(), dim, distance, land_dim);
+
+	// friction:
+	al_field3d_scale(dim, fluidpod.velocities.front(), glm::vec3(fluid_decay));
+	
+
+	/*
 	// update fluid
 	Field3D<>& velocities = fluid.velocities;
 	const size_t dim0 = velocities.dimx();
@@ -369,6 +397,7 @@ void fluid_update(double dt) {
 	// clear gradients:
 	fluid.gradient.front().zero();
 	fluid.gradient.back().zero();
+	*/
 }
 
 void fungus_update(float dt) {
@@ -455,8 +484,12 @@ void sim_update(float dt) {
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = state->particles[i];
 
-			glm::vec3 flow;
-			fluid.velocities.front().readnorm(transform(world2fluid, o.location), &flow.x);
+			// get norm'd coordinate:
+			glm::vec3 norm = transform(world2field, o.location);
+
+			//glm::vec3 flow;
+			//fluid.velocities.front().readnorm(transform(world2field, o.location), &flow.x);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), norm);
 
 			// noise:
 			flow += glm::sphericalRand(0.0002f);
@@ -507,11 +540,12 @@ void sim_update(float dt) {
 		auto &o = state->objects[i];
 
 		// get norm'd coordinate:
-		glm::vec3 norm = transform(world2fluid, o.location);
+		glm::vec3 norm = transform(world2field, o.location);
 
 		// get fluid flow:
-		glm::vec3 flow;
-		fluid.velocities.front().readnorm(norm, &flow.x);
+		//glm::vec3 flow;
+		//fluid.velocities.front().readnorm(norm, &flow.x);
+		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), norm);
 
 		// get my distance from the ground:
 		float sdist; // creature's distance above the ground (or negative if below)
@@ -545,7 +579,8 @@ void sim_update(float dt) {
 			
 		// add my direction to the fluid current
 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-		fluid.velocities.front().addnorm(norm, &push.x);
+		//fluid.velocities.front().addnorm(norm, &push.x);
+		al_field3d_addnorm_interp(field_dim, state->fluidpod.velocities.front(), norm, push);
 	}
 
 
@@ -558,7 +593,7 @@ void sim_update(float dt) {
 			// a root;
 			
 			/*
-			glm::vec3 fluidloc = transform(world2fluid, o.location);
+			glm::vec3 fluidloc = transform(world2field, o.location);
 			glm::vec3 flow;
 			fluid.velocities.front().readnorm(fluidloc, &flow.x);
 			glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
@@ -570,11 +605,12 @@ void sim_update(float dt) {
 
 
 			// get norm'd coordinate:
-			glm::vec3 norm = transform(world2fluid, o.location);
+			glm::vec3 norm = transform(world2field, o.location);
 
 			// get fluid flow:
-			glm::vec3 flow;
-			fluid.velocities.front().readnorm(norm, &flow.x);
+			//glm::vec3 flow;
+			//fluid.velocities.front().readnorm(norm, &flow.x);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), norm);
 
 			// get my distance from the ground:
 			float sdist; // creature's distance above the ground (or negative if below)
@@ -801,8 +837,8 @@ void draw_scene(int width, int height) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", world2fluid);
-		heightMeshShader.uniform("uLandMatrixInverse", fluid2world);
+		heightMeshShader.uniform("uLandMatrix", world2field);
+		heightMeshShader.uniform("uLandMatrixInverse", field2world);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
@@ -822,7 +858,7 @@ void draw_scene(int width, int height) {
 		landShader.uniform("uDistanceTex", 4);
 		landShader.uniform("uFungusTex", 5);
 		landShader.uniform("uLandTex", 6);
-		landShader.uniform("uLandMatrix", world2fluid);
+		landShader.uniform("uLandMatrix", world2field);
 		quadMesh.draw();
 	}
 
@@ -830,63 +866,70 @@ void draw_scene(int width, int height) {
 	fungusTex.unbind(5);
 	landTex.unbind(6);
 
-	objectShader.use();
-	objectShader.uniform("time", t);
-	objectShader.uniform("uViewMatrix", viewMat);
-	objectShader.uniform("uViewProjectionMatrix", viewProjMat);
-	objectShader.uniform("uFluidTex", 7);
-	objectShader.uniform("uFluidMatrix", world2fluid);
-	objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
+	if (0) {
+		objectShader.use();
+		objectShader.uniform("time", t);
+		objectShader.uniform("uViewMatrix", viewMat);
+		objectShader.uniform("uViewProjectionMatrix", viewProjMat);
+		objectShader.uniform("uFluidTex", 7);
+		objectShader.uniform("uFluidMatrix", world2field);
+		objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
+	}
 
-	segmentShader.use();
-	segmentShader.uniform("time", t);
-	segmentShader.uniform("uEyePos", eyePos);
-	segmentShader.uniform("uMini2World", mini2world);
-	segmentShader.uniform("uViewMatrix", viewMat);
-	segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
-	segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
+	if (0) {
+		segmentShader.use();
+		segmentShader.uniform("time", t);
+		segmentShader.uniform("uEyePos", eyePos);
+		segmentShader.uniform("uMini2World", mini2world);
+		segmentShader.uniform("uViewMatrix", viewMat);
+		segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
+		segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
+	}
 
-	particleShader.use(); 
-	particleShader.uniform("time", t);
-	particleShader.uniform("uViewMatrix", viewMat);
-	particleShader.uniform("uViewMatrixInverse", viewMatInverse);
-	particleShader.uniform("uProjectionMatrix", projMat);
-	particleShader.uniform("uViewProjectionMatrix", viewProjMat);
-	particleShader.uniform("uViewPortHeight", (float)height);
-	particleShader.uniform("uPointSize", particleSize);
-	particleShader.uniform("uColorTex", 0);
+	if (1) {
+		particleShader.use(); 
+		particleShader.uniform("time", t);
+		particleShader.uniform("uViewMatrix", viewMat);
+		particleShader.uniform("uViewMatrixInverse", viewMatInverse);
+		particleShader.uniform("uProjectionMatrix", projMat);
+		particleShader.uniform("uViewProjectionMatrix", viewProjMat);
+		particleShader.uniform("uViewPortHeight", (float)height);
+		particleShader.uniform("uPointSize", particleSize);
+		particleShader.uniform("uColorTex", 0);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glEnable( GL_PROGRAM_POINT_SIZE );
-	glEnable(GL_POINT_SPRITE);
-	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-	particlesVAO.draw(NUM_PARTICLES, GL_POINTS);
-	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-	glDisable(GL_POINT_SPRITE);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, colorTex);
+		glEnable( GL_PROGRAM_POINT_SIZE );
+		glEnable(GL_POINT_SPRITE);
+		glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+		particlesVAO.draw(NUM_PARTICLES, GL_POINTS);
+		glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+		glDisable(GL_POINT_SPRITE);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 
-	debugShader.use(); 
-	debugShader.uniform("uViewMatrix", viewMat);
-	debugShader.uniform("uViewMatrixInverse", viewMatInverse);
-	debugShader.uniform("uProjectionMatrix", projMat);
-	debugShader.uniform("uViewProjectionMatrix", viewProjMat);
-	debugShader.uniform("uViewPortHeight", (float)height);
-	debugShader.uniform("uPointSize", particleSize * 8.);
-	debugShader.uniform("uColorTex", 0);
+	if (0) {
+		debugShader.use(); 
+		debugShader.uniform("uViewMatrix", viewMat);
+		debugShader.uniform("uViewMatrixInverse", viewMatInverse);
+		debugShader.uniform("uProjectionMatrix", projMat);
+		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
+		debugShader.uniform("uViewPortHeight", (float)height);
+		debugShader.uniform("uPointSize", particleSize * 8.);
+		debugShader.uniform("uColorTex", 0);
 
-	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glEnable( GL_PROGRAM_POINT_SIZE );
-	glEnable(GL_POINT_SPRITE);
-	glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-	debugVAO.draw(NUM_PARTICLES, GL_POINTS);
-	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-	glDisable(GL_POINT_SPRITE);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, colorTex);
+		glEnable( GL_PROGRAM_POINT_SIZE );
+		glEnable(GL_POINT_SPRITE);
+		glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+		debugVAO.draw(NUM_PARTICLES, GL_POINTS);
+		glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+		glDisable(GL_POINT_SPRITE);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
 
 	glDisable(GL_CULL_FACE);
-
 }
 
 void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
@@ -923,7 +966,7 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 
 		deferShader.uniform("uViewMatrix", viewMat);
 		deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		deferShader.uniform("uFluidMatrix", world2fluid);
+		deferShader.uniform("uFluidMatrix", world2field);
 		deferShader.uniform("uNearClip", near_clip);
 		deferShader.uniform("uFarClip", far_clip);
 		
@@ -980,13 +1023,13 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			if (hand.pinch == 1) {
 				vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
-			} else if (hand.pinch = 0) {
+			} else if (hand.pinch == 0) {
 				//vrLocation = glm::vec3(34.5, 17., 33.);
 				/*
 				float idt = 1.f/dt;
 				glm::vec3 flow;
 				flow *= idt;
-				glm::vec3 norm = transform(world2fluid, state->objects[1].location);
+				glm::vec3 norm = transform(world2field, state->objects[1].location);
 				// get my distance from the ground:
 				float sdist; // creature's distance above the ground (or negative if below)
 				al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
@@ -1052,11 +1095,11 @@ void onFrame(uint32_t width, uint32_t height) {
 				//handDir = safe_normalize(transform(warp, handDir));
 				handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
 
-				auto norm = transform(world2fluid, p);
+				auto norm = transform(world2field, p);
 				float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
 
 				// distance in world coordinates:
-				//float dist_w = fluid2world_scale * dist;
+				//float dist_w = field2world_scale * dist;
 
 				p = p + 0.01f * handDir;
 
@@ -1079,8 +1122,8 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = state->particles[i];
-			//o.location = o.location + o.velocity * dt;
-			//o.location = wrap(o.location, world_min, world_max);
+			o.location = o.location + o.velocity * dt;
+			o.location = wrap(o.location, world_min, world_max);
 		}
 	
 		for (int i=0; i<NUM_OBJECTS; i++) {
@@ -1089,9 +1132,9 @@ void onFrame(uint32_t width, uint32_t height) {
 			
 			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
 
-			glm::vec3 norm = transform(world2fluid, o.location);
+			glm::vec3 norm = transform(world2field, o.location);
 			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-			o.location = transform(fluid2world, glm::vec3(norm.x, landpt.w, norm.z));
+			o.location = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
 
 			o.phase += dt;
 		}
@@ -1168,7 +1211,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		debugVBO.submit(&state->debugdots[0], sizeof(state->debugdots));
 		
 		// upload texture data to GPU:
-		fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
+		//fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
+		fluidTex.submit(field_dim, state->fluidpod.velocities.front());
 		densityTex.submit(field_dim, state->density_back);
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->fungus[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
@@ -1255,9 +1299,11 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::vec3(0., 1., 0.));*/
 				auto& o = state->objects[0];
 
-				glm::vec3 fluidloc = transform(world2fluid, o.location);
-				glm::vec3 flow;
-				fluid.velocities.front().readnorm(fluidloc, &flow.x);
+				glm::vec3 fluidloc = transform(world2field, o.location);
+				//glm::vec3 flow;
+				//fluid.velocities.front().readnorm(fluidloc, &flow.x);
+				glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
+
 				flow = flow * dt * 100.0f;
 				
 				cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
@@ -1277,9 +1323,10 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				auto& o = state->segments[0];
 
-				glm::vec3 fluidloc = transform(world2fluid, o.location);
-				glm::vec3 flow;
-				fluid.velocities.front().readnorm(fluidloc, &flow.x);
+				glm::vec3 fluidloc = transform(world2field, o.location);
+				//glm::vec3 flow;
+				//fluid.velocities.front().readnorm(fluidloc, &flow.x);
+				glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
 				flow = flow * dt * 100.0f;
 				
 				cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
@@ -1527,6 +1574,8 @@ void onReset() {
 	// zero by default:
 	memset(state, 0, sizeof(State));
 
+	state->fluidpod.reset();
+
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
 		o.location = world_centre+glm::ballRand(10.f);
@@ -1685,7 +1734,7 @@ void onReset() {
 		//o.location = glm::linearRand(world_min, world_max);
 
 		// normalized coordinate (0..1)
-		glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2fluid, o.location);
+		glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
 
 		// get land data at this point:
 		// xyz is normal, w is height
@@ -1698,7 +1747,7 @@ void onReset() {
 		flatness = powf(flatness, 2.f);				
 
 		// get land surface coordinate:
-		glm::vec3 land_coord = transform(fluid2world, glm::vec3(norm.x, landpt.w, norm.z));
+		glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
 		
 		// place on land
 		o.location = land_coord;
@@ -1751,10 +1800,6 @@ extern "C" {
 		//state_initialize();
 		console.log("onload state initialized");
 
-
-		// TODO currently this is a memory leak on unload:
-		fluid.initialize(FIELD_DIM, FIELD_DIM, FIELD_DIM);
-		
 		projFBOs[0].dim.x = projFBOs[1].dim.x = 1920;
 		projFBOs[0].dim.y = projFBOs[1].dim.y = 1080;
 
@@ -1762,12 +1807,12 @@ extern "C" {
 
 		// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
 		// this effectively defines the bounds of the fluid in the world:
-		// from transform(fluid2world(glm::vec3(0.)))
-		// to   transform(fluid2world(glm::vec3(1.)))
-		fluid2world_scale = world_max.x - world_min.x;
-		fluid2world = glm::scale(glm::vec3(fluid2world_scale));
+		// from transform(field2world(glm::vec3(0.)))
+		// to   transform(field2world(glm::vec3(1.)))
+		field2world_scale = world_max.x - world_min.x;
+		field2world = glm::scale(glm::vec3(field2world_scale));
 		// how to convert world positions into normalized texture coordinates in the fluid field:
-		world2fluid = glm::inverse(fluid2world);
+		world2field = glm::inverse(field2world);
 
 		//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));

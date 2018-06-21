@@ -260,6 +260,7 @@ glm::mat4 viewMatInverse;
 glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
+glm::mat4 world2minimap;
 float mini2world = 1.;
 float near_clip = 0.1f / mini2world;
 float far_clip = 1200.f * mini2world;// / mini2world;
@@ -850,6 +851,24 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 		heightMeshShader.uniform("uLandMatrix", world2field);
 		heightMeshShader.uniform("uLandMatrixInverse", field2world);
+		heightMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		heightMeshShader.uniform("uDistanceTex", 4);
+		heightMeshShader.uniform("uFungusTex", 5);
+		heightMeshShader.uniform("uLandTex", 6);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		gridVAO.drawElements(grid_elements);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
+	//Mini
+	if (1) {
+		heightMeshShader.use();
+		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		heightMeshShader.uniform("uLandMatrix", world2field);
+		heightMeshShader.uniform("uLandMatrixInverse", field2world);
+		heightMeshShader.uniform("uWorld2Map", world2minimap);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
@@ -877,7 +896,7 @@ void draw_scene(int width, int height) {
 	fungusTex.unbind(5);
 	landTex.unbind(6);
 
-	if (0) {
+	if (1) {
 		objectShader.use();
 		objectShader.uniform("time", t);
 		objectShader.uniform("uViewMatrix", viewMat);
@@ -887,7 +906,7 @@ void draw_scene(int width, int height) {
 		objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
 	}
 
-	if (0) {
+	if (1) {
 		segmentShader.use();
 		segmentShader.uniform("time", t);
 		segmentShader.uniform("uEyePos", eyePos);
@@ -927,7 +946,7 @@ void draw_scene(int width, int height) {
 		debugShader.uniform("uProjectionMatrix", projMat);
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
-		debugShader.uniform("uPointSize", particleSize * 8.);
+		debugShader.uniform("uPointSize", particleSize * 2.);
 		debugShader.uniform("uColorTex", 0);
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -1034,28 +1053,42 @@ void onFrame(uint32_t width, uint32_t height) {
 			int d = h * (num_hand_dots + num_ray_dots);
 			auto& hand = alice.leap->hands[h];
 
+			//auto& handRight = alice.leap->hands[0];
+
+			/*
 			if (hand.pinch == 1) {
 				vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
 			} else if (hand.pinch == 0) {
-				//vrLocation = glm::vec3(34.5, 17., 33.);
-				/*
-				float idt = 1.f/dt;
-				glm::vec3 flow;
-				flow *= idt;
-				glm::vec3 norm = transform(world2field, state->objects[1].location);
-				// get my distance from the ground:
-				float sdist; // creature's distance above the ground (or negative if below)
-				al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
-				// if below ground, rise up;
-				// if above ground, sink down:
-				float gravity = 0.1f;
-				flow.y += sdist < 0.1f ? gravity : -gravity;
-				// set my velocity, in meters per second:
-				state->objects[1].velocity = flow;
-				vrLocation = vrLocation - sdist;
-				*/
 
 			}
+			*/
+
+			//Get palm position (center position of the palm in millimeters)
+			
+			//glm::vec3 handPosR = glm::vec3(handRight.palmPos.x * 100., handRight.palmPos.y * 100., handRight.palmPos.z * 100.);
+			
+			if (h == 0) {
+				if (hand.normal.y >= 0.5f) {
+
+				glm::vec3 mapPos = transform(trans, hand.palmPos);
+				//console.log("hand normal");
+				world2minimap = 
+					glm::scale(glm::vec3(0.05f)) *
+					glm::translate(glm::vec3(mapPos)) * 
+					glm::mat4(0.5f);
+
+					//console.log("%f %f %f", handRight.palmPos.x * -50., handRight.palmPos.y * 50., handRight.palmPos.z * -50.);
+
+					console.log("%f %f %f", (hand.palmPos.x), (hand.palmPos.y), (hand.palmPos.z));
+
+			} else {
+				//console.log("No hand normal");
+				world2minimap = glm::scale(glm::vec3(0.f));
+			}
+
+			}
+			
+			
 
 			//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 			float cf = fmod(hand.id / 6.f, 1.f);
@@ -1079,6 +1112,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			glm::vec3 handPos = hand.palmPos;
 			glm::vec3 handDir = hand.direction;
 
+			//glm::vec3 handNormall = glm::vec3(0.,1.,0.);
+
 			// these are in 'leap' space, need to convert to world space
 			handPos = transform(trans, handPos);
 			handDir = transform(trans, handDir);
@@ -1099,6 +1134,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			glm::vec3 p = a;
 
+			/*
 			for (int i=0; i<num_ray_dots; i++) {
 				glm::vec3 loc = state->debugdots[d].location;
 				//loc = p;
@@ -1123,6 +1159,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				d++;
 			}
+			*/
 		}
 	}
 
@@ -1241,6 +1278,36 @@ void onFrame(uint32_t width, uint32_t height) {
 		//}
 	}
 
+	
+	for (int i=0; i<2; i++) {
+		SimpleFBO& fbo = projFBOs[i];
+
+		//top down camera view
+		eyePos = world_centre + glm::vec3(0.0f, 6.0f + 20.f*i, 0.0f);
+		viewMat = glm::lookAt(
+			eyePos, 
+			world_centre, 
+			glm::vec3(0.0f, 0.0f, 1.0f));
+		projMat = glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
+		viewMat = viewMat * glm::scale(glm::vec3(mini2world));
+		viewProjMat = projMat * viewMat;
+		projMatInverse = glm::inverse(projMat);
+		viewMatInverse = glm::inverse(viewMat);
+		viewProjMatInverse = glm::inverse(viewProjMat);
+		
+		// draw the scene into the GBuffer:
+		glEnable(GL_SCISSOR_TEST);
+		gBufferProj.begin();
+			glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+			glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+			glEnable(GL_DEPTH_TEST);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			draw_scene(gBufferProj.dim.x, gBufferProj.dim.y);
+		gBufferProj.end();
+		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+		draw_gbuffer(fbo, gBufferProj, glm::vec2(1.f), glm::vec2(0.f));
+		glDisable(GL_SCISSOR_TEST);
+	}
 	
 	Hmd& vive = *alice.hmd;
 	SimpleFBO& fbo = vive.fbo;
@@ -1401,35 +1468,6 @@ void onFrame(uint32_t width, uint32_t height) {
 	alice.hmd->submit();
 
 
-	for (int i=0; i<2; i++) {
-		SimpleFBO& fbo = projFBOs[i];
-
-		//top down camera view
-		eyePos = world_centre + glm::vec3(0.0f, 6.0f + 20.f*i, 0.0f);
-		viewMat = glm::lookAt(
-			eyePos, 
-			world_centre, 
-			glm::vec3(0.0f, 0.0f, 1.0f));
-		projMat = glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
-		viewMat = viewMat * glm::scale(glm::vec3(mini2world));
-		viewProjMat = projMat * viewMat;
-		projMatInverse = glm::inverse(projMat);
-		viewMatInverse = glm::inverse(viewMat);
-		viewProjMatInverse = glm::inverse(viewProjMat);
-		
-		// draw the scene into the GBuffer:
-		glEnable(GL_SCISSOR_TEST);
-		gBufferProj.begin();
-			glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
-			glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
-			glEnable(GL_DEPTH_TEST);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			draw_scene(gBufferProj.dim.x, gBufferProj.dim.y);
-		gBufferProj.end();
-		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-		draw_gbuffer(fbo, gBufferProj, glm::vec2(1.f), glm::vec2(0.f));
-		glDisable(GL_SCISSOR_TEST);
-	}
 
 	glViewport(0, 0, width, height);
 	glEnable(GL_DEPTH_TEST);
@@ -1841,6 +1879,8 @@ extern "C" {
 		//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
 		leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
+
+		world2minimap = glm::scale(glm::vec3(0.f));
 
 		console.log("onload fluid initialized");
 	

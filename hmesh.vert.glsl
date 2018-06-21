@@ -1,6 +1,7 @@
 #version 330 core
 
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix, uLandMatrix, uLandMatrixInverse;
+uniform mat4 uWorld2Map;
 uniform sampler2D uLandTex;
 
 layout (location = 0) in vec3 aPos;
@@ -16,7 +17,8 @@ void main() {
 	normal = aNormal;
 
 	// basic grid mesh is 0..1, need to scale that to the world
-	position = (uLandMatrixInverse * vec4(aPos, 1.)).xyz;
+	position = (uWorld2Map * uLandMatrixInverse * vec4(aPos, 1.)).xyz;
+
 
 	// get the landscape data (normal + height) from the texture:
 	vec4 land = texture(uLandTex, texCoord.xy);

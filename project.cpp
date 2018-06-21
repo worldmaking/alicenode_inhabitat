@@ -234,18 +234,18 @@ VBO debugVBO(sizeof(State::debugdots));
 float particleSize = 0.005;
 float creature_fluid_push = 0.75f;
 
+glm::vec3 world_min(0.f, 0.f, 0.f);
+glm::vec3 world_max(80.f, 80.f, 80.f);
+glm::vec3 world_centre(40.f, 18.f, 40.f);
+
 int debugMode = 0;
 int camMode = 0;
 int camModeMax = 4;
 glm::vec3 camVel, camTurn;
-glm::vec3 cameraLoc;
+glm::vec3 cameraLoc = world_centre;
 glm::quat cameraOri;
 
 std::mutex sim_mutex;
-
-glm::vec3 world_min(0.f, 0.f, 0.f);
-glm::vec3 world_max(80.f, 80.f, 80.f);
-glm::vec3 world_centre(40.f, 18.f, 40.f);
 
 // how to convert world positions into fluid texture coordinates:
 float field2world_scale;
@@ -467,11 +467,69 @@ void sim_update(float dt) {
 	float idt = 1.f/dt;
 
 
-	const Alice& alice = Alice::Instance();
+	Alice& alice = Alice::Instance();
 	if (!alice.isSimulating) return;
 
-	auto& kinect0 = alice.cloudDeviceManager.devices[0];
-	auto& kinect1 = alice.cloudDeviceManager.devices[1];
+	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
+	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+
+	
+	if (1) {
+		// anchor sets centre of rotation of the cloud (relative to camera view)
+		glm::vec3 anchor = glm::vec3(0,0,1);
+		kinect0.cloudTransform = 
+			glm::translate(world_centre) *
+			glm::scale(glm::vec3(10.f)) *
+			
+			glm::translate(anchor) * // anchor
+			glm::rotate(float(M_PI/2.), glm::vec3(1,0,0)) * 
+			glm::translate(-anchor) * // anchor
+
+			glm::translate(glm::vec3(-1.5,0,0)) * // camera location in real world
+			glm::rotate(float(M_PI/2.), glm::vec3(0,0,1)) * // camera orient in real world
+			glm::mat4();
+		
+		kinect1.cloudTransform = 
+			glm::translate(world_centre) *
+			glm::scale(glm::vec3(10.f)) * 
+
+			glm::translate(anchor) * // anchor
+			glm::rotate(float(M_PI/2.), glm::vec3(1,0,0)) * 
+			glm::translate(-anchor) * // anchor
+
+			glm::translate(glm::vec3(1.5,0,0)) * // camera location in real world
+			glm::rotate(float(M_PI/2.), glm::vec3(0,0,1)) * // camera orient in real world
+			glm::mat4();
+
+		{
+			const CloudFrame& cloudFrame1 = kinect1.cloudFrame();
+			const glm::vec3 * cloud_points1 = cloudFrame1.xyz;
+			const glm::vec2 * uv_points1 = cloudFrame1.uv;
+			const glm::vec3 * rgb_points1 = cloudFrame1.rgb;
+
+			const CloudFrame& cloudFrame0 = kinect0.cloudFrame();
+			const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
+			const glm::vec2 * uv_points0 = cloudFrame0.uv;
+			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
+
+			//console.log("%d %d", NUM_DEBUGDOTS, max_cloud_points);
+			
+			for (int i=0; i<NUM_DEBUGDOTS; i++) {
+				DebugDot& o = state->debugdots[i];
+
+				
+				int ki = (i/2);// % max_cloud_points;
+				if (i % 2 == 0) {
+					o.location = cloud_points0[ki];
+					o.color = rgb_points0[ki];
+				} else {
+					o.location = cloud_points1[ki];
+					o.color = rgb_points1[ki];
+				}
+				
+			}
+		}
+	}
 
 	// 
 	al_field3d_scale(field_dim, state->density, glm::vec3(density_decay));
@@ -483,13 +541,15 @@ void sim_update(float dt) {
 	// get the most recent complete frame:
 	
 	flip = !flip;
-	const CloudDevice& cd = alice.cloudDeviceManager.devices[flip];
+	const CloudDevice& cd = alice.cloudDeviceManager.devices[0];
 	const CloudFrame& cloudFrame = cd.cloudFrame();
 	const glm::vec3 * cloud_points = cloudFrame.xyz;
 	const glm::vec2 * uv_points = cloudFrame.uv;
 	const glm::vec3 * rgb_points = cloudFrame.rgb;
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
 	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
+
+	
 		
 	if (1) {
 		for (int i=0; i<NUM_PARTICLES; i++) {
@@ -504,27 +564,13 @@ void sim_update(float dt) {
 
 			// noise:
 			flow += glm::sphericalRand(0.0002f);
-			
+
 			o.velocity = flow * idt;
-
-			if (cd.capturing && i < max_cloud_points) {
-				uint64_t idx = i % max_cloud_points;
-				glm::vec3 p = cloud_points[idx];
-
-				//if (i == rnd::integer(max_cloud_points)) { console.log("                        p.z %f %f %f", p.x, p.y, p.z); }
-
-				if (p.z > 1.f) {
-					o.location = p + kinectloc;
-					o.color =  glm::vec3(uv_points[idx], 0.5f);
-					// o.color = rgb_points[i] + 0.5f;
-					o.velocity = glm::vec3(0);
-				}
-			} else {
-				// sometimes assign to a random creature?
-				if (rnd::uni() < 0.0001/NUM_PARTICLES) {
-					int idx = i % NUM_OBJECTS;
-					o.location = state->objects[idx].location;
-				}
+			
+			// sometimes assign to a random creature?
+			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
+				int idx = i % NUM_OBJECTS;
+				o.location = state->objects[idx].location;
 			}
 		}
 	} else {
@@ -927,14 +973,14 @@ void draw_scene(int width, int height) {
 		debugShader.uniform("uProjectionMatrix", projMat);
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
-		debugShader.uniform("uPointSize", particleSize * 8.);
+		debugShader.uniform("uPointSize", particleSize * 3.);
 		debugShader.uniform("uColorTex", 0);
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glEnable( GL_PROGRAM_POINT_SIZE );
 		glEnable(GL_POINT_SPRITE);
 		glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
-		debugVAO.draw(NUM_PARTICLES, GL_POINTS);
+		debugVAO.draw(NUM_DEBUGDOTS, GL_POINTS);
 		glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 		glDisable(GL_POINT_SPRITE);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -1006,23 +1052,12 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float dt = alice.dt;
 	float aspect = gBufferVR.dim.x / (float)gBufferVR.dim.y;
-	auto& kinect0 = alice.cloudDeviceManager.devices[0];
-	auto& kinect1 = alice.cloudDeviceManager.devices[1];
-
-	if (1) {
-		//kinect0.cloudTransform = 
-			//glm::scale(glm::vec3(0.1f)) * 
-			//glm::rotate(float(t), glm::vec3(1,0,0)) * 
-			//glm::translate(world_centre) *
-			//glm::scale(glm::vec3(0.1f)) * 
-			//glm::mat4();
-		
-		//kinect1.cloudTransform = kinect0.cloudTransform;
-	}
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
 
-	if (alice.leap->isConnected) {
+
+	if (false && alice.leap->isConnected) {
+		//console.log("leap connected!");
 		// copy bones into debugdots
 		glm::mat4 trans = viewMatInverse * leap2view;
 
@@ -1133,88 +1168,90 @@ void onFrame(uint32_t width, uint32_t height) {
 		// here we should only be extrapolating visible features
 		// such as location (and maybe also orientation?)
 
-		for (int i=0; i<NUM_PARTICLES; i++) {
-			Particle &o = state->particles[i];
-			o.location = o.location + o.velocity * dt;
-			o.location = wrap(o.location, world_min, world_max);
-		}
-	
-		for (int i=0; i<NUM_OBJECTS; i++) {
-			auto &o = state->objects[i];
-			// TODO: dt-ify this:	
-			
-			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+		if (0) {
 
-			glm::vec3 norm = transform(world2field, o.location);
-			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-			o.location = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
-
-			o.phase += dt;
-		}
-
-		for (int i=0; i<NUM_SEGMENTS; i++) {
-			auto &o = state->segments[i];
-			if (i % 8 == 0) {
-				// a root;
-				// TODO: dt-ify
-				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
+			for (int i=0; i<NUM_PARTICLES; i++) {
+				Particle &o = state->particles[i];
+				o.location = o.location + o.velocity * dt;
+				o.location = wrap(o.location, world_min, world_max);
+			}
+		
+			for (int i=0; i<NUM_OBJECTS; i++) {
+				auto &o = state->objects[i];
+				// TODO: dt-ify this:	
+				
 				o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+
+				glm::vec3 norm = transform(world2field, o.location);
+				auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+				o.location = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+
 				o.phase += dt;
-			} else {
-				auto& p = state->segments[i-1];
-				o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
-				glm::vec3 uz = quat_uz(p.orientation);
-				o.location = p.location + uz*o.scale;
-				o.phase = p.phase + 0.1f;
+			}
+
+			for (int i=0; i<NUM_SEGMENTS; i++) {
+				auto &o = state->segments[i];
+				if (i % 8 == 0) {
+					// a root;
+					// TODO: dt-ify
+					o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
+					o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+					o.phase += dt;
+				} else {
+					auto& p = state->segments[i-1];
+					o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
+					glm::vec3 uz = quat_uz(p.orientation);
+					o.location = p.location + uz*o.scale;
+					o.phase = p.phase + 0.1f;
+				}
+			}
+
+			//change mode to have object[0], segement[0], or nothing in focus
+			//float oScale = state->objects[0].scale;
+			//console.log("%f", oScale);
+
+
+			int speciesCount = 6;
+			speciesCount++;
+			if(debugMode % speciesCount == 1){
+				state->objects[0].location = world_centre;
+				state->objects[0].scale = 2.0;
+				state->segments[0].scale = 2.5;
+				//console.log("Creature 1");
+			}else if(debugMode % speciesCount == 2){
+				state->objects[1].location = world_centre;
+				state->objects[1].scale = 2.0;
+				state->objects[0].scale = 1.0;
+				state->segments[0].scale = 2.5;
+				//console.log("Creature 2");
+			}else if(debugMode % speciesCount == 3){
+				state->objects[2].location = world_centre;
+				state->objects[2].scale = 2.0;
+				state->objects[1].scale = 1.0;
+				state->segments[0].scale = 2.5;
+				//console.log("Creature 3");
+			}else if(debugMode % speciesCount == 4){
+				state->objects[3].location = world_centre;
+				state->objects[3].scale = 2.0;
+				state->objects[2].scale = 1.0;
+				state->segments[0].scale = 2.5;
+				//console.log("Creature 4");
+			}else if(debugMode % speciesCount == 5){
+				state->objects[4].location = world_centre;
+				state->objects[4].scale = 2.0;
+				state->objects[3].scale = 1.0;
+				state->segments[0].scale = 2.5;
+				//console.log("Creature 5");
+			}else if(debugMode % speciesCount == 6){
+				state->segments[0].location = world_centre;
+				state->segments[0].scale = 5.0;
+				state->objects[4].scale = 1.0;
+				state->objects[0].scale = 1.0;
+			}else{
+				state->segments[0].scale = 2.5;
+				state->objects[0].scale = 1.0;
 			}
 		}
-
-		//change mode to have object[0], segement[0], or nothing in focus
-		//float oScale = state->objects[0].scale;
-		//console.log("%f", oScale);
-
-
-		int speciesCount = 6;
-		speciesCount++;
-		if(debugMode % speciesCount == 1){
-			state->objects[0].location = world_centre;
-			state->objects[0].scale = 2.0;
-			state->segments[0].scale = 2.5;
-			//console.log("Creature 1");
-		}else if(debugMode % speciesCount == 2){
-			state->objects[1].location = world_centre;
-			state->objects[1].scale = 2.0;
-			state->objects[0].scale = 1.0;
-			state->segments[0].scale = 2.5;
-			//console.log("Creature 2");
-		}else if(debugMode % speciesCount == 3){
-			state->objects[2].location = world_centre;
-			state->objects[2].scale = 2.0;
-			state->objects[1].scale = 1.0;
-			state->segments[0].scale = 2.5;
-			//console.log("Creature 3");
-		}else if(debugMode % speciesCount == 4){
-			state->objects[3].location = world_centre;
-			state->objects[3].scale = 2.0;
-			state->objects[2].scale = 1.0;
-			state->segments[0].scale = 2.5;
-			//console.log("Creature 4");
-		}else if(debugMode % speciesCount == 5){
-			state->objects[4].location = world_centre;
-			state->objects[4].scale = 2.0;
-			state->objects[3].scale = 1.0;
-			state->segments[0].scale = 2.5;
-			//console.log("Creature 5");
-		}else if(debugMode % speciesCount == 6){
-			state->segments[0].location = world_centre;
-			state->segments[0].scale = 5.0;
-			state->objects[4].scale = 1.0;
-			state->objects[0].scale = 1.0;
-		}else{
-			state->segments[0].scale = 2.5;
-			state->objects[0].scale = 1.0;
-		}
-	
 		
 
 		// upload VBO data to GPU:
@@ -1363,12 +1400,22 @@ void onFrame(uint32_t width, uint32_t height) {
 				} break;
 				default: {
 					// orbit around
-					double a = M_PI * t / 30.;
+					float a = M_PI * t / 30.;
+					/*
 					viewMat = glm::lookAt(
 						world_centre + 
 						glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
 						world_centre, 
 						glm::vec3(0., 1., 0.));
+					*/
+					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
+					glm::vec3 newloc = world_centre + (quat_uz(cameraOri))*40.f;
+
+					cameraLoc = glm::mix(cameraLoc, newloc, 0.1f);
+					cameraOri = glm::slerp(cameraOri, newori, 0.01f);
+
+					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
+					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
 				}
 			}
 
@@ -1405,7 +1452,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		SimpleFBO& fbo = projFBOs[i];
 
 		//top down camera view
-		eyePos = world_centre + glm::vec3(0.0f, 6.0f + 20.f*i, 0.0f);
+		eyePos = world_centre + glm::vec3(0.0f, 6.0f + 50.f*i, 0.0f);
 		viewMat = glm::lookAt(
 			eyePos, 
 			world_centre, 
@@ -1435,8 +1482,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	projFBOs[0].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
-	projFBOs[1].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
+	projFBOs[0].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
+	projFBOs[1].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
 
 	fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
 
@@ -1508,62 +1555,6 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			else camVel.x = 0.f; 
 			break;
 	
-	/*
-		//pitch up
-		case GLFW_KEY_KP_8:
-		case GLFW_KEY_UP:{
-			camPitch += camSpeed;
-		} break;
-		//pitch down
-		case GLFW_KEY_KP_2: 
-		case GLFW_KEY_DOWN:{
-			camPitch -= camSpeed;
-		} break;
-		//yaw left
-		case GLFW_KEY_KP_4:
-		case GLFW_KEY_LEFT: {
-			camYaw += camSpeed;
-		} break;
-		//yaw right
-		case GLFW_KEY_KP_6:
-		case GLFW_KEY_RIGHT: {
-			camYaw -= camSpeed;
-		} break;
-		//Go left
-		case GLFW_KEY_KP_7:
-		case GLFW_KEY_O: {
-			camStrafe -= camSpeed;
-		} break;
-		//Go right
-		case GLFW_KEY_KP_9:
-		case GLFW_KEY_P: {
-			camStrafe += camSpeed;
-		} break;
-		//Go Up
-		case GLFW_KEY_KP_ADD:
-		case GLFW_KEY_LEFT_BRACKET: {
-			camUp += camSpeed;
-		} break;
-		//Go down
-		case GLFW_KEY_KP_SUBTRACT:
-		case GLFW_KEY_RIGHT_BRACKET: { 
-			camUp -= camSpeed;
-		} break;
-		//Go Forward
-		case GLFW_KEY_KP_1:
-		case GLFW_KEY_K: {
-			camForward = true;
-		} break;
-		//Go Back
-		case GLFW_KEY_KP_3:
-		case GLFW_KEY_L: {
-			camBackwards = true;
-		} break;
-		// default:
-		//state->objects[0].velocity = glm::vec3(0.);
-		accel = 0;
-		decel = 0;
-		*/
 	}
 
 }
@@ -1744,36 +1735,37 @@ void onReset() {
 		}
 	}
 
+	if (1) {
+		int div = sqrt(NUM_DEBUGDOTS);
+		for (int i=0; i<NUM_DEBUGDOTS; i++) {
+			auto& o = state->debugdots[i];
+			
+			float x = (i / div) / float(div);
+			float z = (i % div) / float(div);
+			
+			//o.location = glm::linearRand(world_min, world_max);
 
-	int div = sqrt(NUM_DEBUGDOTS);
-	for (int i=0; i<NUM_DEBUGDOTS; i++) {
-		auto& o = state->debugdots[i];
-		
-		float x = (i / div) / float(div);
-		float z = (i % div) / float(div);
-		
-		//o.location = glm::linearRand(world_min, world_max);
+			// normalized coordinate (0..1)
+			glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
 
-		// normalized coordinate (0..1)
-		glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
+			// get land data at this point:
+			// xyz is normal, w is height
+			glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
+			
+			// if flatness == 1, land is horizontal. 
+			// if flatness == 0, land is vertical.
+			float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
+			// make it more extreme
+			flatness = powf(flatness, 2.f);				
 
-		// get land data at this point:
-		// xyz is normal, w is height
-		glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
-		
-		// if flatness == 1, land is horizontal. 
-		// if flatness == 0, land is vertical.
-		float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
-		// make it more extreme
-		flatness = powf(flatness, 2.f);				
+			// get land surface coordinate:
+			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+			
+			// place on land
+			o.location = land_coord;
 
-		// get land surface coordinate:
-		glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
-		
-		// place on land
-		o.location = land_coord;
-
-		o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+			o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+		}
 	}
 
 

@@ -120,6 +120,11 @@ struct DebugDot {
 };
 
 struct State {
+
+	float dummy = 10;
+	float test = 34;
+	
+
 	Particle particles[NUM_PARTICLES];
 	Object objects[NUM_OBJECTS];
 	Segment segments[NUM_SEGMENTS];
@@ -150,9 +155,7 @@ struct State {
 
 	// the fluid simulation:
 	Fluid3DPod<> fluidpod;
-
-	float dummy = 10;
-
+	
 	void fluid_update(float dt);
 };
 

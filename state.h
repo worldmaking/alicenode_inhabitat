@@ -2,16 +2,19 @@
 #define STATE_H
 
 #ifndef ALICE_H
+
+#include <stddef.h>
+
 namespace glm {
 
-	struct vec2 { float x, y; };
-	struct vec3 { float x, y, z; };
-	struct vec4 { float x, y, z, w; };
-	struct quat { float x, y, z, w; };
+	struct vec2 { float x, y; vec2(float, float); };
+	struct vec3 { float x, y, z; vec3(float, float, float); };
+	struct vec4 { float x, y, z, w; vec4(float, float, float, float); };
+	struct quat { float x, y, z, w; quat(float, float, float, float); };
 
-	struct ivec2 { int x, y; };
-	struct ivec3 { int x, y, z; };
-	struct ivec4 { int x, y, z, w; };
+	struct ivec2 { int x, y; ivec2(int, int); };
+	struct ivec3 { int x, y, z; ivec3(int, int, int); };
+	struct ivec4 { int x, y, z, w; ivec4(int, int, int, int); };
 }
 #endif
 

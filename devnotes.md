@@ -10,7 +10,7 @@ all of this could be avoided if we can create a mosaic desktop via Nvidia perhap
 
 was unable to maintain 90fps for Rift on main thread
 
-TODO: find out what are the bottlenecks
+TODO: find out what are the bottlenecksg
 
 Q: if this is primarily limited by the main-thread sim:
 

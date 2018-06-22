@@ -2,6 +2,9 @@
 #define STATE_H
 
 #ifndef ALICE_H
+
+#include <stddef.h>
+
 namespace glm {
 
 	struct vec2 { float x, y; vec2(float, float); };

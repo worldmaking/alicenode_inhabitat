@@ -262,6 +262,7 @@ glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
 glm::mat4 world2minimap;
 float mini2world = 1.;
+float kinect2world_scale = 10.f;
 float near_clip = 0.1f / mini2world;
 float far_clip = 1200.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
@@ -290,19 +291,12 @@ MetroThread simThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
 
+int soloView = 2;
+
 GBuffer gBufferVR;
 GBuffer gBufferProj;
 
 void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float * distancefield, const glm::ivec3 land_dim) {
-
-	/* 
-		boundary effect of landscape: the closer we get to the landscape, 
-		the more the velocities should be redirected away from the surface
-
-
-
-
-	*/
 
 	glm::vec3 field_dimf = glm::vec3(field_dim);
 
@@ -477,25 +471,27 @@ void sim_update(float dt) {
 	
 	if (1) {
 		// anchor sets centre of rotation of the cloud (relative to camera view)
-		glm::vec3 anchor = glm::vec3(0,0,1);
+		glm::vec3 anchor = glm::vec3(0,0,-1);
+
+	
 		kinect0.cloudTransform = 
 			glm::translate(world_centre) *
-			glm::scale(glm::vec3(10.f)) *
+			glm::scale(glm::vec3(kinect2world_scale)) *
 			
 			glm::translate(anchor) * // anchor
-			glm::rotate(float(M_PI/2.), glm::vec3(1,0,0)) * 
+			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
 			glm::translate(-anchor) * // anchor
 
 			glm::translate(glm::vec3(-1.5,0,0)) * // camera location in real world
 			glm::rotate(float(M_PI/2.), glm::vec3(0,0,1)) * // camera orient in real world
 			glm::mat4();
-		
+
 		kinect1.cloudTransform = 
 			glm::translate(world_centre) *
-			glm::scale(glm::vec3(10.f)) * 
+			glm::scale(glm::vec3(kinect2world_scale)) * 
 
 			glm::translate(anchor) * // anchor
-			glm::rotate(float(M_PI/2.), glm::vec3(1,0,0)) * 
+			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
 			glm::translate(-anchor) * // anchor
 
 			glm::translate(glm::vec3(1.5,0,0)) * // camera location in real world
@@ -1071,6 +1067,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float dt = alice.dt;
 	float aspect = gBufferVR.dim.x / (float)gBufferVR.dim.y;
+	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
+	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
 
@@ -1319,14 +1318,61 @@ void onFrame(uint32_t width, uint32_t height) {
 	for (int i=0; i<2; i++) {
 		SimpleFBO& fbo = projFBOs[i];
 
-		//top down camera view
-		eyePos = world_centre + glm::vec3(0.0f, 6.0f + 20.f*i, 0.0f);
-		viewMat = glm::lookAt(
-			eyePos, 
-			world_centre, 
-			glm::vec3(0.0f, 0.0f, 1.0f));
-		projMat = glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
-		viewMat = viewMat * glm::scale(glm::vec3(mini2world));
+
+		// move K-world points to inhabitat-world points:
+		//kinect0.cloudTransform
+		glm::vec3 ksc;
+		glm::quat kro;
+		glm::vec3 ktr;
+		glm::vec3 ksk;
+		glm::vec4 kpe;
+		glm::decompose(kinect0.cloudTransform, ksc, kro, ktr, ksk, kpe);
+		kro = glm::conjugate(kro);
+
+		glm::vec3 p = ktr; //glm::vec3(kinect0.cloudTransform[3]); // translation component, ==
+		//console.log("p %f %f %f", p.x, p.y, p.z);
+
+		glm::mat3 r = glm::mat3(kinect0.cloudTransform);
+		//r = glm::normalize(r); // remove scale
+
+
+		glm::quat kq = kro;//glm::normalize(glm::quat_cast(glm::inverse(kinect0.cloudTransform)));
+		//console.log("kq %f %f %f %f", kq.w, kq.x, kq.y, kq.z);
+
+		glm::quat q = glm::quat();
+		//extraglmq = gl
+
+	//  frustum -0.0631 0.0585 -0.038 0.038 0.1 10
+		glm::quat proj_quat = //glm::quat(0.002566, -0.026639, -0.017277, 0.999493);
+			glm::quat(0.999493, 0.002566, -0.026639, -0.017277);
+			//glm::angleAxis(float(M_PI/-2.), glm::vec3(1, 0, 0)) * glm::angleAxis(float(M_PI/-2.), glm::vec3(0, 0, 1));
+		//console.log("proj_quat %f %f %f %f", proj_quat.w, proj_quat.x, proj_quat.y, proj_quat.z);
+		
+		// pos of projector, in space of kinect0
+		glm::vec3 proj_pos = glm::vec3(-0.135, -0.263, 0.317);
+		
+		glm::mat4 k2proj = (glm::mat4_cast(proj_quat)) * glm::translate(-proj_pos * kinect2world_scale);
+		viewMat = glm::inverse(
+			glm::translate(p) * glm::mat4_cast(kro) // kinect viewpoint
+			* (k2proj)
+		);
+
+		/*
+			kinect0.cloudTransform captures how the kinect space transforms into world space
+
+			we want to render the world from the POV of the kinect, but at the scale of the world
+			POV p we can get via transform(kinect0.cloudTransform, glm::vec3(0.f));
+		*/
+
+		// let this define the view matrix:
+		//viewMat = glm::inverse(kinect0.cloudTransform);
+
+		//viewMat = kinect0.cloudTransform * glm::translate(-proj_pos);
+		//viewMat = glm::inverse(viewMat);
+			
+		projMat = glm::frustum(-0.0631f, 0.0585f, -0.038f, 0.038f, 0.1f, far_clip);
+				//glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
+		
 		viewProjMat = projMat * viewMat;
 		projMatInverse = glm::inverse(projMat);
 		viewMatInverse = glm::inverse(viewMat);
@@ -1517,25 +1563,26 @@ void onFrame(uint32_t width, uint32_t height) {
 	} 
 		
 	alice.hmd->submit();
-
+	glFlush(); glFinish();
 
 
 	glViewport(0, 0, width, height);
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	projFBOs[0].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
-	projFBOs[1].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
+	if (soloView) {
+		switch (soloView) {
+			case 1: fbo.draw(); break;
+			case 2: projFBOs[0].draw(); break;
+			case 3: projFBOs[1].draw(); break;
+			default: soloView = 0;
+		}
+	} else {
+		projFBOs[0].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
+		projFBOs[1].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
 
-	fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
-
-	//fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
-
-
-	
-	// openvr header recommends this after submit:
-	//glFlush();
-	//glFinish();
+		fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
+	}
 }
 
 
@@ -1543,6 +1590,22 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 	Alice& alice = Alice::Instance();
 
 	switch(keycode) {
+		case GLFW_KEY_0:
+		case GLFW_KEY_1:
+		case GLFW_KEY_2:
+		case GLFW_KEY_3:
+		case GLFW_KEY_4:
+		case GLFW_KEY_5:
+		case GLFW_KEY_6:
+		case GLFW_KEY_7:
+		case GLFW_KEY_8:
+		case GLFW_KEY_9: {
+			int num = keycode - GLFW_KEY_0;
+			if (downup) {
+				soloView = (soloView != num) ? num : 0;
+			}
+		}
+		break;
 		case GLFW_KEY_ENTER: {
 			if (downup && alt) {
 				if (alice.hmd->connected) {

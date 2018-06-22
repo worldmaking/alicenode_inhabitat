@@ -2,6 +2,7 @@
 #define STATE_H
 
 #ifndef ALICE_H
+#include <stddef.h>
 namespace glm {
 
 	struct vec2 { float x, y; };
@@ -9,9 +10,9 @@ namespace glm {
 	struct vec4 { float x, y, z, w; };
 	struct quat { float x, y, z, w; };
 
-	struct ivec2 { int x, y; };
-	struct ivec3 { int x, y, z; };
-	struct ivec4 { int x, y, z, w; };
+	struct ivec2 { int x, y;  ivec2(int x, int y); };
+	struct ivec3 { int x, y, z; ivec3(int x, int y, int z); };
+	struct ivec4 { int x, y, z, w; ivec4(int x, int y, int z, int w); };
 }
 #endif
 

@@ -9,8 +9,8 @@ namespace glm {
 	struct vec4 { float x, y, z, w; vec4(float, float, float, float); };
 	struct quat { float x, y, z, w; quat(float, float, float, float); };
 
-	struct ivec2 { int x, y; ivec4(int, int); };
-	struct ivec3 { int x, y, z; ivec4(int, int, int); };
+	struct ivec2 { int x, y; ivec2(int, int); };
+	struct ivec3 { int x, y, z; ivec3(int, int, int); };
 	struct ivec4 { int x, y, z, w; ivec4(int, int, int, int); };
 }
 #endif

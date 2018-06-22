@@ -24,7 +24,7 @@ namespace glm {
 #define NUM_OBJECTS	32
 #define NUM_PARTICLES 1024*256
 
-#define NUM_DEBUGDOTS 512*424*2
+#define NUM_DEBUGDOTS 5*5*3
 //2*5*4
 
 #define FIELD_DIM 32

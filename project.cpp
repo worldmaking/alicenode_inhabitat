@@ -266,6 +266,7 @@ float mini2world = 1.;
 float near_clip = 0.02f / mini2world;
 float far_clip = 1200.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
+glm::vec3 headPos; // in world space
 Viewport viewport;
 
 // the location of the VR person in the world
@@ -1092,20 +1093,70 @@ void onFrame(uint32_t width, uint32_t height) {
 			int d = h * (num_hand_dots + num_ray_dots);
 			auto& hand = alice.leap->hands[h];
 
-			//auto& handRight = alice.leap->hands[0];
-
 			/*
 			if (hand.pinch == 1) {
-				vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
+				//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
 			} else if (hand.pinch == 0) {
 
 			}
 			*/
 
-			//Get palm position (center position of the palm in millimeters)
+			glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
+			glm::vec3 head2map = mapPos - headPos;
+
+			glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
+			float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
+
+			float m = 0.005f / dist2map_squared;
+
+			minimapScale = glm::mix(minimapScale, m, dt*3.f);
+
+			glm::vec3 midPoint = (world_min + world_max)/2.f;
+				midPoint.y = 0;
+			world2minimap = 
+					glm::translate(glm::vec3(mapPos)) * 
+					glm::scale(glm::vec3(minimapScale)) *
+					glm::translate(-midPoint);
 			
-			//glm::vec3 handPosR = glm::vec3(handRight.palmPos.x * 100., handRight.palmPos.y * 100., handRight.palmPos.z * 100.);
-			
+			if (dist2map_squared < 0.4f) {
+				//Show spots you can move to
+				
+				int div = sqrt(NUM_DEBUGDOTS);
+				for (int i=0; i<NUM_DEBUGDOTS; i++) {
+					auto& o = state->debugdots[i];
+					float x = (i / div) / float(div);
+					float z = (i % div) / float(div);
+
+					// normalized coordinate (0..1)
+					glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
+					//glm::vec3 norm = transform(world2minimap, o.location);
+
+					// get land data at this point:
+					// xyz is normal, w is height
+					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
+
+					// if flatness == 1, land is horizontal. 
+					// if flatness == 0, land is vertical.
+					float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
+					// make it more extreme
+					flatness = powf(flatness, 2.f);				
+
+					// get land surface coordinate:
+					glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
+					
+					if (flatness == 1) {
+						// place on land
+						o.location = transform(world2minimap, land_coord);
+						o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+					
+					}
+					
+				}
+
+				
+			}
+
+			/*
 			if (h == 0) {
 				if (hand.normal.y >= 0.4f) {
 
@@ -1126,7 +1177,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					//world2minimap = glm::scale(glm::vec3(0.f));
 				}
 
-			}
+			}*/
 			
 			
 
@@ -1363,6 +1414,9 @@ void onFrame(uint32_t width, uint32_t height) {
 			glEnable(GL_SCISSOR_TEST);
 
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
+
+			// get head position in world space:
+			headPos = vive.mTrackedPosition + vrLocation;
 
 			for (int eye = 0; eye < 2; eye++) {
 				// update nav

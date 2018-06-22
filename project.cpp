@@ -261,8 +261,9 @@ glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
 glm::mat4 world2minimap;
+float minimapScale = 0.005f;
 float mini2world = 1.;
-float near_clip = 0.1f / mini2world;
+float near_clip = 0.02f / mini2world;
 float far_clip = 1200.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
 Viewport viewport;
@@ -898,6 +899,7 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uLandMatrix", world2field);
 		heightMeshShader.uniform("uLandMatrixInverse", field2world);
 		heightMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		heightMeshShader.uniform("uMapScale", 1.f);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
@@ -915,11 +917,12 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uLandMatrix", world2field);
 		heightMeshShader.uniform("uLandMatrixInverse", field2world);
 		heightMeshShader.uniform("uWorld2Map", world2minimap);
+		heightMeshShader.uniform("uMapScale", minimapScale);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
@@ -1075,7 +1078,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
 
 
-	if (false && alice.leap->isConnected) {
+	if (true && alice.leap->isConnected) {
 		//console.log("leap connected!");
 		// copy bones into debugdots
 		glm::mat4 trans = viewMatInverse * leap2view;
@@ -1084,6 +1087,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		int num_hand_dots = 5*4;
 
 		for (int h=0; h<2; h++) {
+			
 
 			int d = h * (num_hand_dots + num_ray_dots);
 			auto& hand = alice.leap->hands[h];
@@ -1103,23 +1107,24 @@ void onFrame(uint32_t width, uint32_t height) {
 			//glm::vec3 handPosR = glm::vec3(handRight.palmPos.x * 100., handRight.palmPos.y * 100., handRight.palmPos.z * 100.);
 			
 			if (h == 0) {
-				if (hand.normal.y >= 0.5f) {
+				if (hand.normal.y >= 0.4f) {
 
 				glm::vec3 mapPos = transform(trans, hand.palmPos);
 				//console.log("hand normal");
+				glm::vec3 midPoint = (world_min + world_max)/2.f;
+				midPoint.y = 0;
+
 				world2minimap = 
-					glm::scale(glm::vec3(0.05f)) *
 					glm::translate(glm::vec3(mapPos)) * 
-					glm::mat4(0.5f);
+					glm::scale(glm::vec3(minimapScale)) *
+					glm::translate(-midPoint) *
+					glm::mat4(1.0f);
+					console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
 
-					//console.log("%f %f %f", handRight.palmPos.x * -50., handRight.palmPos.y * 50., handRight.palmPos.z * -50.);
-
-					console.log("%f %f %f", (hand.palmPos.x), (hand.palmPos.y), (hand.palmPos.z));
-
-			} else {
-				//console.log("No hand normal");
-				world2minimap = glm::scale(glm::vec3(0.f));
-			}
+				} else {
+					//console.log("No hand normal");
+					//world2minimap = glm::scale(glm::vec3(0.f));
+				}
 
 			}
 			
@@ -1136,6 +1141,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				auto& finger = hand.fingers[f];
 				for (int b=0; b<4; b++) {
 					auto& bone = finger.bones[b];
+					
 					if (hand.isVisible) state->debugdots[d].location = transform(trans, bone.center);
 					state->debugdots[d].color = col;
 

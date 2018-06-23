@@ -572,23 +572,6 @@ void sim_update(float dt) {
 				o.location = state->objects[idx].location;
 			}
 		}
-	} else {
-
-		if (cd.capturing) {
-			for (int idx=0; idx<max_cloud_points; idx++) {
-				glm::vec3 p = cloud_points[idx];
-				if (p.z > 1.f) {
-					Particle &o = state->particles[kidx];
-					o.location = p + kinectloc;
-					o.color = glm::vec3(uv_points[idx], 0.5f);
-
-					if (idx == rnd::integer(max_cloud_points)) { console.log("p.z %f %d %d ||| %d %d", p.z, idx, kidx, cd.lastCloudFrame, cd.lastColourFrame); }
-
-					kidx++;
-					if (kidx >= NUM_PARTICLES) kidx = 0;
-				}
-			}
-		}
 	} 
 
 	// simulate creatures:
@@ -1261,7 +1244,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// here we should only be extrapolating visible features
 		// such as location (and maybe also orientation?)
 
-		if (0) {
+		if (1) {
 
 			for (int i=0; i<NUM_PARTICLES; i++) {
 				Particle &o = state->particles[i];

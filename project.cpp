@@ -263,10 +263,13 @@ glm::mat4 projMatInverse;
 glm::mat4 viewProjMatInverse;
 glm::mat4 leap2view;
 glm::mat4 world2minimap;
+float minimapScale = 0.005f;
 float mini2world = 1.;
-float near_clip = 0.1f / mini2world;
+float kinect2world_scale = 10.f;
+float near_clip = 0.02f / mini2world;
 float far_clip = 1200.f * mini2world;// / mini2world;
 glm::vec3 eyePos;
+glm::vec3 headPos; // in world space
 Viewport viewport;
 
 // the location of the VR person in the world
@@ -292,19 +295,12 @@ MetroThread simThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
 
+int soloView = 2;
+
 GBuffer gBufferVR;
 GBuffer gBufferProj;
 
 void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float * distancefield, const glm::ivec3 land_dim) {
-
-	/* 
-		boundary effect of landscape: the closer we get to the landscape, 
-		the more the velocities should be redirected away from the surface
-
-
-
-
-	*/
 
 	glm::vec3 field_dimf = glm::vec3(field_dim);
 
@@ -479,25 +475,27 @@ void sim_update(float dt) {
 	
 	if (1) {
 		// anchor sets centre of rotation of the cloud (relative to camera view)
-		glm::vec3 anchor = glm::vec3(0,0,1);
+		glm::vec3 anchor = glm::vec3(0,0,-1);
+
+	
 		kinect0.cloudTransform = 
 			glm::translate(world_centre) *
-			glm::scale(glm::vec3(10.f)) *
+			glm::scale(glm::vec3(kinect2world_scale)) *
 			
 			glm::translate(anchor) * // anchor
-			glm::rotate(float(M_PI/2.), glm::vec3(1,0,0)) * 
+			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
 			glm::translate(-anchor) * // anchor
 
 			glm::translate(glm::vec3(-1.5,0,0)) * // camera location in real world
 			glm::rotate(float(M_PI/2.), glm::vec3(0,0,1)) * // camera orient in real world
 			glm::mat4();
-		
+
 		kinect1.cloudTransform = 
 			glm::translate(world_centre) *
-			glm::scale(glm::vec3(10.f)) * 
+			glm::scale(glm::vec3(kinect2world_scale)) * 
 
 			glm::translate(anchor) * // anchor
-			glm::rotate(float(M_PI/2.), glm::vec3(1,0,0)) * 
+			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
 			glm::translate(-anchor) * // anchor
 
 			glm::translate(glm::vec3(1.5,0,0)) * // camera location in real world
@@ -574,23 +572,6 @@ void sim_update(float dt) {
 			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
 				int idx = i % NUM_OBJECTS;
 				o.location = state->objects[idx].location;
-			}
-		}
-	} else {
-
-		if (cd.capturing) {
-			for (int idx=0; idx<max_cloud_points; idx++) {
-				glm::vec3 p = cloud_points[idx];
-				if (p.z > 1.f) {
-					Particle &o = state->particles[kidx];
-					o.location = p + kinectloc;
-					o.color = glm::vec3(uv_points[idx], 0.5f);
-
-					if (idx == rnd::integer(max_cloud_points)) { console.log("p.z %f %d %d ||| %d %d", p.z, idx, kidx, cd.lastCloudFrame, cd.lastColourFrame); }
-
-					kidx++;
-					if (kidx >= NUM_PARTICLES) kidx = 0;
-				}
 			}
 		}
 	} 
@@ -901,6 +882,7 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uLandMatrix", world2field);
 		heightMeshShader.uniform("uLandMatrixInverse", field2world);
 		heightMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		heightMeshShader.uniform("uMapScale", 1.f);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
@@ -918,11 +900,12 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uLandMatrix", world2field);
 		heightMeshShader.uniform("uLandMatrixInverse", field2world);
 		heightMeshShader.uniform("uWorld2Map", world2minimap);
+		heightMeshShader.uniform("uMapScale", minimapScale);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
@@ -1074,11 +1057,14 @@ void onFrame(uint32_t width, uint32_t height) {
 	double t = alice.simTime;
 	float dt = alice.dt;
 	float aspect = gBufferVR.dim.x / (float)gBufferVR.dim.y;
+	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
+	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+
 
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d %f", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height, dt);
 
 
-	if (false && alice.leap->isConnected) {
+	if (true && alice.leap->isConnected) {
 		//console.log("leap connected!");
 		// copy bones into debugdots
 		glm::mat4 trans = viewMatInverse * leap2view;
@@ -1087,44 +1073,96 @@ void onFrame(uint32_t width, uint32_t height) {
 		int num_hand_dots = 5*4;
 
 		for (int h=0; h<2; h++) {
+			
 
 			int d = h * (num_hand_dots + num_ray_dots);
 			auto& hand = alice.leap->hands[h];
 
-			//auto& handRight = alice.leap->hands[0];
-
 			/*
 			if (hand.pinch == 1) {
-				vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
+				//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
 			} else if (hand.pinch == 0) {
 
 			}
 			*/
 
-			//Get palm position (center position of the palm in millimeters)
+			glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
+			glm::vec3 head2map = mapPos - headPos;
+
+			glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
+			float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
+
+			float m = 0.005f / dist2map_squared;
+
+			minimapScale = glm::mix(minimapScale, m, dt*3.f);
+
+			glm::vec3 midPoint = (world_min + world_max)/2.f;
+				midPoint.y = 0;
+			world2minimap = 
+					glm::translate(glm::vec3(mapPos)) * 
+					glm::scale(glm::vec3(minimapScale)) *
+					glm::translate(-midPoint);
 			
-			//glm::vec3 handPosR = glm::vec3(handRight.palmPos.x * 100., handRight.palmPos.y * 100., handRight.palmPos.z * 100.);
-			
+			if (dist2map_squared < 0.4f) {
+				//Show spots you can move to
+				
+				int div = sqrt(NUM_DEBUGDOTS);
+				for (int i=0; i<NUM_DEBUGDOTS; i++) {
+					auto& o = state->debugdots[i];
+					float x = (i / div) / float(div);
+					float z = (i % div) / float(div);
+
+					// normalized coordinate (0..1)
+					glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
+					//glm::vec3 norm = transform(world2minimap, o.location);
+
+					// get land data at this point:
+					// xyz is normal, w is height
+					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
+
+					// if flatness == 1, land is horizontal. 
+					// if flatness == 0, land is vertical.
+					float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
+					// make it more extreme
+					flatness = powf(flatness, 2.f);				
+
+					// get land surface coordinate:
+					glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
+					
+					if (flatness == 1) {
+						// place on land
+						o.location = transform(world2minimap, land_coord);
+						o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+					
+					}
+					
+				}
+
+				
+			}
+
+			/*
 			if (h == 0) {
-				if (hand.normal.y >= 0.5f) {
+				if (hand.normal.y >= 0.4f) {
 
 				glm::vec3 mapPos = transform(trans, hand.palmPos);
 				//console.log("hand normal");
+				glm::vec3 midPoint = (world_min + world_max)/2.f;
+				midPoint.y = 0;
+
 				world2minimap = 
-					glm::scale(glm::vec3(0.05f)) *
 					glm::translate(glm::vec3(mapPos)) * 
-					glm::mat4(0.5f);
+					glm::scale(glm::vec3(minimapScale)) *
+					glm::translate(-midPoint) *
+					glm::mat4(1.0f);
+					console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
 
-					//console.log("%f %f %f", handRight.palmPos.x * -50., handRight.palmPos.y * 50., handRight.palmPos.z * -50.);
+				} else {
+					//console.log("No hand normal");
+					//world2minimap = glm::scale(glm::vec3(0.f));
+				}
 
-					console.log("%f %f %f", (hand.palmPos.x), (hand.palmPos.y), (hand.palmPos.z));
-
-			} else {
-				//console.log("No hand normal");
-				world2minimap = glm::scale(glm::vec3(0.f));
-			}
-
-			}
+			}*/
 			
 			
 
@@ -1139,6 +1177,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				auto& finger = hand.fingers[f];
 				for (int b=0; b<4; b++) {
 					auto& bone = finger.bones[b];
+					
 					if (hand.isVisible) state->debugdots[d].location = transform(trans, bone.center);
 					state->debugdots[d].color = col;
 
@@ -1323,14 +1362,61 @@ void onFrame(uint32_t width, uint32_t height) {
 	for (int i=0; i<2; i++) {
 		SimpleFBO& fbo = projFBOs[i];
 
-		//top down camera view
-		eyePos = world_centre + glm::vec3(0.0f, 6.0f + 20.f*i, 0.0f);
-		viewMat = glm::lookAt(
-			eyePos, 
-			world_centre, 
-			glm::vec3(0.0f, 0.0f, 1.0f));
-		projMat = glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
-		viewMat = viewMat * glm::scale(glm::vec3(mini2world));
+
+		// move K-world points to inhabitat-world points:
+		//kinect0.cloudTransform
+		glm::vec3 ksc;
+		glm::quat kro;
+		glm::vec3 ktr;
+		glm::vec3 ksk;
+		glm::vec4 kpe;
+		glm::decompose(kinect0.cloudTransform, ksc, kro, ktr, ksk, kpe);
+		kro = glm::conjugate(kro);
+
+		glm::vec3 p = ktr; //glm::vec3(kinect0.cloudTransform[3]); // translation component, ==
+		//console.log("p %f %f %f", p.x, p.y, p.z);
+
+		glm::mat3 r = glm::mat3(kinect0.cloudTransform);
+		//r = glm::normalize(r); // remove scale
+
+
+		glm::quat kq = kro;//glm::normalize(glm::quat_cast(glm::inverse(kinect0.cloudTransform)));
+		//console.log("kq %f %f %f %f", kq.w, kq.x, kq.y, kq.z);
+
+		glm::quat q = glm::quat();
+		//extraglmq = gl
+
+	//  frustum -0.0631 0.0585 -0.038 0.038 0.1 10
+		glm::quat proj_quat = //glm::quat(0.002566, -0.026639, -0.017277, 0.999493);
+			glm::quat(0.999493, 0.002566, -0.026639, -0.017277);
+			//glm::angleAxis(float(M_PI/-2.), glm::vec3(1, 0, 0)) * glm::angleAxis(float(M_PI/-2.), glm::vec3(0, 0, 1));
+		//console.log("proj_quat %f %f %f %f", proj_quat.w, proj_quat.x, proj_quat.y, proj_quat.z);
+		
+		// pos of projector, in space of kinect0
+		glm::vec3 proj_pos = glm::vec3(-0.135, -0.263, 0.317);
+		
+		glm::mat4 k2proj = (glm::mat4_cast(proj_quat)) * glm::translate(-proj_pos * kinect2world_scale);
+		viewMat = glm::inverse(
+			glm::translate(p) * glm::mat4_cast(kro) // kinect viewpoint
+			* (k2proj)
+		);
+
+		/*
+			kinect0.cloudTransform captures how the kinect space transforms into world space
+
+			we want to render the world from the POV of the kinect, but at the scale of the world
+			POV p we can get via transform(kinect0.cloudTransform, glm::vec3(0.f));
+		*/
+
+		// let this define the view matrix:
+		//viewMat = glm::inverse(kinect0.cloudTransform);
+
+		//viewMat = kinect0.cloudTransform * glm::translate(-proj_pos);
+		//viewMat = glm::inverse(viewMat);
+			
+		projMat = glm::frustum(-0.0631f, 0.0585f, -0.038f, 0.038f, 0.1f, far_clip);
+				//glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
+		
 		viewProjMat = projMat * viewMat;
 		projMatInverse = glm::inverse(projMat);
 		viewMatInverse = glm::inverse(viewMat);
@@ -1362,10 +1448,17 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
 
+			// get head position in world space:
+			headPos = vive.mTrackedPosition + vrLocation;
+
 			for (int eye = 0; eye < 2; eye++) {
 				// update nav
 				viewMat = glm::inverse(vive.m_mat4viewEye[eye]) * glm::mat4_cast(glm::inverse(vive.mTrackedQuat)) * glm::translate(glm::mat4(1.f), -vive.mTrackedPosition) * glm::translate(-vrLocation);
+				/*
 				projMat = glm::frustum(vive.frustum[eye].l, vive.frustum[eye].r, vive.frustum[eye].b, vive.frustum[eye].t, vive.frustum[eye].n, vive.frustum[eye].f);
+				*/
+
+				projMat = vive.mProjMatEye[eye];
 
 				viewProjMat = projMat * viewMat;
 				projMatInverse = glm::inverse(projMat);
@@ -1517,25 +1610,26 @@ void onFrame(uint32_t width, uint32_t height) {
 	} 
 		
 	alice.hmd->submit();
-
+	glFlush(); glFinish();
 
 
 	glViewport(0, 0, width, height);
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	projFBOs[0].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
-	projFBOs[1].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
+	if (soloView) {
+		switch (soloView) {
+			case 1: fbo.draw(); break;
+			case 2: projFBOs[0].draw(); break;
+			case 3: projFBOs[1].draw(); break;
+			default: soloView = 0;
+		}
+	} else {
+		projFBOs[0].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
+		projFBOs[1].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
 
-	fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
-
-	//fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
-
-
-	
-	// openvr header recommends this after submit:
-	//glFlush();
-	//glFinish();
+		fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
+	}
 }
 
 
@@ -1543,6 +1637,22 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 	Alice& alice = Alice::Instance();
 
 	switch(keycode) {
+		case GLFW_KEY_0:
+		case GLFW_KEY_1:
+		case GLFW_KEY_2:
+		case GLFW_KEY_3:
+		case GLFW_KEY_4:
+		case GLFW_KEY_5:
+		case GLFW_KEY_6:
+		case GLFW_KEY_7:
+		case GLFW_KEY_8:
+		case GLFW_KEY_9: {
+			int num = keycode - GLFW_KEY_0;
+			if (downup) {
+				soloView = (soloView != num) ? num : 0;
+			}
+		}
+		break;
 		case GLFW_KEY_ENTER: {
 			if (downup && alt) {
 				if (alice.hmd->connected) {

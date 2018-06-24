@@ -633,9 +633,16 @@ vec3 smax_tex( vec3 a, vec3 b, float k )
 {
 	float k1 = k*k;
 	float k2 = 1./k1;
+	float d = log( exp(k2*a.z) + exp(k2*b.z) )*k1;
+	// if d is closer to a.z, use a.xy
+	// if d is closer to b.z, use b.xy
+	// diff is b-a
+	// t is d-a
+	// ratio is t/diff
+	float h = (d-a.z)/(b.z-a.z);
 	return vec3(
-		mix(a.xy, b.xy, k), //log(exp(a.xy) + exp(b.xy)), 
-		log( exp(k2*a.z) + exp(k2*b.z) )*k1);
+		mix(a.xy, b.xy, h), //log(exp(a.xy) + exp(b.xy)), 
+		d);
 }
 
 float ssub(in float A, in float B, float k) {
@@ -646,7 +653,7 @@ vec3 ssub_tex(vec3 a, vec3 b, float k) {
 	return smax_tex(a, -b, k);
 }
 
-vec3 sub_tex(vec3 a, vec3 b, float k) {
+vec3 sub_tex(vec3 a, vec3 b) {
 	return max_tex(a, -b);
 }
 
@@ -729,6 +736,7 @@ vec3 fScene_tex_z(vec3 p) {
 	//p = p.yxz;
 	// basic symmetry:
 	p.x = abs(p.x);
+	//p.y = abs(p.y);
 
 	//p.z = quant(p.z, 0.05);
 
@@ -749,15 +757,26 @@ vec3 fScene_tex_z(vec3 p) {
 	vec3 c = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), PI / -7.), 0.3, 0.1, 0.2);
 	vec3 e = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0.2, 0)), PI / -8.), 0.4, w*w*0.8);
 
-	vec3 test = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), PI / 0.5), 0.4, w*0.9);
-	vec3 testWing = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.1, 0., -0.4)), (3. * PI) / 2.), 0.4, w*0.9);
-	vec3 testFinal = smin_tex(test, testWing, 0.2);
+	vec3 test = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.4)), PI / 0.5), 0.4, w*0.9);
+	vec3 wings = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), phase*0.5*(3. * PI) / 2.), 0.75, 0.2);
+	vec3 testFinal = smin_tex(test, wings, 0.4);
+
+	vec3 legs = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., 0., 0.4)), phase*-0.5*(3. * PI) / 2.), 0.75, 0.1);
+	vec3 legs2 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., 0., 0.2)), phase*-0.5*(3. * PI) / 2. + 0.15), 0.75, 0.1);
+	vec3 legs3 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., 0., 0.)), phase*-0.5*(3. * PI) / 2. + 0.3), 0.75, 0.1);
+	vec3 legs4 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., 0., -0.2)), phase*-0.5*(3. * PI) / 2. + 0.45), 0.75, 0.1);
+	legs = min_tex(legs, legs2);
+	legs = min_tex(legs, legs3);
+	legs = min_tex(legs, legs4);
+	vec3 walkTest = smin_tex(test, legs, 0.2);
+	testFinal = walkTest;
 	
 	vec3 d = smin_tex(a, b, 0.4);
 	//d = smin_tex(d, a, 0.05);
 	d = smin_tex(d, c, 0.3);
 	d = smin_tex(d, e, 0.4);
 	//d = a;
+	//d = sub_tex(e, d);
 
 	vec3 f = smin_tex(a, c, 0.4);
 	f = smin_tex(f, e, 0.2);
@@ -770,7 +789,7 @@ vec3 fScene_tex_z(vec3 p) {
 	//return d * world_scale;
 	//return scl * ssub(d, mouth, 0.125);
 
-	
+
 	float gridripple = 0.01 * dot(sin(p.xyz * PI * 8.), cos(p.zxy * PI * 32.));
 
 	//d.z += gridripple;

@@ -240,6 +240,8 @@ glm::vec3 world_centre(40.f, 18.f, 40.f);
 
 int debugMode = 0;
 int camMode = 0;
+int objectSel = 0; //Used for changing which object is in focus
+int objSelMod = 0;
 int camModeMax = 4;
 glm::vec3 camVel, camTurn;
 glm::vec3 cameraLoc = world_centre;
@@ -879,6 +881,7 @@ void onReloadGPU() {
 
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
+	//console.log("%f", t);
 
 	distanceTex.bind(4);
 	fungusTex.bind(5);
@@ -1072,7 +1075,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	float dt = alice.dt;
 	float aspect = gBufferVR.dim.x / (float)gBufferVR.dim.y;
 
-	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
+	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d %f", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height, dt);
 
 
 	if (false && alice.leap->isConnected) {
@@ -1205,7 +1208,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// here we should only be extrapolating visible features
 		// such as location (and maybe also orientation?)
 
-		if (0) {
+		if (1) {
 
 			for (int i=0; i<NUM_PARTICLES; i++) {
 				Particle &o = state->particles[i];
@@ -1228,7 +1231,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			for (int i=0; i<NUM_SEGMENTS; i++) {
 				auto &o = state->segments[i];
-				if (i % 8 == 0) {
+				if (i % PREDATOR_SEGMENTS_EACH == 0) {
 					// a root;
 					// TODO: dt-ify
 					o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
@@ -1240,6 +1243,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::vec3 uz = quat_uz(p.orientation);
 					o.location = p.location + uz*o.scale;
 					o.phase = p.phase + 0.1f;
+					//o.phase += dt;
 				}
 			}
 
@@ -1432,7 +1436,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				} break;
 				case 1: {
 					// follow a creature mode:
-					auto& o = state->objects[0];
+					auto& o = state->objects[objSelMod];
 
 					glm::vec3 fluidloc = transform(world2field, o.location);
 					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
@@ -1562,6 +1566,13 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			if (downup) { 
 				camMode = (camMode+1) % camModeMax;
 				console.log("Cam mode %d", camMode);
+			}
+		} break;
+
+		case GLFW_KEY_F: {
+			if(downup){
+				objectSel++;
+				objSelMod = objectSel % 5;
 			}
 		} break;
 
@@ -1877,7 +1888,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBufferVR.dim = alice.hmd->fbo.dim;

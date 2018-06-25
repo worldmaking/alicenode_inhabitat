@@ -243,6 +243,7 @@ int camMode = 0;
 int objectSel = 0; //Used for changing which object is in focus
 int objSelMod = 0;
 int camModeMax = 4;
+bool camFast = false;
 glm::vec3 camVel, camTurn;
 glm::vec3 cameraLoc = world_centre;
 glm::quat cameraOri;
@@ -1501,7 +1502,11 @@ void onFrame(uint32_t width, uint32_t height) {
 				case 0: {
 					// WASD mode:
 					float camera_turnangle = 1.f;
-					float camera_speed = 4.f;
+					float camera_speed_default = 4.f;
+					float camera_speed_fast = camera_speed_default * 3.f;
+					float camera_speed;
+					if(camFast) camera_speed = camera_speed_fast;
+					else camera_speed = camera_speed_default;
 
 					// move camera:
 					cameraLoc += quat_rotate(cameraOri, camVel) * (camera_speed * dt);
@@ -1525,6 +1530,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					//glm::vec3 boom = glm::vec3(0.);
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
 					projMat = glm::perspective(glm::radians(110.0f), aspect, near_clip, far_clip);
+					//console.log("Cam Mode 0 Active");
 				
 				} break;
 				case 1: {
@@ -1580,6 +1586,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
 					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+					//console.log("Default Cam mode Active");
 				}
 			}
 
@@ -1685,6 +1692,12 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 				objSelMod = objectSel % 5;
 			}
 		} break;
+
+		case GLFW_KEY_LEFT_SHIFT: {
+			if (downup) camFast = true;
+			else camFast = false;
+			break;
+		}
 
 		// WASD+arrows for nav:
 		case GLFW_KEY_UP:

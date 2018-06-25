@@ -9,6 +9,7 @@
 #include "al/al_mmap.h"
 #include "al/al_hmd.h"
 #include "al/al_time.h"
+#include "al/al_jxf.h"
 #include "alice.h"
 #include "state.h"
 
@@ -1948,31 +1949,54 @@ void onReset() {
 }
 
 void test() {
-	Timer timer;
-	double t = 0.1;
+	
+	// try loading a jxf:
+	// "projector_calibration/"
+	//console.log("%s", cwd());
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+	const char * fname = "projector_calibration/chesspoints_all.jxf";
+    FILE* filp = fopen(fname, "rb" );
+    if (!filp) { 
+		console.error("Error: could not open file %s", fname);  
+	}
+	console.log("opened %s ok", fname);
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+	JXFHeader header;
+	int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
+	console.log("read %d ok of %d", bytes_read, sizeof(header));
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+	// need to BE->LE this:
+	header.container_id = SWAP32(header.container_id);
+	header.form_id = SWAP32(header.form_id);
+	header.version_id = SWAP32(header.version_id);
+	header.matrix_id = SWAP32(header.matrix_id);
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+
+	header.filesize = SWAP32(header.filesize);
+
+	if (header.container_id != 'FORM' 
+		|| header.form_id != 'JIT!'
+		|| header.version_id != 'FVER'
+		|| header.matrix_id != 'MTRX'
+	) {
+		console.error("bad chunk");
+		goto out;
+	}
+	
+
+	console.log("filesize %d", header.filesize);
+	
+
+	
+	out:
+	fclose(filp);
 }
 
 
 extern "C" {
     AL_EXPORT int onload() {
 
-		//test();
+		test();
     	
 		Alice& alice = Alice::Instance();
 

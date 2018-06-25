@@ -758,17 +758,28 @@ vec3 fScene_tex_z(vec3 p) {
 	vec3 c = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), PI / -7.), 0.3, 0.1, 0.2);
 	vec3 e = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0.2, 0)), PI / -8.), 0.4, w*w*0.8);
 
+	//Creature 1, original blobby creature, uses vectors a, b, c, e
+	vec3 d = smin_tex(a, b, 0.4);
+	//d = smin_tex(d, a, 0.05);
+	d = smin_tex(d, c, 0.3);
+	d = smin_tex(d, e, 0.4);
+	//d = a;
+	//d = sub_tex(e, d);
+
+	//wide backed creature [NOT USED]
 	vec3 test = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.5, 0.4)), 7 * PI / 4), 0.5, w*0.8);
 	vec3 test2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.5, 0.4)), TWOPI), 0.4, w*0.8);
 	vec3 wings = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.2, 0.)), phase*0.5*(3. * PI) / 2.), 0.75, 0.2);
 	vec3 testFinal = smin_tex(test, wings, 0.4);
 
-	vec3 legs = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., -0.2, 0.4)), phase*-jointSpeed*PI), 0.5, 0.1);
-	vec3 legs2 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.125, -0.2, 0.2)), phase*-jointSpeed*PI - 1.33), 0.5, 0.1);
-	vec3 legs3 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.25, -0.2, 0.)), phase*-jointSpeed*PI - 2.66), 0.5, 0.1);
-	vec3 legs4 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.375, -0.2, -0.2)), phase*-jointSpeed*PI - 4), 0.5, 0.1);
+
+	//Creature 4, Waterbear? see https://en.wikipedia.org/wiki/Tardigrade
+	vec3 legs = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., -0.2, 0.4)), phase*-jointSpeed*PI), 0.45, 0.1);
+	vec3 legs2 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.125, -0.2, 0.2)), phase*-jointSpeed*PI - 1.33), 0.45, 0.1);
+	vec3 legs3 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.25, -0.2, 0.)), phase*-jointSpeed*PI - 2.66), 0.45, 0.1);
+	vec3 legs4 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.375, -0.2, -0.2)), phase*-jointSpeed*PI - 4), 0.45, 0.1);
 	vec3 legsHead = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.4, 0.8)), 3*PI/2), 0.25, w*0.8);
-	//TODO: Scale joint speed with the "forward" velocity of the legs creature
+	//TODO: Scale joint speed with the "forward" velocity of this creature
 	legs = min_tex(legs, legs2);
 	legs = min_tex(legs, legs3);
 	legs = min_tex(legs, legs4);
@@ -778,6 +789,7 @@ vec3 fScene_tex_z(vec3 p) {
 
 	testFinal = walkTest;
 
+	//Creature 5, Horeshoe Crab
 	vec3 wing1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), TWOPI), 1.0, w*w*0.6);
 	vec3 wing1_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.2, 0.2)), TWOPI), 0.3, w*w*0.7);
 	vec3 wing2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), TWOPI), 0.3, w*w*0.7);
@@ -798,12 +810,6 @@ vec3 fScene_tex_z(vec3 p) {
 	wingFinal = smin_tex(wingFinal, wing4_2, 0.2);
 	wingFinal = min_tex(wingFinal, wing1);
 	
-	vec3 d = smin_tex(a, b, 0.4);
-	//d = smin_tex(d, a, 0.05);
-	d = smin_tex(d, c, 0.3);
-	d = smin_tex(d, e, 0.4);
-	//d = a;
-	//d = sub_tex(e, d);
 
 	vec3 f = smin_tex(a, c, 0.4);
 	f = smin_tex(f, e, 0.2);

@@ -1061,6 +1061,62 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
 
 
+	// for now, just create two teleport points:0
+	state->debugdots[0].location = transform(world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
+	state->debugdots[1].location = transform(world2minimap, glm::vec3(4., 1., 13.)); //land_coord
+	state->debugdots[2].location = transform(world2minimap, glm::vec3(60., 2., 13.)); //land_coord
+	state->debugdots[2].location = transform(world2minimap, glm::vec3(34.5, 17., 33.)); //top of mountain
+	
+	// later, figure out how to place teleport points in viable locations
+	/*
+	int div = sqrt(NUM_DEBUGDOTS);
+	for (int i=0; i<NUM_DEBUGDOTS; i++) {
+
+		auto& o = state->debugdots[i];
+		float x = (i / div) / float(div);
+		float z = (i % div) / float(div);
+
+		// normalized coordinate (0..1)
+		glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
+		//glm::vec3 norm = transform(world2minimap, o.location);
+
+		// get land data at this point:
+		// xyz is normal, w is height
+		glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
+
+		// if flatness == 1, land is horizontal. 
+		// if flatness == 0, land is vertical.
+		float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
+		// make it more extreme
+		flatness = powf(flatness, 2.f);				
+
+		// get land surface coordinate:
+		glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
+		
+		
+		if (flatness == 1) {
+			// place on land
+			o.location = transform(world2minimap,land_coord);
+			//state->debugdots[1].location = transform(world2minimap, glm::vec3(20., 1., 37.)); //land_coord
+			//state->debugdots[2].location = transform(world2minimap, glm::vec3(4., 1., 13.)); //land_coord
+			o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+		}
+
+		//glm::vec3 handCoor = transform(world2minimap, hand.palmPos);
+	
+		
+		//console.log("O: %f %f %f", o.location.x, o.location.y, o.location.z);
+		//console.log("%f %f %f", state->objects[1].location.x, state->objects[1].location.y, state->objects[1].location.z);
+		///console.log("%f %f %f", handCoor.x, handCoor.y, handCoor.z);
+
+			//auto& oo = state->debugdots[3];
+
+			
+
+		//console.log("%f %f %f", o.location.x, o.location.y, o.location.z);
+		//console.log("%f %f %f", hand.palmPos.x, hand.palmPos.y, hand.palmPos.z);
+	}
+	*/
 	if (true && alice.leap->isConnected) {
 		//console.log("leap connected!");
 		// copy bones into debugdots
@@ -1070,19 +1126,10 @@ void onFrame(uint32_t width, uint32_t height) {
 		int num_hand_dots = 5*4;
 
 		for (int h=0; h<2; h++) {
-			
-
-			int d = h * (num_hand_dots + num_ray_dots);
+	
+			int d = NUM_TELEPORT_POINTS + h * (num_hand_dots + num_ray_dots);
 			auto& hand = alice.leap->hands[h];
-
-			/*
-			if (hand.pinch == 1) {
-				//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
-			} else if (hand.pinch == 0) {
-
-			}
-			*/
-
+			
 			glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
 			glm::vec3 head2map = mapPos - headPos;
 
@@ -1100,43 +1147,27 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::scale(glm::vec3(minimapScale)) *
 					glm::translate(-midPoint);
 			
-			if (dist2map_squared < 0.4f) {
+			if (hand.pinch == 1) {
+				vrLocation = glm::vec3(20., 1., 37.);
+				//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
+				if (hand.palmPos == state->debugdots[1].location) {
+					vrLocation = glm::vec3(20., 1., 37.);
+					}
+			} 
+
+
+			//if (dist2map_squared < 0.4f) {
 				//Show spots you can move to
 				
-				int div = sqrt(NUM_DEBUGDOTS);
-				for (int i=0; i<NUM_DEBUGDOTS; i++) {
-					auto& o = state->debugdots[i];
-					float x = (i / div) / float(div);
-					float z = (i % div) / float(div);
-
-					// normalized coordinate (0..1)
-					glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
-					//glm::vec3 norm = transform(world2minimap, o.location);
-
-					// get land data at this point:
-					// xyz is normal, w is height
-					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
-
-					// if flatness == 1, land is horizontal. 
-					// if flatness == 0, land is vertical.
-					float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
-					// make it more extreme
-					flatness = powf(flatness, 2.f);				
-
-					// get land surface coordinate:
-					glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
-					
-					if (flatness == 1) {
-						// place on land
-						o.location = transform(world2minimap, land_coord);
-						o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
-					
-					}
-					
-				}
+				
 
 				
-			}
+			//}
+
+				
+
+
+			
 
 			/*
 			if (h == 0) {
@@ -1160,8 +1191,6 @@ void onFrame(uint32_t width, uint32_t height) {
 				}
 
 			}*/
-			
-			
 
 			//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 			float cf = fmod(hand.id / 6.f, 1.f);

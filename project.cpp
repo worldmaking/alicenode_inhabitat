@@ -9,6 +9,7 @@
 #include "al/al_mmap.h"
 #include "al/al_hmd.h"
 #include "al/al_time.h"
+#include "al/al_jxf.h"
 #include "alice.h"
 #include "state.h"
 
@@ -240,7 +241,10 @@ glm::vec3 world_centre(40.f, 18.f, 40.f);
 
 int debugMode = 0;
 int camMode = 0;
+int objectSel = 0; //Used for changing which object is in focus
+int objSelMod = 0;
 int camModeMax = 4;
+bool camFast = false;
 glm::vec3 camVel, camTurn;
 glm::vec3 cameraLoc = world_centre;
 glm::quat cameraOri;
@@ -860,6 +864,7 @@ void onReloadGPU() {
 
 void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
+	//console.log("%f", t);
 
 	distanceTex.bind(4);
 	fungusTex.bind(5);
@@ -1058,7 +1063,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
 
-	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height);
+	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d %f", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height, dt);
 
 
 	// for now, just create two teleport points:0
@@ -1296,7 +1301,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			for (int i=0; i<NUM_SEGMENTS; i++) {
 				auto &o = state->segments[i];
-				if (i % 8 == 0) {
+				if (i % PREDATOR_SEGMENTS_EACH == 0) {
 					// a root;
 					// TODO: dt-ify
 					o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
@@ -1308,6 +1313,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::vec3 uz = quat_uz(p.orientation);
 					o.location = p.location + uz*o.scale;
 					o.phase = p.phase + 0.1f;
+					//o.phase += dt;
 				}
 			}
 
@@ -1526,7 +1532,11 @@ void onFrame(uint32_t width, uint32_t height) {
 				case 0: {
 					// WASD mode:
 					float camera_turnangle = 1.f;
-					float camera_speed = 4.f;
+					float camera_speed_default = 4.f;
+					float camera_speed_fast = camera_speed_default * 3.f;
+					float camera_speed;
+					if(camFast) camera_speed = camera_speed_fast;
+					else camera_speed = camera_speed_default;
 
 					// move camera:
 					cameraLoc += quat_rotate(cameraOri, camVel) * (camera_speed * dt);
@@ -1550,11 +1560,12 @@ void onFrame(uint32_t width, uint32_t height) {
 					//glm::vec3 boom = glm::vec3(0.);
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
 					projMat = glm::perspective(glm::radians(110.0f), aspect, near_clip, far_clip);
+					//console.log("Cam Mode 0 Active");
 				
 				} break;
 				case 1: {
 					// follow a creature mode:
-					auto& o = state->objects[0];
+					auto& o = state->objects[objSelMod];
 
 					glm::vec3 fluidloc = transform(world2field, o.location);
 					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
@@ -1605,6 +1616,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
 					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+					//console.log("Default Cam mode Active");
 				}
 			}
 
@@ -1703,6 +1715,19 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 				console.log("Cam mode %d", camMode);
 			}
 		} break;
+
+		case GLFW_KEY_F: {
+			if(downup){
+				objectSel++;
+				objSelMod = objectSel % 5;
+			}
+		} break;
+
+		case GLFW_KEY_LEFT_SHIFT: {
+			if (downup) camFast = true;
+			else camFast = false;
+			break;
+		}
 
 		// WASD+arrows for nav:
 		case GLFW_KEY_UP:
@@ -1953,31 +1978,54 @@ void onReset() {
 }
 
 void test() {
-	Timer timer;
-	double t = 0.1;
+	
+	// try loading a jxf:
+	// "projector_calibration/"
+	//console.log("%s", cwd());
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+	const char * fname = "projector_calibration/chesspoints_all.jxf";
+    FILE* filp = fopen(fname, "rb" );
+    if (!filp) { 
+		console.error("Error: could not open file %s", fname);  
+	}
+	console.log("opened %s ok", fname);
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+	JXFHeader header;
+	int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
+	console.log("read %d ok of %d", bytes_read, sizeof(header));
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+	// need to BE->LE this:
+	header.container_id = SWAP32(header.container_id);
+	header.form_id = SWAP32(header.form_id);
+	header.version_id = SWAP32(header.version_id);
+	header.matrix_id = SWAP32(header.matrix_id);
 
-	al_sleep(t);
-	console.log("slept, elapsed %f %f", t, timer.measure());
-	t *= 0.1;
+
+	header.filesize = SWAP32(header.filesize);
+
+	if (header.container_id != 'FORM' 
+		|| header.form_id != 'JIT!'
+		|| header.version_id != 'FVER'
+		|| header.matrix_id != 'MTRX'
+	) {
+		console.error("bad chunk");
+		goto out;
+	}
+	
+
+	console.log("filesize %d", header.filesize);
+	
+
+	
+	out:
+	fclose(filp);
 }
 
 
 extern "C" {
     AL_EXPORT int onload() {
 
-		//test();
+		test();
     	
 		Alice& alice = Alice::Instance();
 
@@ -2016,7 +2064,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.desiredFrameRate = 90;
 			gBufferVR.dim = alice.hmd->fbo.dim;

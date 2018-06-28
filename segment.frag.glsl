@@ -412,6 +412,7 @@ vec3 fScene_tex_z(vec3 p0) {
 	//float a = 0.7;
 	//float b = 0.7;
 	vec3 d = smin_tex(a, b, 0.3);
+	d = a;
 
 	return vec3(d.xy, d.z * scl); //ssub(d, sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05)), 0.125);
 }

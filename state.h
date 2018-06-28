@@ -1,14 +1,36 @@
 #ifndef STATE_H
 #define STATE_H
 
-#include "al/al_math.h"
+#ifndef ALICE_H
 
-#define NUM_SEGMENTS 64
+#include <stddef.h>
+
+namespace glm {
+
+	struct vec2 { float x, y; vec2(float, float); };
+	struct vec3 { float x, y, z; vec3(float, float, float); };
+	struct vec4 { float x, y, z, w; vec4(float, float, float, float); };
+	struct quat { float x, y, z, w; quat(float, float, float, float); };
+
+	struct ivec2 { int x, y; ivec2(int, int); };
+	struct ivec3 { int x, y, z; ivec3(int, int, int); };
+	struct ivec4 { int x, y, z, w; ivec4(int, int, int, int); };
+}
+#endif
+
+#define NUM_PREDATORS 124
+#define NUM_CREATURES NUM_PREDATORS
+
+#define PREDATOR_SEGMENTS_EACH 1
+#define NUM_SEGMENTS (NUM_PREDATORS*PREDATOR_SEGMENTS_EACH)
+
 #define NUM_OBJECTS	32
 #define NUM_PARTICLES 1024*256
 
-#define NUM_DEBUGDOTS 128*128
+#define NUM_DEBUGDOTS 2*5*4
 //2*5*4
+
+#define NUM_TELEPORT_POINTS 10
 
 #define FIELD_DIM 32
 #define FIELD_TEXELS FIELD_DIM*FIELD_DIM
@@ -23,6 +45,53 @@
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+static const glm::ivec2 fungus_dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
+
+template<int DIM=32, typename T=float>
+struct Field3DPod {
+
+	Field3DPod() { reset(); }
+
+	void reset() {
+		memset(data0, 0, sizeof(data0));
+		memset(data1, 0, sizeof(data1));
+	}
+
+	T * data(bool back=false) { return (!isSwapped != !back) ? data1 : data0; }
+	const T * data(bool back=false) const { return (!isSwapped != !back) ? data1 : data0; }
+
+	T * front() { return data(0); }
+	T * back() { return data(1); }
+
+	size_t length() const { return DIM*DIM*DIM; }
+	glm::ivec3 dim() const { return glm::ivec3(DIM, DIM, DIM); }
+
+	void swap() { isSwapped = !isSwapped; }
+
+	T data0[DIM*DIM*DIM];
+	T data1[DIM*DIM*DIM];
+	int isSwapped = 0;
+};
+
+template<int DIM=32>
+struct Fluid3DPod {
+
+	Fluid3DPod() { reset(); }
+
+	void reset() {
+		velocities.reset();
+		gradient.reset();
+	}
+
+	size_t length() const { return DIM*DIM*DIM; }
+	glm::ivec3 dim() const { return glm::ivec3(DIM, DIM, DIM); }
+
+	// TODO: I guess a clever thing would be to use vec4, xyz=velocity, w=gradient... 
+	Field3DPod<DIM, glm::vec3> velocities;
+	Field3DPod<DIM, float> gradient;
+
+	bool isFlipped = 0;
+};
 
 struct Object {
 	glm::vec3 location;
@@ -56,6 +125,11 @@ struct DebugDot {
 };
 
 struct State {
+
+	float dummy = 10;
+	float test = 34;
+	
+
 	Particle particles[NUM_PARTICLES];
 	Object objects[NUM_OBJECTS];
 	Segment segments[NUM_SEGMENTS];
@@ -84,7 +158,10 @@ struct State {
 	float fungus[FUNGUS_TEXELS];
 	float fungus_old[FUNGUS_TEXELS];
 
-	float dummy = 10;
+	// the fluid simulation:
+	Fluid3DPod<> fluidpod;
+	
+	void fluid_update(float dt);
 };
 
 #endif

@@ -781,7 +781,7 @@ vec3 fScene_tex_z(vec3 p) {
 	vec3 body1;
 	vec3 body2;
 	vec3 body3;
-	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (7 * PI / 4) * -sinPhase2), 0.75, 0.2);
+	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (7 * PI / 4) * -sinPhase2), 0.75, 0.1);
 	vec3 limbLeftRight;
 
 	vec3 squidLike = limbTopBottom;

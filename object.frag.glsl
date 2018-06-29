@@ -736,7 +736,7 @@ vec3 fScene_tex_z(vec3 p) {
 	//p = p.yxz;
 	// basic symmetry:
 	p.x = abs(p.x);
-	//p.y = abs(p.y);
+	if(species == 2) p.y = abs(p.y);
 
 	//p.z = quant(p.z, 0.05);
 
@@ -771,6 +771,20 @@ vec3 fScene_tex_z(vec3 p) {
 	vec3 test2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.5, 0.4)), TWOPI), 0.4, w*0.8);
 	vec3 wings = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.2, 0.)), phase*0.5*(3. * PI) / 2.), 0.75, 0.2);
 	vec3 testFinal = smin_tex(test, wings, 0.4);
+
+	//Creature 3, Squid/Octopus-Like
+	//limbs: TopBottom = limb closest to the top or bottom
+	
+	float sinPhase = sin(phase*4) * 0.125 + 0.125;
+	float sinPhase2 = sin(phase*4) * 0.0625 + 0.0625;
+
+	vec3 body1;
+	vec3 body2;
+	vec3 body3;
+	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (7 * PI / 4) * -sinPhase2), 0.75, 0.2);
+	vec3 limbLeftRight;
+
+	vec3 squidLike = limbTopBottom;
 
 
 	//Creature 4, Waterbear? see https://en.wikipedia.org/wiki/Tardigrade
@@ -850,7 +864,7 @@ vec3 fScene_tex_z(vec3 p) {
 	}else if (species <= 1){
 		baseGeo = e;
 	}else if (species <= 2){
-		baseGeo = c;
+		baseGeo = squidLike;
 	}else if (species <= 3){
 		baseGeo = testFinal;
 	}else if (species <= 4){

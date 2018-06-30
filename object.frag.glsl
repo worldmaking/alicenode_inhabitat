@@ -736,7 +736,7 @@ vec3 fScene_tex_z(vec3 p) {
 	//p = p.yxz;
 	// basic symmetry:
 	p.x = abs(p.x);
-	if(species == 2) p.y = abs(p.y);
+	if(species == 2 || species == 1) p.y = abs(p.y);
 
 	//p.z = quant(p.z, 0.05);
 
@@ -760,7 +760,7 @@ vec3 fScene_tex_z(vec3 p) {
 	vec3 c = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), PI / -7.), 0.3, 0.1, 0.2);
 	vec3 e = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0.2, 0)), PI / -8.), 0.4, w*w*0.8);
 
-	//Creature 1, original blobby creature, uses vectors a, b, c, e
+	//Creature 1: original blobby creature, uses vectors a, b, c, e
 	vec3 d = smin_tex(a, b, 0.4);
 	//d = smin_tex(d, a, 0.05);
 	d = smin_tex(d, c, 0.3);
@@ -774,32 +774,45 @@ vec3 fScene_tex_z(vec3 p) {
 	vec3 wings = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.2, 0.)), phase*0.5*(3. * PI) / 2.), 0.75, 0.2);
 	vec3 testFinal = smin_tex(test, wings, 0.4);
 
-	//Creature 3, Squid/Octopus-Like
-	//limbs: TopBottom = limb closest to the top or bottom
-	
+	//Creature 2: Worm-Like, bulbous head
+	vec3 roundHeadX = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.65)), 3*PI/2), 0.3, wX*0.8);
+	vec3 roundHeadY = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.65)), 3*PI/2), 3*PI/2), 0.3, wY*0.8);
+	vec3 roundHeadX_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.6)), 3*PI/2), 0.2, wX*0.55);
+	vec3 roundHeadY_2 = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.55)), 3*PI/2), 3*PI/2), 0.2, wY*0.6);
+	vec3 longBody = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), TWOPI), 0.8, w*w*0.8 + 0.3);
+
+	vec3 bulbWorm = smin_tex(roundHeadX, roundHeadY, 0.5);
+	bulbWorm = smin_tex(bulbWorm, roundHeadX_2, 0.5);
+	bulbWorm = smin_tex(bulbWorm, roundHeadY_2, 0.5);
+	bulbWorm = smin_tex(bulbWorm, longBody, 0.2);
+
+
+
+
+	//Creature 3: Squid/Octopus-Like
+	//limbs:	TopBottom = limb closest to the top or bottom
+	//			LeftRight = limb closest to the left or right
+	//	This creature is identical in 4 xy quadrants (abs.xy)
 	float sinPhase = sin(phase*4.5) * 0.125 + 0.125;
 	float sinPhase2 = sin(phase*4.5) * 0.0625 + 0.1875;
 	float sinPhase3 = sin(phase*4.5) * 0.0625 + 0.0625;
 
 	vec3 body1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 0.3, wX*0.3);
 	vec3 body2 = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 3*PI/2), 0.3, wY*0.3);
-	//vec3 body3;
 	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (5 * PI / 3) * -sinPhase2), 0.75, w*0.5);
-	vec3 limbLeftRight = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (11 * PI / 6) * -sinPhase3), 0.75, w*0.5);
+	vec3 limbLeftRight = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase2), (11 * PI / 6) * -sinPhase3), 0.75, w*0.5);
 
-	vec3 squidLike;
-	vec3 squidBod;
-	squidLike = smin_tex(limbTopBottom, limbLeftRight, 0.05);
-	squidBod = smin_tex(body1, body2, 0.7);
+	vec3 squidLike = smin_tex(limbTopBottom, limbLeftRight, 0.05);
+	vec3 squidBod = smin_tex(body1, body2, 0.7);
 	squidLike = smin_tex(squidLike, squidBod, 0.1);
 
 
-	//Creature 4, Waterbear? see https://en.wikipedia.org/wiki/Tardigrade
+	//Creature 4: Waterbear? see https://en.wikipedia.org/wiki/Tardigrade
 	vec3 legs = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., -0.2, 0.4)), phase*-jointSpeed*PI), 0.45, 0.1);
 	vec3 legs2 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.125, -0.2, 0.2)), phase*-jointSpeed*PI - 1.33), 0.45, 0.1);
 	vec3 legs3 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.25, -0.2, 0.)), phase*-jointSpeed*PI - 2.66), 0.45, 0.1);
 	vec3 legs4 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.375, -0.2, -0.2)), phase*-jointSpeed*PI - 4), 0.45, 0.1);
-	vec3 legsHead = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.4, 0.8)), 3*PI/2), 0.25, w*0.8);
+	vec3 legsHead = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.4, 0.7)), 3*PI/2), 0.25, w*0.8);
 	//TODO: Scale joint speed with the "forward" velocity of this creature
 	legs = min_tex(legs, legs2);
 	legs = min_tex(legs, legs3);
@@ -808,9 +821,9 @@ vec3 fScene_tex_z(vec3 p) {
 	walkTest = smin_tex(walkTest, legs, 0.5);
 	walkTest = min_tex(walkTest, legsHead);
 
-	testFinal = walkTest;
+	//testFinal = walkTest;
 
-	//Creature 5, Horeshoe Crab
+	//Creature 5: Horeshoe Crab
 	vec3 wing1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), TWOPI), 1.0, w*w*0.6);
 	vec3 wing1_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.2, 0.2)), TWOPI), 0.3, w*w*0.7);
 	vec3 wing2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), TWOPI), 0.3, w*w*0.7);
@@ -869,11 +882,11 @@ vec3 fScene_tex_z(vec3 p) {
 	if(species == 0){
 		baseGeo = d;
 	}else if (species <= 1){
-		baseGeo = e;
+		baseGeo = bulbWorm;
 	}else if (species <= 2){
 		baseGeo = squidLike;
 	}else if (species <= 3){
-		baseGeo = testFinal;
+		baseGeo = walkTest;
 	}else if (species <= 4){
 		baseGeo = wingFinal;
 	}else{
@@ -956,7 +969,7 @@ vec3 fScene_tex_z(vec3 p) {
 
 	float gg = smin(g, baseGeometry.z, 0.01);
 	//return vec3(min(g, baseGeometry.x), id, h);
-	if(species == 2) return vec3(baseGeometry.xy, baseGeometry.z * scl);
+	if(species == 2 || species == 1) return vec3(baseGeometry.xy, baseGeometry.z * scl);
 	else return vec3(baseGeometry.xy, gg * scl);
 	//*/
 	

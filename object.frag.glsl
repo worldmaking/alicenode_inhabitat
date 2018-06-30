@@ -744,7 +744,9 @@ vec3 fScene_tex_z(vec3 p) {
 	
 	vec3 A = vec3(0., 0., -0.5);
 	vec3 B = vec3(0., 0., 0.5);
-	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase)); //TODO: Play with undulation value.
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase));
+	float wX = 0.125*abs(2.+0.5*sin(14.*p.x - 8.8 * phase));
+	float wY = 0.125*abs(2.+0.5*sin(14.*p.y - 8.8 * phase));  //TODO: Play with undulation value.
 	//float w = 0.4;
 	float z = 0.25;
 	float y = 0.5;
@@ -775,16 +777,21 @@ vec3 fScene_tex_z(vec3 p) {
 	//Creature 3, Squid/Octopus-Like
 	//limbs: TopBottom = limb closest to the top or bottom
 	
-	float sinPhase = sin(phase*4) * 0.125 + 0.125;
-	float sinPhase2 = sin(phase*4) * 0.0625 + 0.0625;
+	float sinPhase = sin(phase*4.5) * 0.125 + 0.125;
+	float sinPhase2 = sin(phase*4.5) * 0.0625 + 0.1875;
+	float sinPhase3 = sin(phase*4.5) * 0.0625 + 0.0625;
 
-	vec3 body1;
-	vec3 body2;
-	vec3 body3;
-	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (7 * PI / 4) * -sinPhase2), 0.75, 0.1);
-	vec3 limbLeftRight;
+	vec3 body1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 0.3, wX*0.3);
+	vec3 body2 = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 3*PI/2), 0.3, wY*0.3);
+	//vec3 body3;
+	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (5 * PI / 3) * -sinPhase2), 0.75, w*0.5);
+	vec3 limbLeftRight = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (11 * PI / 6) * -sinPhase3), 0.75, w*0.5);
 
-	vec3 squidLike = limbTopBottom;
+	vec3 squidLike;
+	vec3 squidBod;
+	squidLike = smin_tex(limbTopBottom, limbLeftRight, 0.05);
+	squidBod = smin_tex(body1, body2, 0.7);
+	squidLike = smin_tex(squidLike, squidBod, 0.1);
 
 
 	//Creature 4, Waterbear? see https://en.wikipedia.org/wiki/Tardigrade
@@ -949,7 +956,8 @@ vec3 fScene_tex_z(vec3 p) {
 
 	float gg = smin(g, baseGeometry.z, 0.01);
 	//return vec3(min(g, baseGeometry.x), id, h);
-	return vec3(baseGeometry.xy, gg * scl);
+	if(species == 2) return vec3(baseGeometry.xy, baseGeometry.z * scl);
+	else return vec3(baseGeometry.xy, gg * scl);
 	//*/
 	
 }

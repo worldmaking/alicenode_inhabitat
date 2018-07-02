@@ -377,7 +377,9 @@ void State::fungus_update(float dt) {
 	fungus_field.swap();
 }
 
-void sim_update(float dt) {
+void sim_update(double dt) { state->sim_update(dt); }
+
+void State::sim_update(float dt) {
 
 	// inverse dt gives rate (per second)
 	float idt = 1.f/dt;
@@ -396,8 +398,8 @@ void sim_update(float dt) {
 
 	
 		kinect0.cloudTransform = 
-			glm::translate(state->world_centre) *
-			glm::scale(glm::vec3(state->kinect2world_scale)) *
+			glm::translate(world_centre) *
+			glm::scale(glm::vec3(kinect2world_scale)) *
 			
 			glm::translate(anchor) * // anchor
 			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
@@ -408,8 +410,8 @@ void sim_update(float dt) {
 			glm::mat4();
 
 		kinect1.cloudTransform = 
-			glm::translate(state->world_centre) *
-			glm::scale(glm::vec3(state->kinect2world_scale)) * 
+			glm::translate(world_centre) *
+			glm::scale(glm::vec3(kinect2world_scale)) * 
 
 			glm::translate(anchor) * // anchor
 			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
@@ -433,7 +435,7 @@ void sim_update(float dt) {
 			//console.log("%d %d", NUM_DEBUGDOTS, max_cloud_points);
 			
 			for (int i=0; i<NUM_DEBUGDOTS; i++) {
-				DebugDot& o = state->debugdots[i];
+				DebugDot& o = debugdots[i];
 
 				
 				int ki = (i/2);// % max_cloud_points;
@@ -450,11 +452,11 @@ void sim_update(float dt) {
 	}
 
 	// 
-	al_field3d_scale(field_dim, state->density, glm::vec3(state->density_decay));
-	al_field3d_diffuse(field_dim, state->density, state->density, state->density_diffuse);
-	memcpy(state->density_back, state->density, sizeof(glm::vec3) * FIELD_VOXELS);
+	al_field3d_scale(field_dim, density, glm::vec3(density_decay));
+	al_field3d_diffuse(field_dim, density, density, density_diffuse);
+	memcpy(density_back, density, sizeof(glm::vec3) * FIELD_VOXELS);
 
-	state->fungus_update(dt);
+	fungus_update(dt);
 
 	// get the most recent complete frame:
 	
@@ -465,20 +467,20 @@ void sim_update(float dt) {
 	const glm::vec2 * uv_points = cloudFrame.uv;
 	const glm::vec3 * rgb_points = cloudFrame.rgb;
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
-	glm::vec3 kinectloc = state->world_centre + glm::vec3(0,0,-4);
+	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
 
 	
 		
 	if (1) {
 		for (int i=0; i<NUM_PARTICLES; i++) {
-			Particle &o = state->particles[i];
+			Particle &o = particles[i];
 
 			// get norm'd coordinate:
-			glm::vec3 norm = transform(state->world2field, o.location);
+			glm::vec3 norm = transform(world2field, o.location);
 
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(transform(world2field, o.location), &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), norm);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
 
 			// noise:
 			flow += glm::sphericalRand(0.0002f);
@@ -488,26 +490,26 @@ void sim_update(float dt) {
 			// sometimes assign to a random creature?
 			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
 				int idx = i % NUM_OBJECTS;
-				o.location = state->objects[idx].location;
+				o.location = objects[idx].location;
 			}
 		}
 	} 
 
 	// simulate creatures:
 	for (int i=0; i<NUM_OBJECTS; i++) {
-		auto &o = state->objects[i];
+		auto &o = objects[i];
 
 		// get norm'd coordinate:
-		glm::vec3 norm = transform(state->world2field, o.location);
+		glm::vec3 norm = transform(world2field, o.location);
 
 		// get fluid flow:
 		//glm::vec3 flow;
 		//fluid.velocities.front().readnorm(norm, &flow.x);
-		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), norm);
+		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
 
 		// get my distance from the ground:
 		float sdist; // creature's distance above the ground (or negative if below)
-		al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
+		al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
 
 		// convert to meters per second:
 		// (why is this needed? shouldn't it be m/s already?)
@@ -521,7 +523,7 @@ void sim_update(float dt) {
 			o.accel.y = jump * gravity * 2.f * o.scale;
 
 			// this is a good time to also emit a pulse:
-			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * state->density_scale * jump);
+			al_field3d_addnorm_interp(field_dim, density, norm, o.color * density_scale * jump);
 		}
 
 		// set my velocity, in meters per second:
@@ -531,22 +533,22 @@ void sim_update(float dt) {
 		o.orientation = safe_normalize(glm::slerp(o.orientation, quat_random() * o.orientation, 0.025f));
 
 		// get a normal for the land:
-		glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.05f/LAND_DIM);
+		glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
 		// re-orient relative to ground:
 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
 			
 		// add my direction to the fluid current
-		glm::vec3 push = quat_uf(o.orientation) * (state->creature_fluid_push * (float)dt);
+		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
 		//fluid.velocities.front().addnorm(norm, &push.x);
-		al_field3d_addnorm_interp(field_dim, state->fluidpod.velocities.front(), norm, push);
+		al_field3d_addnorm_interp(field_dim, fluidpod.velocities.front(), norm, push);
 	}
 
 
-	//if(accel == 1)state->objects[0].velocity += state->objects[0].velocity;
-	//else if(decel == 1)state->objects[0].velocity -= state->objects[0].velocity * glm::vec3(2.);
+	//if(accel == 1)objects[0].velocity += objects[0].velocity;
+	//else if(decel == 1)objects[0].velocity -= objects[0].velocity * glm::vec3(2.);
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto &o = state->segments[i];
+		auto &o = segments[i];
 		if (i % 8 == 0) {
 			// a root;
 			
@@ -558,21 +560,21 @@ void sim_update(float dt) {
 			fluid.velocities.front().addnorm(fluidloc, &push.x);
 			o.velocity = flow * idt;
 
-			al_field3d_addnorm_interp(field_dim, state->density, fluidloc, o.color * density_scale * 0.02f);
+			al_field3d_addnorm_interp(field_dim, density, fluidloc, o.color * density_scale * 0.02f);
 			*/
 
 
 			// get norm'd coordinate:
-			glm::vec3 norm = transform(state->world2field, o.location);
+			glm::vec3 norm = transform(world2field, o.location);
 
 			// get fluid flow:
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(norm, &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), norm);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
 
 			// get my distance from the ground:
 			float sdist; // creature's distance above the ground (or negative if below)
-			al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist);
+			al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
 
 			// convert to meters per second:
 			flow *= idt;
@@ -590,12 +592,12 @@ void sim_update(float dt) {
 			// use this to sample the landscape:
 			
 			// get a normal for the land:
-			glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 0.05f/LAND_DIM);
+			glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
 			// re-orient relative to ground:
 			o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
 			
 		} else {
-			auto& p = state->segments[i-1];
+			auto& p = segments[i-1];
 			o.scale = p.scale * 0.9f;
 		}
 	}

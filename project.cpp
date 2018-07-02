@@ -187,7 +187,7 @@ Shader debugShader;
 QuadMesh quadMesh;
 GLuint colorTex;
 FloatTexture3D fluidTex;
-FloatTexture3D densityTex;
+FloatTexture3D emissionTex;
 FloatTexture3D distanceTex;
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
@@ -384,14 +384,12 @@ void State::sim_update(float dt) {
 	// inverse dt gives rate (per second)
 	float idt = 1.f/dt;
 
-
 	Alice& alice = Alice::Instance();
 	if (!alice.isSimulating) return;
 
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
-	
 	if (1) {
 		// anchor sets centre of rotation of the cloud (relative to camera view)
 		glm::vec3 anchor = glm::vec3(0,0,-1);
@@ -451,10 +449,16 @@ void State::sim_update(float dt) {
 		}
 	}
 
-	// 
+	// diffuse and decay the emission field
+	/*
 	al_field3d_scale(field_dim, density, glm::vec3(density_decay));
 	al_field3d_diffuse(field_dim, density, density, density_diffuse);
 	memcpy(density_back, density, sizeof(glm::vec3) * FIELD_VOXELS);
+	*/
+	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(density_decay));
+	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), density_diffuse);
+	//memcpy(density_back, density, sizeof(glm::vec3) * FIELD_VOXELS);
+	emission_field.swap();
 
 	fungus_update(dt);
 
@@ -523,7 +527,7 @@ void State::sim_update(float dt) {
 			o.accel.y = jump * gravity * 2.f * o.scale;
 
 			// this is a good time to also emit a pulse:
-			al_field3d_addnorm_interp(field_dim, density, norm, o.color * density_scale * jump);
+			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, o.color * density_scale * jump);
 		}
 
 		// set my velocity, in meters per second:
@@ -624,7 +628,7 @@ void onUnloadGPU() {
 	debugVAO.dest_closing();
 
 	fluidTex.dest_closing();
-	densityTex.dest_closing();
+	emissionTex.dest_closing();
 	distanceTex.dest_closing();
 	fungusTex.dest_closing();
 	landTex.dest_closing();
@@ -934,7 +938,7 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 		gbuffer.bindTextures(); // 0,1,2
 		distanceTex.bind(4);
 		fungusTex.bind(5);
-		densityTex.bind(6);
+		emissionTex.bind(6);
 		fluidTex.bind(7);
 
 		deferShader.use();
@@ -943,7 +947,7 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 		deferShader.uniform("gPosition", 2);
 		deferShader.uniform("uDistanceTex", 4);
 		deferShader.uniform("uFungusTex", 5);
-		deferShader.uniform("uDensityTex", 6);
+		deferShader.uniform("uEmissionTex", 6);
 		deferShader.uniform("uFluidTex", 7);
 
 		deferShader.uniform("uViewMatrix", viewMat);
@@ -963,7 +967,7 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 		
 		distanceTex.unbind(4);
 		fungusTex.unbind(5);
-		densityTex.unbind(6);
+		emissionTex.unbind(6);
 		fluidTex.unbind(7);
 		gbuffer.unbindTextures();
 	}
@@ -1290,7 +1294,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// upload texture data to GPU:
 		//fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		fluidTex.submit(field_dim, state->fluidpod.velocities.front());
-		densityTex.submit(field_dim, state->density_back);
+		emissionTex.submit(field_dim, state->emission_field.front());
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), state->fungus_field.front());
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
@@ -1764,22 +1768,7 @@ void onReset() {
 
 	//al_field3d_zero(field_dim, state->density);
 	{
-		int i=0;
-		glm::ivec3 dim = field_dim;
-		for (size_t z=0;z<dim.z;z++) {
-			for (size_t y=0;y<dim.y;y++) {
-				for (size_t x=0;x<dim.x;x++) {
-					glm::vec3 coord = glm::vec3(x, y, z);
-					glm::vec3 norm = coord/glm::vec3(dim);
-					//glm::vec3 snorm = norm*2.f-1.f;
-					//glm::vec3 snormhalf = snorm * 0.5f;
-					state->density[i] = glm::vec3(0.f);//norm * 0.000001f;
-					state->density_back[i] = state->density[i];
-
-					i++;
-				}
-			}
-		}
+		state->emission_field.reset();
 	}
 
 

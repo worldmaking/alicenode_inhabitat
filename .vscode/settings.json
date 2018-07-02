@@ -21,7 +21,9 @@
         "limits": "cpp",
         "__split_buffer": "cpp",
         "array": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "__bit_reference": "cpp",
+        "bitset": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

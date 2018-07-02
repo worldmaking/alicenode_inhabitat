@@ -164,8 +164,9 @@ struct State {
 	DebugDot debugdots[NUM_DEBUGDOTS];
 
 	// the density field is currently being used to store emissive light (as a form of smell)
-	glm::vec3 density[FIELD_VOXELS];
-	glm::vec3 density_back[FIELD_VOXELS];
+	Field2DPod<FUNGUS_DIM, glm::vec3> emission_field;
+	//glm::vec3 density[FIELD_VOXELS];
+	//glm::vec3 density_back[FIELD_VOXELS];
 
 	// the basic height field
 	// .xyz represents the normal

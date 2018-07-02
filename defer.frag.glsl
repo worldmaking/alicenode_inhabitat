@@ -21,7 +21,7 @@ uniform sampler2D gNormal;
 uniform sampler2D gPosition;
 uniform sampler3D uDistanceTex;
 //uniform sampler3D uLandTex;
-uniform sampler3D uDensityTex;
+uniform sampler3D uEmissionTex;
 uniform sampler3D uFluidTex;
 
 uniform float uFarClip;
@@ -76,7 +76,7 @@ void main() {
 	vec3 fluidtexcoord = (uFluidMatrix * vec4(position, 1.)).xyz;
 	//vec3 fluidtexcoord = position; //
 	vec3 fluid = texture(uFluidTex, fluidtexcoord).xyz;
-	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
+	vec3 density = texture(uEmissionTex, fluidtexcoord).xyz;
 	//float land = texture(uLandTex, fluidtexcoord).x;
 
 	float dist = texture(uDistanceTex, fluidtexcoord).x;
@@ -136,9 +136,9 @@ void main() {
 	// by lookup in the normal direction
 	float nearby = .25;
 	vec3 texcoord_for_normal = (uFluidMatrix * vec4(position + normal*nearby, 1.)).xyz;
-	vec3 envcolor = texture(uDensityTex, texcoord_for_normal).rgb;
+	vec3 envcolor = texture(uEmissionTex, texcoord_for_normal).rgb;
 	vec3 texcoord_for_ref = (uFluidMatrix * vec4(position + ref*nearby, 1.)).xyz;
-	vec3 envcolor_ref = texture(uDensityTex, texcoord_for_ref).rgb;
+	vec3 envcolor_ref = texture(uEmissionTex, texcoord_for_ref).rgb;
 
 	//float metallic = acute;
 	float metallic = acute;

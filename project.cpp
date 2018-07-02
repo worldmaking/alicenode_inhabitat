@@ -182,7 +182,7 @@ glm::vec2 limit(glm::vec2 v, float max) {
 	return v;
 }
 
-static int flip = 0;
+//// RENDER STUFF ////
 
 Shader objectShader;
 Shader segmentShader;
@@ -219,26 +219,31 @@ EBO tableEBO;
 unsigned int table_elements;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
-
 VAO objectVAO;
 VBO objectInstancesVBO(sizeof(State::objects));
-
 VAO segmentVAO;
 VBO segmentInstancesVBO(sizeof(State::segments));
-
 VAO particlesVAO;
 VBO particlesVBO(sizeof(State::particles));
-
 VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
-float particleSize = 0.005;
-float creature_fluid_push = 0.75f;
+GBuffer gBufferVR;
+GBuffer gBufferProj;
 
-glm::vec3 world_min(0.f, 0.f, 0.f);
-glm::vec3 world_max(80.f, 80.f, 80.f);
-glm::vec3 world_centre(40.f, 18.f, 40.f);
+glm::mat4 viewMat;
+glm::mat4 projMat;
+glm::mat4 viewProjMat;
+glm::mat4 viewMatInverse;
+glm::mat4 projMatInverse;
+glm::mat4 viewProjMatInverse;
+Viewport viewport;
+glm::vec3 eyePos;
+glm::vec3 headPos; // in world space
+// the location of the VR person in the world
+glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
 
+//// DEBUG STUFF ////
 int debugMode = 0;
 int camMode = 0;
 int objectSel = 0; //Used for changing which object is in focus
@@ -246,61 +251,23 @@ int objSelMod = 0;
 int camModeMax = 4;
 bool camFast = false;
 glm::vec3 camVel, camTurn;
-glm::vec3 cameraLoc = world_centre;
+glm::vec3 cameraLoc;
 glm::quat cameraOri;
+static int flip = 0;
+int kidx = 0;
+int soloView = 1;
+
+
+//// RUNTIME STUFF ///.
 
 std::mutex sim_mutex;
-
-// how to convert world positions into fluid texture coordinates:
-float field2world_scale;
-glm::mat4 world2field;
-glm::mat4 field2world;
-glm::mat4 vive2world;
-glm::mat4 kinect2world; 
-glm::mat4 viewMat;
-glm::mat4 projMat;
-glm::mat4 viewProjMat;
-glm::mat4 viewMatInverse;
-glm::mat4 projMatInverse;
-glm::mat4 viewProjMatInverse;
-glm::mat4 leap2view;
-glm::mat4 world2minimap;
-float minimapScale = 0.005f;
-float mini2world = 1.;
-float kinect2world_scale = 10.f;
-float near_clip = 0.02f / mini2world;
-float far_clip = 1200.f * mini2world;// / mini2world;
-glm::vec3 eyePos;
-glm::vec3 headPos; // in world space
-Viewport viewport;
-
-// the location of the VR person in the world
-glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
-
-int kidx = 0;
-
-State * state;
-Mmap<State> statemap;
-
-int fluid_passes = 14;
-int fluid_noise_count = 32;
-float fluid_decay = 0.9999f;
-double fluid_viscosity = 0.00000001; //0.00001;
-double fluid_boundary_damping = .2;
-double fluid_noise = 8.;
-
-float density_decay = 0.98f;
-float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
-float density_scale = 0.5;
-
 MetroThread simThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
 
-int soloView = 1;
+State * state;
+Mmap<State> statemap;
 
-GBuffer gBufferVR;
-GBuffer gBufferProj;
 
 void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float * distancefield, const glm::ivec3 land_dim) {
 
@@ -481,8 +448,8 @@ void sim_update(float dt) {
 
 	
 		kinect0.cloudTransform = 
-			glm::translate(world_centre) *
-			glm::scale(glm::vec3(kinect2world_scale)) *
+			glm::translate(state->world_centre) *
+			glm::scale(glm::vec3(state->kinect2world_scale)) *
 			
 			glm::translate(anchor) * // anchor
 			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
@@ -493,8 +460,8 @@ void sim_update(float dt) {
 			glm::mat4();
 
 		kinect1.cloudTransform = 
-			glm::translate(world_centre) *
-			glm::scale(glm::vec3(kinect2world_scale)) * 
+			glm::translate(state->world_centre) *
+			glm::scale(glm::vec3(state->kinect2world_scale)) * 
 
 			glm::translate(anchor) * // anchor
 			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
@@ -535,8 +502,8 @@ void sim_update(float dt) {
 	}
 
 	// 
-	al_field3d_scale(field_dim, state->density, glm::vec3(density_decay));
-	al_field3d_diffuse(field_dim, state->density, state->density, density_diffuse);
+	al_field3d_scale(field_dim, state->density, glm::vec3(state->density_decay));
+	al_field3d_diffuse(field_dim, state->density, state->density, state->density_diffuse);
 	memcpy(state->density_back, state->density, sizeof(glm::vec3) * FIELD_VOXELS);
 
 	fungus_update(dt);
@@ -550,7 +517,7 @@ void sim_update(float dt) {
 	const glm::vec2 * uv_points = cloudFrame.uv;
 	const glm::vec3 * rgb_points = cloudFrame.rgb;
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
-	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
+	glm::vec3 kinectloc = state->world_centre + glm::vec3(0,0,-4);
 
 	
 		
@@ -559,7 +526,7 @@ void sim_update(float dt) {
 			Particle &o = state->particles[i];
 
 			// get norm'd coordinate:
-			glm::vec3 norm = transform(world2field, o.location);
+			glm::vec3 norm = transform(state->world2field, o.location);
 
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(transform(world2field, o.location), &flow.x);
@@ -583,7 +550,7 @@ void sim_update(float dt) {
 		auto &o = state->objects[i];
 
 		// get norm'd coordinate:
-		glm::vec3 norm = transform(world2field, o.location);
+		glm::vec3 norm = transform(state->world2field, o.location);
 
 		// get fluid flow:
 		//glm::vec3 flow;
@@ -606,7 +573,7 @@ void sim_update(float dt) {
 			o.accel.y = jump * gravity * 2.f * o.scale;
 
 			// this is a good time to also emit a pulse:
-			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * density_scale * jump);
+			al_field3d_addnorm_interp(field_dim, state->density, norm, o.color * state->density_scale * jump);
 		}
 
 		// set my velocity, in meters per second:
@@ -621,7 +588,7 @@ void sim_update(float dt) {
 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
 			
 		// add my direction to the fluid current
-		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
+		glm::vec3 push = quat_uf(o.orientation) * (state->creature_fluid_push * (float)dt);
 		//fluid.velocities.front().addnorm(norm, &push.x);
 		al_field3d_addnorm_interp(field_dim, state->fluidpod.velocities.front(), norm, push);
 	}
@@ -648,7 +615,7 @@ void sim_update(float dt) {
 
 
 			// get norm'd coordinate:
-			glm::vec3 norm = transform(world2field, o.location);
+			glm::vec3 norm = transform(state->world2field, o.location);
 
 			// get fluid flow:
 			//glm::vec3 flow;
@@ -881,8 +848,8 @@ void draw_scene(int width, int height) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", world2field);
-		heightMeshShader.uniform("uLandMatrixInverse", field2world);
+		heightMeshShader.uniform("uLandMatrix", state->world2field);
+		heightMeshShader.uniform("uLandMatrixInverse", state->field2world);
 		heightMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
 		heightMeshShader.uniform("uMapScale", 1.f);
 		heightMeshShader.uniform("uDistanceTex", 4);
@@ -899,10 +866,10 @@ void draw_scene(int width, int height) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", world2field);
-		heightMeshShader.uniform("uLandMatrixInverse", field2world);
-		heightMeshShader.uniform("uWorld2Map", world2minimap);
-		heightMeshShader.uniform("uMapScale", minimapScale);
+		heightMeshShader.uniform("uLandMatrix", state->world2field);
+		heightMeshShader.uniform("uLandMatrixInverse", state->field2world);
+		heightMeshShader.uniform("uWorld2Map", state->world2minimap);
+		heightMeshShader.uniform("uMapScale", state->minimapScale);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
@@ -917,12 +884,12 @@ void draw_scene(int width, int height) {
 		landShader.uniform("time", t);
 		landShader.uniform("uViewProjectionMatrix", viewProjMat);
 		landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		landShader.uniform("uNearClip", near_clip);
-		landShader.uniform("uFarClip", far_clip);
+		landShader.uniform("uNearClip", state->near_clip);
+		landShader.uniform("uFarClip", state->far_clip);
 		landShader.uniform("uDistanceTex", 4);
 		landShader.uniform("uFungusTex", 5);
 		landShader.uniform("uLandTex", 6);
-		landShader.uniform("uLandMatrix", world2field);
+		landShader.uniform("uLandMatrix", state->world2field);
 		quadMesh.draw();
 	}
 
@@ -936,7 +903,7 @@ void draw_scene(int width, int height) {
 		objectShader.uniform("uViewMatrix", viewMat);
 		objectShader.uniform("uViewProjectionMatrix", viewProjMat);
 		objectShader.uniform("uFluidTex", 7);
-		objectShader.uniform("uFluidMatrix", world2field);
+		objectShader.uniform("uFluidMatrix", state->world2field);
 		objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
 	}
 
@@ -944,7 +911,6 @@ void draw_scene(int width, int height) {
 		segmentShader.use();
 		segmentShader.uniform("time", t);
 		segmentShader.uniform("uEyePos", eyePos);
-		segmentShader.uniform("uMini2World", mini2world);
 		segmentShader.uniform("uViewMatrix", viewMat);
 		segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
 		segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
@@ -958,7 +924,7 @@ void draw_scene(int width, int height) {
 		particleShader.uniform("uProjectionMatrix", projMat);
 		particleShader.uniform("uViewProjectionMatrix", viewProjMat);
 		particleShader.uniform("uViewPortHeight", (float)height);
-		particleShader.uniform("uPointSize", particleSize);
+		particleShader.uniform("uPointSize", state->particleSize);
 		particleShader.uniform("uColorTex", 0);
 
 		glActiveTexture(GL_TEXTURE0);
@@ -980,7 +946,7 @@ void draw_scene(int width, int height) {
 		debugShader.uniform("uProjectionMatrix", projMat);
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
-		debugShader.uniform("uPointSize", particleSize * 2.);
+		debugShader.uniform("uPointSize", state->particleSize * 2.);
 		debugShader.uniform("uColorTex", 0);
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -1032,9 +998,9 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 
 		deferShader.uniform("uViewMatrix", viewMat);
 		deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		deferShader.uniform("uFluidMatrix", world2field);
-		deferShader.uniform("uNearClip", near_clip);
-		deferShader.uniform("uFarClip", far_clip);
+		deferShader.uniform("uFluidMatrix", state->world2field);
+		deferShader.uniform("uNearClip", state->near_clip);
+		deferShader.uniform("uFarClip", state->far_clip);
 		
 		deferShader.uniform("time", Alice::Instance().simTime);
 		deferShader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
@@ -1067,10 +1033,10 @@ void onFrame(uint32_t width, uint32_t height) {
 
 
 	// for now, just create two teleport points:0
-	state->debugdots[0].location = transform(world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
-	state->debugdots[1].location = transform(world2minimap, glm::vec3(4., 1., 13.)); //land_coord
-	state->debugdots[2].location = transform(world2minimap, glm::vec3(60., 2., 13.)); //land_coord
-	state->debugdots[2].location = transform(world2minimap, glm::vec3(34.5, 17., 33.)); //top of mountain
+	state->debugdots[0].location = transform(state->world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
+	state->debugdots[1].location = transform(state->world2minimap, glm::vec3(4., 1., 13.)); //land_coord
+	state->debugdots[2].location = transform(state->world2minimap, glm::vec3(60., 2., 13.)); //land_coord
+	state->debugdots[2].location = transform(state->world2minimap, glm::vec3(34.5, 17., 33.)); //top of mountain
 	
 	// later, figure out how to place teleport points in viable locations
 	/*
@@ -1125,7 +1091,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (true && alice.leap->isConnected) {
 		//console.log("leap connected!");
 		// copy bones into debugdots
-		glm::mat4 trans = viewMatInverse * leap2view;
+		glm::mat4 trans = viewMatInverse * state->leap2view;
 
 		int num_ray_dots = 64;
 		int num_hand_dots = 5*4;
@@ -1143,13 +1109,13 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			float m = 0.005f / dist2map_squared;
 
-			minimapScale = glm::mix(minimapScale, m, dt*3.f);
+			state->minimapScale = glm::mix(state->minimapScale, m, dt*3.f);
 
-			glm::vec3 midPoint = (world_min + world_max)/2.f;
+			glm::vec3 midPoint = (state->world_min + state->world_max)/2.f;
 				midPoint.y = 0;
-			world2minimap = 
+			state->world2minimap = 
 					glm::translate(glm::vec3(mapPos)) * 
-					glm::scale(glm::vec3(minimapScale)) *
+					glm::scale(glm::vec3(state->minimapScale)) *
 					glm::translate(-midPoint);
 			
 			if (hand.pinch == 1) {
@@ -1283,18 +1249,18 @@ void onFrame(uint32_t width, uint32_t height) {
 			for (int i=0; i<NUM_PARTICLES; i++) {
 				Particle &o = state->particles[i];
 				o.location = o.location + o.velocity * dt;
-				o.location = wrap(o.location, world_min, world_max);
+				o.location = wrap(o.location, state->world_min, state->world_max);
 			}
 		
 			for (int i=0; i<NUM_OBJECTS; i++) {
 				auto &o = state->objects[i];
 				// TODO: dt-ify this:	
 				
-				o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+				o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
 
-				glm::vec3 norm = transform(world2field, o.location);
+				glm::vec3 norm = transform(state->world2field, o.location);
 				auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-				o.location = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+				o.location = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z));
 
 				o.phase += dt;
 			}
@@ -1305,7 +1271,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					// a root;
 					// TODO: dt-ify
 					o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-					o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+					o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
 					o.phase += dt;
 				} else {
 					auto& p = state->segments[i-1];
@@ -1325,36 +1291,36 @@ void onFrame(uint32_t width, uint32_t height) {
 			int speciesCount = 6;
 			speciesCount++;
 			if(debugMode % speciesCount == 1){
-				state->objects[0].location = world_centre;
+				state->objects[0].location = state->world_centre;
 				state->objects[0].scale = 2.0;
 				state->segments[0].scale = 2.5;
 				//console.log("Creature 1");
 			}else if(debugMode % speciesCount == 2){
-				state->objects[1].location = world_centre;
+				state->objects[1].location = state->world_centre;
 				state->objects[1].scale = 2.0;
 				state->objects[0].scale = 1.0;
 				state->segments[0].scale = 2.5;
 				//console.log("Creature 2");
 			}else if(debugMode % speciesCount == 3){
-				state->objects[2].location = world_centre;
+				state->objects[2].location = state->world_centre;
 				state->objects[2].scale = 2.0;
 				state->objects[1].scale = 1.0;
 				state->segments[0].scale = 2.5;
 				//console.log("Creature 3");
 			}else if(debugMode % speciesCount == 4){
-				state->objects[3].location = world_centre;
+				state->objects[3].location = state->world_centre;
 				state->objects[3].scale = 2.0;
 				state->objects[2].scale = 1.0;
 				state->segments[0].scale = 2.5;
 				//console.log("Creature 4");
 			}else if(debugMode % speciesCount == 5){
-				state->objects[4].location = world_centre;
+				state->objects[4].location = state->world_centre;
 				state->objects[4].scale = 2.0;
 				state->objects[3].scale = 1.0;
 				state->segments[0].scale = 2.5;
 				//console.log("Creature 5");
 			}else if(debugMode % speciesCount == 6){
-				state->segments[0].location = world_centre;
+				state->segments[0].location = state->world_centre;
 				state->segments[0].scale = 5.0;
 				state->objects[4].scale = 1.0;
 				state->objects[0].scale = 1.0;
@@ -1426,7 +1392,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// pos of projector, in space of kinect0
 		glm::vec3 proj_pos = glm::vec3(-0.135, -0.263, 0.317);
 		
-		glm::mat4 k2proj = (glm::mat4_cast(proj_quat)) * glm::translate(-proj_pos * kinect2world_scale);
+		glm::mat4 k2proj = (glm::mat4_cast(proj_quat)) * glm::translate(-proj_pos * state->kinect2world_scale);
 		viewMat = glm::inverse(
 			glm::translate(p) * glm::mat4_cast(kro) // kinect viewpoint
 			* (k2proj)
@@ -1445,7 +1411,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		//viewMat = kinect0.cloudTransform * glm::translate(-proj_pos);
 		//viewMat = glm::inverse(viewMat);
 			
-		projMat = glm::frustum(-0.0631f, 0.0585f, -0.038f, 0.038f, 0.1f, far_clip);
+		projMat = glm::frustum(-0.0631f, 0.0585f, -0.038f, 0.038f, 0.1f, state->far_clip);
 				//glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
 		
 		viewProjMat = projMat * viewMat;
@@ -1472,8 +1438,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (width && height) {
 		if (vive.connected) {	
 				
-			vive.near_clip = near_clip;
-			vive.far_clip = far_clip;	
+			vive.near_clip = state->near_clip;
+			vive.far_clip = state->far_clip;	
 			vive.update();
 			glEnable(GL_SCISSOR_TEST);
 
@@ -1541,12 +1507,12 @@ void onFrame(uint32_t width, uint32_t height) {
 					// move camera:
 					cameraLoc += quat_rotate(cameraOri, camVel) * (camera_speed * dt);
 					// wrap to world:
-					cameraLoc = wrap(cameraLoc, world_min, world_max);
+					cameraLoc = wrap(cameraLoc, state->world_min, state->world_max);
 
 					// stick to floor:
-					glm::vec3 norm = transform(world2field, cameraLoc);
+					glm::vec3 norm = transform(state->world2field, cameraLoc);
 					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-					cameraLoc = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
+					cameraLoc = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
 			
 					// rotate camera:
 					cameraOri = safe_normalize(cameraOri * glm::angleAxis(camera_turnangle * dt, camTurn));
@@ -1559,7 +1525,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::vec3 boom = glm::vec3(0., 1.7, 1.7);
 					//glm::vec3 boom = glm::vec3(0.);
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					projMat = glm::perspective(glm::radians(110.0f), aspect, near_clip, far_clip);
+					projMat = glm::perspective(glm::radians(110.0f), aspect, state->near_clip, state->far_clip);
 					//console.log("Cam Mode 0 Active");
 				
 				} break;
@@ -1567,7 +1533,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					// follow a creature mode:
 					auto& o = state->objects[objSelMod];
 
-					glm::vec3 fluidloc = transform(world2field, o.location);
+					glm::vec3 fluidloc = transform(state->world2field, o.location);
 					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
 					flow = flow * dt * 100.0f;
 					
@@ -1577,7 +1543,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					
 					auto boom = glm::vec3(0., o.scale*2.f, o.scale*4.);
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+					projMat = glm::perspective(glm::radians(75.0f), aspect, state->near_clip, state->far_clip);
 				
 				} break;
 				case 2: {
@@ -1585,7 +1551,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					double a = M_PI * t / 30.;
 					auto& o = state->segments[0];
 
-					glm::vec3 fluidloc = transform(world2field, o.location);
+					glm::vec3 fluidloc = transform(state->world2field, o.location);
 					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
 					flow = flow * dt * 100.0f;
 					
@@ -1595,7 +1561,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 					auto boom = glm::vec3(0., o.scale*2.f, o.scale*4.);
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+					projMat = glm::perspective(glm::radians(75.0f), aspect, state->near_clip, state->far_clip);
 				
 				} break;
 				default: {
@@ -1609,18 +1575,17 @@ void onFrame(uint32_t width, uint32_t height) {
 						glm::vec3(0., 1., 0.));
 					*/
 					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
-					glm::vec3 newloc = world_centre + (quat_uz(cameraOri))*40.f;
+					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*40.f;
 
 					cameraLoc = glm::mix(cameraLoc, newloc, 0.1f);
 					cameraOri = glm::slerp(cameraOri, newori, 0.01f);
 
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
-					projMat = glm::perspective(glm::radians(75.0f), aspect, near_clip, far_clip);
+					projMat = glm::perspective(glm::radians(75.0f), aspect, state->near_clip, state->far_clip);
 					//console.log("Default Cam mode Active");
 				}
 			}
 
-			viewMat = viewMat * glm::scale(glm::vec3(mini2world));
 			viewProjMat = projMat * viewMat;
 			projMatInverse = glm::inverse(projMat);
 			viewMatInverse = glm::inverse(viewMat);
@@ -1792,7 +1757,7 @@ void onReset() {
 
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = state->objects[i];
-		o.location = world_centre+glm::ballRand(10.f);
+		o.location = state->world_centre+glm::ballRand(10.f);
 		o.color = glm::mix(glm::ballRand(1.f)*0.5f+0.5f, glm::vec3(0.3, 0.2, 0.8), 0.5f);
 		o.phase = rnd::uni();
 		o.scale = 1.;
@@ -1800,14 +1765,14 @@ void onReset() {
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto& o = state->segments[i];
-		o.location = world_centre+glm::ballRand(10.f);
+		o.location = state->world_centre+glm::ballRand(10.f);
 		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
 		o.scale = 2.5;
 	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = state->particles[i];
-		o.location = world_centre+glm::ballRand(10.f);
+		o.location = state->world_centre+glm::ballRand(10.f);
 		o.color = glm::vec3(1.f);
 	}
 
@@ -1961,7 +1926,7 @@ void onReset() {
 			flatness = powf(flatness, 2.f);				
 
 			// get land surface coordinate:
-			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+			glm::vec3 land_coord = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z));
 			
 			// place on land
 			o.location = land_coord;
@@ -2050,16 +2015,17 @@ extern "C" {
 		// this effectively defines the bounds of the fluid in the world:
 		// from transform(field2world(glm::vec3(0.)))
 		// to   transform(field2world(glm::vec3(1.)))
-		field2world_scale = world_max.x - world_min.x;
-		field2world = glm::scale(glm::vec3(field2world_scale));
+		state->field2world_scale = state->world_max.x - state->world_min.x;
+		state->field2world = glm::scale(glm::vec3(state->field2world_scale));
 		// how to convert world positions into normalized texture coordinates in the fluid field:
-		world2field = glm::inverse(field2world);
+		state->world2field = glm::inverse(state->field2world);
 
 		//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
-		leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
+		state->leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
 
-		world2minimap = glm::scale(glm::vec3(0.f));
+		/// initialize at zero so that the minimap is invisible
+		state->world2minimap = glm::scale(glm::vec3(0.f));
 
 		console.log("onload fluid initialized");
 	

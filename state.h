@@ -161,6 +161,38 @@ struct State {
 
 	// the fluid simulation:
 	Fluid3DPod<> fluidpod;
+
+	// transforms:
+	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
+	glm::vec3 world_max = glm::vec3(80.f, 80.f, 80.f);
+	glm::vec3 world_centre = glm::vec3(40.f, 18.f, 40.f);
+	float field2world_scale;
+	glm::mat4 world2field;
+	glm::mat4 field2world;
+	glm::mat4 vive2world;
+	glm::mat4 kinect2world; 
+	glm::mat4 leap2view;
+	glm::mat4 world2minimap;
+	float minimapScale = 0.005f;
+	float kinect2world_scale = 10.f;
+	float near_clip = 0.02f;
+	float far_clip = 1200.f;
+
+	// parameters:
+
+	int fluid_passes = 14;
+	int fluid_noise_count = 32;
+	float fluid_decay = 0.9999f;
+	double fluid_viscosity = 0.00000001; //0.00001;
+	double fluid_boundary_damping = .2;
+	double fluid_noise = 8.;
+
+	float density_decay = 0.98f;
+	float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
+	float density_scale = 0.5;
+
+	float particleSize = 0.005;
+	float creature_fluid_push = 0.75f;
 	
 	void fluid_update(float dt);
 };

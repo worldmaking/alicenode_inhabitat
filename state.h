@@ -163,10 +163,8 @@ struct State {
 	Segment segments[NUM_SEGMENTS];
 	DebugDot debugdots[NUM_DEBUGDOTS];
 
-	// the density field is currently being used to store emissive light (as a form of smell)
+	// the emission field is currently being used to store emissive light (as a form of smell)
 	Field2DPod<FUNGUS_DIM, glm::vec3> emission_field;
-	//glm::vec3 density[FIELD_VOXELS];
-	//glm::vec3 density_back[FIELD_VOXELS];
 
 	// the basic height field
 	// .xyz represents the normal
@@ -213,9 +211,9 @@ struct State {
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
 
-	float density_decay = 0.98f;
-	float density_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
-	float density_scale = 0.5;
+	float emission_decay = 0.98f;
+	float emission_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
+	float emission_scale = 0.5;
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.75f;

@@ -450,14 +450,8 @@ void State::sim_update(float dt) {
 	}
 
 	// diffuse and decay the emission field
-	/*
-	al_field3d_scale(field_dim, density, glm::vec3(density_decay));
-	al_field3d_diffuse(field_dim, density, density, density_diffuse);
-	memcpy(density_back, density, sizeof(glm::vec3) * FIELD_VOXELS);
-	*/
-	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(density_decay));
-	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), density_diffuse);
-	//memcpy(density_back, density, sizeof(glm::vec3) * FIELD_VOXELS);
+	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
+	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse);
 	emission_field.swap();
 
 	fungus_update(dt);
@@ -527,7 +521,7 @@ void State::sim_update(float dt) {
 			o.accel.y = jump * gravity * 2.f * o.scale;
 
 			// this is a good time to also emit a pulse:
-			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, o.color * density_scale * jump);
+			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, o.color * emission_scale * jump);
 		}
 
 		// set my velocity, in meters per second:
@@ -564,7 +558,7 @@ void State::sim_update(float dt) {
 			fluid.velocities.front().addnorm(fluidloc, &push.x);
 			o.velocity = flow * idt;
 
-			al_field3d_addnorm_interp(field_dim, density, fluidloc, o.color * density_scale * 0.02f);
+			al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
 			*/
 
 
@@ -1766,11 +1760,7 @@ void onReset() {
 		}
 	}
 
-	//al_field3d_zero(field_dim, state->density);
-	{
-		state->emission_field.reset();
-	}
-
+	state->emission_field.reset();
 
 	/*
 		Create the initial landscape:

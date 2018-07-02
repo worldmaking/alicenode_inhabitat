@@ -297,7 +297,7 @@ MetroThread simThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
 
-int soloView = 2;
+int soloView = 1;
 
 GBuffer gBufferVR;
 GBuffer gBufferProj;

@@ -2,9 +2,8 @@
 #define STATE_H
 
 #ifndef ALICE_H
-
+// for the use of Clang-Index:
 #include <stddef.h>
-
 namespace glm {
 
 	struct vec2 { float x, y; vec2(float, float); };
@@ -99,8 +98,9 @@ struct Object {
 	glm::quat orientation;
 	float phase;
 	glm::vec3 velocity;
-	glm::vec3 accel;
 	glm::vec3 color;
+	
+	glm::vec3 accel;
 };
 
 struct Segment {
@@ -129,11 +129,12 @@ struct State {
 	float dummy = 10;
 	float test = 34;
 	
-
-	Particle particles[NUM_PARTICLES];
+	// for simulation:
 	Object objects[NUM_OBJECTS];
-	Segment segments[NUM_SEGMENTS];
 
+	// for rendering:
+	Particle particles[NUM_PARTICLES];
+	Segment segments[NUM_SEGMENTS];
 	DebugDot debugdots[NUM_DEBUGDOTS];
 
 	// the density field is currently being used to store emissive light (as a form of smell)

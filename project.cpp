@@ -1721,6 +1721,10 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			if (downup) camVel.x =  1.f; 
 			else camVel.x = 0.f; 
 			break;
+
+		default:
+			console.log("keycode: %d scancode: %d press: %d shift %d ctrl %d alt %d cmd %d", keycode, scancode, downup, shift, ctrl, alt, cmd);
+			break;
 	
 	}
 
@@ -1751,7 +1755,27 @@ void onReset() {
 	threads_end();
 
 	// zero by default:
-	memset(state, 0, sizeof(State));
+	//memset(state, 0, sizeof(State));
+	// invoke constructor on it:
+	state = new(state) State;
+
+	// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
+	// this effectively defines the bounds of the fluid in the world:
+	// from transform(field2world(glm::vec3(0.)))
+	// to   transform(field2world(glm::vec3(1.)))
+	state->field2world_scale = state->world_max.x - state->world_min.x;
+	state->field2world = glm::scale(glm::vec3(state->field2world_scale));
+	// how to convert world positions into normalized texture coordinates in the fluid field:
+	state->world2field = glm::inverse(state->field2world);
+
+	//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
+		//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
+	state->leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
+
+	/// initialize at zero so that the minimap is invisible
+	state->world2minimap = glm::scale(glm::vec3(0.f));
+	
+	cameraLoc = state->world_centre;
 
 	state->fluidpod.reset();
 
@@ -2010,23 +2034,7 @@ extern "C" {
 		projFBOs[0].dim.y = projFBOs[1].dim.y = 1080;
 
 		threads_begin();
-
-		// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
-		// this effectively defines the bounds of the fluid in the world:
-		// from transform(field2world(glm::vec3(0.)))
-		// to   transform(field2world(glm::vec3(1.)))
-		state->field2world_scale = state->world_max.x - state->world_min.x;
-		state->field2world = glm::scale(glm::vec3(state->field2world_scale));
-		// how to convert world positions into normalized texture coordinates in the fluid field:
-		state->world2field = glm::inverse(state->field2world);
-
-		//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
-			//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
-		state->leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
-
-		/// initialize at zero so that the minimap is invisible
-		state->world2minimap = glm::scale(glm::vec3(0.f));
-
+		
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
@@ -2050,7 +2058,6 @@ extern "C" {
 		alice.onFrame.connect(onFrame);
 		alice.onReloadGPU.connect(onReloadGPU);
 		alice.onReset.connect(onReset);
-
 		alice.onKeyEvent.connect(onKeyEvent);
 		alice.window.position(45, 45);
 

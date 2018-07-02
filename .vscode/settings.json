@@ -17,7 +17,8 @@
         "xiosbase": "cpp",
         "xtree": "cpp",
         "locale": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "limits": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

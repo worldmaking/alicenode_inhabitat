@@ -173,15 +173,6 @@ glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
 	return safe_normalize(diff * q);	
 }
 
-// max should be >> 0.
-glm::vec2 limit(glm::vec2 v, float max) {
-	float len = glm::length(v);
-	if (len > max) {
-		return v * max/len;
-	}
-	return v;
-}
-
 //// RENDER STUFF ////
 
 Shader objectShader;
@@ -269,50 +260,13 @@ State * state;
 Mmap<State> statemap;
 
 
-void fluid_land_resist(glm::vec3 * velocities, const glm::ivec3 field_dim, float * distancefield, const glm::ivec3 land_dim) {
-
-	glm::vec3 field_dimf = glm::vec3(field_dim);
-
-	int i = 0;
-	for (size_t z = 0; z<field_dim.z; z++) {
-		for (size_t y = 0; y<field_dim.y; y++) {
-			for (size_t x = 0; x<field_dim.x; x++, i++) {
-				
-				// get norm'd coordinate:
-				glm::vec3 norm = glm::vec3(x,y,z) / field_dimf;
-
-				// use this to sample the landscape:
-				float sdist;
-				al_field3d_readnorm_interp(land_dim, state->distance, norm, &sdist );
-				float dist = fabsf(sdist);
-
-				// generate a normalized influence factor -- the closer we are to the surface, the greater this is
-				//float influence = glm::smoothstep(0.05f, 0.f, dist);
-				// s is the amount of dist where the influence is 50%
-				float s = 0.01f;
-				float influence = s / (s + dist);
-
-				glm::vec3& vel = velocities[i];
-				
-				// get a normal for the land:
-				// TODO: or read from state->land xyz?
-				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm, 2.f/LAND_DIM);
-
-				// re-orient to be orthogonal to the land normal:
-				glm::vec3 rescaled = make_orthogonal_to(vel, normal);
-
-				// update:
-				vel = mix(vel, rescaled, influence);	
-			}
-		}
-	}
-}
 
 void fluid_update(double dt) { state->fluid_update(dt); }
 
 void State::fluid_update(float dt) {
 	
 	const glm::ivec3 dim = fluidpod.dim();
+	const glm::vec3 field_dimf = glm::vec3(field_dim);
 	// diffuse the velocities (viscosity)
 	fluidpod.velocities.swap();
 	al_field3d_diffuse(dim, fluidpod.velocities.back(), fluidpod.velocities.front(), fluid_viscosity, fluid_passes);
@@ -330,53 +284,51 @@ void State::fluid_update(float dt) {
 	fluidpod.velocities.swap(); 
 	al_field3d_advect(dim, fluidpod.velocities.front(), fluidpod.velocities.back(), fluidpod.velocities.front(), 1.);
 
-	// apply boundaries:
-	fluid_land_resist(fluidpod.velocities.front(), dim, distance, land_dim);
+	// apply boundary effect to the velocity field
+	// boundary effect is the landscape, forcing the fluid to align to it when near
+	{
+		int i = 0;
+		glm::vec3 * velocities = fluidpod.velocities.front();
+		for (size_t z = 0; z<field_dim.z; z++) {
+			for (size_t y = 0; y<field_dim.y; y++) {
+				for (size_t x = 0; x<field_dim.x; x++, i++) {
+					
+					// get norm'd coordinate:
+					glm::vec3 norm = glm::vec3(x,y,z) / field_dimf;
+
+					// use this to sample the landscape:
+					float sdist;
+					al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+					float dist = fabsf(sdist);
+
+					// TODO: what happens 'underground'?
+					// should velocities here be zeroed? or set to a slight upward motion?	
+
+					// generate a normalized influence factor -- the closer we are to the surface, the greater this is
+					//float influence = glm::smoothstep(0.05f, 0.f, dist);
+					// s is the amount of dist where the influence is 50%
+					float s = 0.01f;
+					float influence = s / (s + dist);
+
+					glm::vec3& vel = velocities[i];
+					
+					// get a normal for the land:
+					// TODO: or read from state->land xyz?
+					glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 2.f/LAND_DIM);
+
+					// re-orient to be orthogonal to the land normal:
+					glm::vec3 rescaled = make_orthogonal_to(vel, normal);
+
+					// update:
+					vel = mix(vel, rescaled, influence);	
+				}
+			}
+		}
+	}
 
 	// friction:
 	al_field3d_scale(dim, fluidpod.velocities.front(), glm::vec3(fluid_decay));
 	
-
-	/*
-	// update fluid
-	Field3D<>& velocities = fluid.velocities;
-	const size_t dim0 = velocities.dimx();
-	const size_t dim1 = velocities.dimy();
-	const size_t dim2 = velocities.dimz();
-	glm::vec3 * data = (glm::vec3 *)velocities.front().ptr();
-	//float * boundary = boundary;
-
-	// and some turbulence:
-	if (0) {
-		for (int i=0; i < rnd::integer(fluid_noise_count); i++) {
-			// pick a cell at random:
-			glm::vec3 * cell = data + (size_t)rnd::integer(dim0*dim1*dim2);
-			// add a random vector:
-			*cell = glm::sphericalRand(rnd::uni((float)fluid_noise));
-		}
-	}
-
-	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
-	velocities.diffuse(fluid_viscosity, fluid_passes);
-	// apply boundaries:
-	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
-	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
-	// stabilize:
-	fluid.project(fluid_passes / 2);
-	// advect:
-	velocities.advect(velocities.back(), 1.);
-
-	fluid_land_resist((glm::vec3 *)velocities.front().data, field_dim, state->distance, land_dim);
-
-	// apply boundaries:
-	//apply_fluid_boundary2(data, boundary, dim0, dim1, dim2);
-	//apply_fluid_boundary2(data, (glm::vec4 *)landscape.ptr(), dim0, dim1, dim2);
-	velocities.front().scale(fluid_decay);
-
-	// clear gradients:
-	fluid.gradient.front().zero();
-	fluid.gradient.back().zero();
-	*/
 }
 
 void fungus_update(float dt) {
@@ -916,7 +868,7 @@ void draw_scene(int width, int height) {
 		segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
 	}
 
-	if (0) {
+	if (1) {
 		particleShader.use(); 
 		particleShader.uniform("time", t);
 		particleShader.uniform("uViewMatrix", viewMat);

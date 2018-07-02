@@ -331,12 +331,10 @@ void State::fluid_update(float dt) {
 	
 }
 
-void fungus_update(float dt) {
+void State::fungus_update(float dt) {
 	const glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
-	auto & src_array = state->fungus;
-	auto & dst_array = state->fungus_old;
-
-	//float * land = state->
+	float * const src_array = fungus_field.front(); 
+	float * dst_array = fungus_field.back(); 
 
 	for (int i=0, y=0; y<dim.y; y++) {
 		for (int x=0; x<dim.x; x++, i++) {
@@ -346,7 +344,7 @@ void fungus_update(float dt) {
 			float C1 = C - 0.1;
 			//float h = 20 * .1;//heightmap_array.sample(norm);
 			glm::vec4 l;
-			al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), state->land, norm, &l);
+			al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), land, norm, &l);
 			float h = 20.f * l.w;
 			float hu = 0.;//humanmap_array.sample(norm);
 			float dst = C;
@@ -376,9 +374,7 @@ void fungus_update(float dt) {
 		}
 	}
 
-	memcpy(src_array, dst_array, sizeof(state->fungus));
-
-	//fungus_write = !fungus_write;
+	fungus_field.swap();
 }
 
 void sim_update(float dt) {
@@ -458,7 +454,7 @@ void sim_update(float dt) {
 	al_field3d_diffuse(field_dim, state->density, state->density, state->density_diffuse);
 	memcpy(state->density_back, state->density, sizeof(glm::vec3) * FIELD_VOXELS);
 
-	fungus_update(dt);
+	state->fungus_update(dt);
 
 	// get the most recent complete frame:
 	
@@ -1293,7 +1289,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		//fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		fluidTex.submit(field_dim, state->fluidpod.velocities.front());
 		densityTex.submit(field_dim, state->density_back);
-		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->fungus[0]);
+		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), state->fungus_field.front());
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 		
@@ -1758,8 +1754,8 @@ void onReset() {
 		glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 		for (size_t y=0;y<dim.y;y++) {
 			for (size_t x=0;x<dim.x;x++) {
-				state->fungus[i] = rnd::uni();
-				state->fungus_old[i] = rnd::uni();
+				state->fungus_field.front()[i] = rnd::uni();
+				state->fungus_field.back()[i] = rnd::uni();
 			}
 		}
 	}

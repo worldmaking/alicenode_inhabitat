@@ -47,6 +47,32 @@ static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
 static const glm::ivec2 fungus_dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 
 template<int DIM=32, typename T=float>
+struct Field2DPod {
+
+	Field2DPod() { reset(); }
+
+	void reset() {
+		memset(data0, 0, sizeof(data0));
+		memset(data1, 0, sizeof(data1));
+	}
+
+	T * data(bool back=false) { return (!isSwapped != !back) ? data1 : data0; }
+	const T * data(bool back=false) const { return (!isSwapped != !back) ? data1 : data0; }
+
+	T * front() { return data(0); }
+	T * back() { return data(1); }
+
+	size_t length() const { return DIM*DIM; }
+	glm::ivec2 dim() const { return glm::ivec2(DIM, DIM); }
+
+	void swap() { isSwapped = !isSwapped; }
+
+	T data0[DIM*DIM];
+	T data1[DIM*DIM];
+	int isSwapped = 0;
+};
+
+template<int DIM=32, typename T=float>
 struct Field3DPod {
 
 	Field3DPod() { reset(); }
@@ -156,8 +182,7 @@ struct State {
 	float distance_binary[LAND_VOXELS];
 
 	// the state of the lichen CA over the world
-	float fungus[FUNGUS_TEXELS];
-	float fungus_old[FUNGUS_TEXELS];
+	Field2DPod<FUNGUS_DIM> fungus_field;
 
 	// the fluid simulation:
 	Fluid3DPod<> fluidpod;
@@ -195,6 +220,7 @@ struct State {
 	float creature_fluid_push = 0.75f;
 	
 	void fluid_update(float dt);
+	void fungus_update(float dt);
 };
 
 #endif

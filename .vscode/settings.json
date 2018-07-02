@@ -18,7 +18,10 @@
         "xtree": "cpp",
         "locale": "cpp",
         "string": "cpp",
-        "limits": "cpp"
+        "limits": "cpp",
+        "__split_buffer": "cpp",
+        "array": "cpp",
+        "string_view": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

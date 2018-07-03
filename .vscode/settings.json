@@ -23,7 +23,9 @@
         "array": "cpp",
         "string_view": "cpp",
         "__bit_reference": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "iterator": "cpp",
+        "map": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

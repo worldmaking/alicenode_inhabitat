@@ -9,6 +9,7 @@
 #include "al/al_mmap.h"
 #include "al/al_hmd.h"
 #include "al/al_time.h"
+#include "al/al_hashspace.h"
 #include "al/al_jxf.h"
 #include "alice.h"
 #include "state.h"
@@ -387,6 +388,16 @@ void State::sim_update(float dt) {
 	Alice& alice = Alice::Instance();
 	if (!alice.isSimulating) return;
 
+
+	// diffuse and decay the emission field:
+	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
+	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse);
+	emission_field.swap();
+
+	// run the fungus simulation:
+	fungus_update(dt);
+
+	// deal with Kinect data:
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
@@ -449,15 +460,7 @@ void State::sim_update(float dt) {
 		}
 	}
 
-	// diffuse and decay the emission field
-	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
-	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse);
-	emission_field.swap();
-
-	fungus_update(dt);
-
 	// get the most recent complete frame:
-	
 	flip = !flip;
 	const CloudDevice& cd = alice.cloudDeviceManager.devices[0];
 	const CloudFrame& cloudFrame = cd.cloudFrame();
@@ -468,7 +471,6 @@ void State::sim_update(float dt) {
 	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
 
 	
-		
 	if (1) {
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = particles[i];
@@ -493,25 +495,114 @@ void State::sim_update(float dt) {
 		}
 	} 
 
-	// simulate creatures:
+	// simulate creature pass:
+	for (int i=0; i<NUM_OBJECTS; i++) {
+		auto &o = objects[i];
+		// update location in hashspace:
+		hashspace.move(i, glm::vec2(o.location.x, o.location.z));
+	}
+
+	// simulate creature pass:
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = objects[i];
 
 		// get norm'd coordinate:
 		glm::vec3 norm = transform(world2field, o.location);
-
-		// get fluid flow:
-		//glm::vec3 flow;
-		//fluid.velocities.front().readnorm(norm, &flow.x);
-		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
+		// get a normal for the land:
+		glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
+		// 0..1 factors:
+		//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
+		float flatness = fabsf(land_normal.y);
+		float steepness = 1.f-flatness;
+		// a direction along which the ground is horizontal (contour)
+		//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
+		glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
 
 		// get my distance from the ground:
 		float sdist; // creature's distance above the ground (or negative if below)
 		al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
 
+		float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), glm::vec2(norm.x, norm.z));
+
+		// get fluid flow:
+		//glm::vec3 flow;
+		//fluid.velocities.front().readnorm(norm, &flow.x);
+		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
 		// convert to meters per second:
 		// (why is this needed? shouldn't it be m/s already?)
 		flow *= idt;
+		
+		// get orientation:
+		glm::quat& oq = o.orientation;
+		
+		// derive from orientation:
+		glm::vec3 up = quat_uy(oq);
+		glm::vec3 uf = quat_uf(oq);
+
+		// get neighbours:
+		// maximum number of agents a spatial query can return
+		const int NEIGHBOURS_MAX = 12;
+		// see who's around:
+		std::vector<int32_t> neighbours;
+		float agent_range_of_view = o.scale * 8.;
+		float field_of_view = 0.; // in -1..1
+		int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(o.location.x, o.location.z), i, agent_range_of_view);
+		//if (nres) console.log("near %d %d", i, nres);
+
+		glm::vec3 avoid;
+		for (int j=0; j<nres; j++) {
+			auto& n = objects[j];
+
+			// get relative vector from a to n:
+			glm::vec3 rel = n.location - o.location;
+			float cdistance = glm::length(rel);
+		
+			// get distance between bodies (never be negative)
+			float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
+			
+			// skip if not in my field of view
+			float similarity = glm::dot(quat_uf(o.orientation), glm::normalize(rel));
+			if (similarity < field_of_view) continue;
+
+			// if too close, avoid:
+			float agent_personal_space = o.scale * 1.;
+			if (distance < agent_personal_space) {
+				// add an avoidance force:
+				float mag = 1. - (distance / agent_personal_space);
+				float avoid_factor = -0.5;
+				avoid += rel * (mag * avoid_factor);
+			}
+
+			/*
+			// accumulate avoidances:
+			// base this on where we are going to be next:
+			glm::vec3 future_rel = n.pos - a.pos + ((n.vel - a.vel) * agent_lookahead_frames);
+			float future_distance = glm::max(glm::length(future_rel) - a.size - n.size, 0.f);
+			// if likely to collide:
+			if (future_distance < agent_personal_space) {
+				// add an avoidance force:
+				float mag = 1. - (future_distance / agent_personal_space);
+				glm::vec3 avoid += future_rel * -mag;
+			}
+			*/
+
+
+		}
+
+		// wander means changing orientation around the creature's up axis
+		{
+			float range = M_PI * steepness * M_PI;
+			glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+			float wander_factor = 0.5f;
+			o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+		}
+
+		// go slower when moving uphill? 
+		// positive value means going uphill, range is -1 to 1
+		//float downhill = glm::dot(uf, glm::vec3(0.f,1.f,0.f)); 
+		float uphill = uf.y;  
+		float downhill = -uphill;
+
 
 		float gravity = 2.0f;
 		o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
@@ -525,7 +616,9 @@ void State::sim_update(float dt) {
 		}
 
 		// set my velocity, in meters per second:
-		o.velocity = flow + o.accel*dt;
+		// float speed = 2.f * o.scale * (1. + downhill*0.5f);
+		// o.vel = speed * (uf + avoid);
+		o.velocity = avoid + flow + o.accel*dt;
 		
 		// wander:
 		o.orientation = safe_normalize(glm::slerp(o.orientation, quat_random() * o.orientation, 0.025f));
@@ -540,10 +633,6 @@ void State::sim_update(float dt) {
 		//fluid.velocities.front().addnorm(norm, &push.x);
 		al_field3d_addnorm_interp(field_dim, fluidpod.velocities.front(), norm, push);
 	}
-
-
-	//if(accel == 1)objects[0].velocity += objects[0].velocity;
-	//else if(decel == 1)objects[0].velocity -= objects[0].velocity * glm::vec3(2.);
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto &o = segments[i];
@@ -971,14 +1060,10 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 void onFrame(uint32_t width, uint32_t height) {
 	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
-	float dt = alice.dt;
+	float dt = alice.fps.dt;
 	float aspect = gBufferVR.dim.x / (float)gBufferVR.dim.y;
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
-
-
-	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d %f", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height, dt);
-
 
 	// for now, just create two teleport points:0
 	state->debugdots[0].location = transform(state->world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
@@ -1206,9 +1291,27 @@ void onFrame(uint32_t width, uint32_t height) {
 				
 				o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
 
+				// get norm'd coordinate:
 				glm::vec3 norm = transform(state->world2field, o.location);
-				auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+
+				
+				auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, norm2);
 				o.location = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z));
+
+				//glm::vec3 land_normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
+				glm::vec3 land_normal = glm::vec3(landpt);
+
+				// apply change of orientation here too
+				// slerping by dt is a close approximation to rotation in radians per second
+				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
+
+				// re-align the creature to the surface normal:
+				{
+					// re-orient relative to ground:
+					float creature_land_orient_factor = 1.f;//0.25f;
+					o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
+				}
 
 				o.phase += dt;
 			}
@@ -1611,7 +1714,7 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 					gBufferVR.dim = alice.hmd->fbo.dim;
 					gBufferVR.dest_changed();
 					alice.hmd->dest_changed();
-					alice.desiredFrameRate = 90;
+					alice.fps.setFPS(90);
 				}
 			}
 		} break;
@@ -1670,6 +1773,10 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			else camVel.x = 0.f; 
 			break;
 
+		case GLFW_KEY_T:
+			console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, gBufferVR.dim.x, gBufferVR.dim.y);
+			break;
+
 		default:
 			console.log("keycode: %d scancode: %d press: %d shift %d ctrl %d alt %d cmd %d", keycode, scancode, downup, shift, ctrl, alt, cmd);
 			break;
@@ -1724,6 +1831,9 @@ void onReset() {
 	state->world2minimap = glm::scale(glm::vec3(0.f));
 	
 	cameraLoc = state->world_centre;
+
+	//hashspace.reset(world_min, world_max);
+	state->hashspace.reset(glm::vec2(state->world_min.x, state->world_min.z), glm::vec2(state->world_max.x, state->world_max.z));
 
 	state->fluidpod.reset();
 
@@ -1969,7 +2079,7 @@ extern "C" {
 		gBufferVR.dim = glm::ivec2(512, 512);
 		//alice.hmd->connect();
 		if (alice.hmd->connected) {
-			alice.desiredFrameRate = 90;
+			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;
 		} else if (isPlatformWindows()) {
 			gBufferVR.dim.x = 1920;

@@ -126,6 +126,7 @@ struct Object {
 	glm::vec3 velocity;
 	glm::vec3 color;
 	
+	glm::quat rot_vel;
 	glm::vec3 accel;
 };
 
@@ -162,6 +163,8 @@ struct State {
 	Particle particles[NUM_PARTICLES];
 	Segment segments[NUM_SEGMENTS];
 	DebugDot debugdots[NUM_DEBUGDOTS];
+
+	Hashspace2D<NUM_OBJECTS> hashspace;
 
 	// the emission field is currently being used to store emissive light (as a form of smell)
 	Field2DPod<FUNGUS_DIM, glm::vec3> emission_field;

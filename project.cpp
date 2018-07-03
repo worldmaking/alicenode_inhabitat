@@ -255,8 +255,10 @@ GLuint colorTex;
 FloatTexture3D fluidTex;
 FloatTexture3D emissionTex;
 FloatTexture3D distanceTex;
+
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
+FloatTexture2D noiseTex;
 
 SimpleOBJ tableObj("island.obj", true, 1.f);
 
@@ -314,7 +316,7 @@ glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 2;
+int soloView = 0;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -348,14 +350,14 @@ void State::fluid_update(float dt) {
 	const glm::vec3 field_dimf = glm::vec3(field_dim);
 	// diffuse the velocities (viscosity)
 	fluidpod.velocities.swap();
-	al_field3d_diffuse(dim, fluidpod.velocities.back(), fluidpod.velocities.front(), fluid_viscosity, fluid_passes);
+	al_field3d_diffuse(dim, fluidpod.velocities.back(), fluidpod.velocities.front(), glm::vec3(fluid_viscosity), fluid_passes);
 
 	// stabilize:
 	// prepare new gradient data:
 	al_field3d_zero(dim, fluidpod.gradient.back());
 	al_field3d_derive_gradient(dim, fluidpod.velocities.back(), fluidpod.gradient.back()); 
 	// diffuse it:
-	al_field3d_diffuse(dim, fluidpod.gradient.back(), fluidpod.gradient.front(), 0.5, fluid_passes / 2);
+	al_field3d_diffuse(dim, fluidpod.gradient.back(), fluidpod.gradient.front(), 0.5f, fluid_passes / 2);
 	// subtract from current velocities:
 	al_field3d_subtract_gradient(dim, fluidpod.gradient.front(), fluidpod.velocities.front());
 	
@@ -410,7 +412,7 @@ void State::fluid_update(float dt) {
 	
 }
 
-void State::fungus_update(float dt) {
+void State::fields_update(float dt) {
 	const glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 	float * const src_array = fungus_field.front(); 
 	float * dst_array = fungus_field.back(); 
@@ -452,8 +454,38 @@ void State::fungus_update(float dt) {
 			dst_array[i] = dst;
 		}
 	}
-
 	fungus_field.swap();
+
+	// diffuse and decay the emission field:
+	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
+	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse);
+	emission_field.swap();
+
+	// diffuse & decay the chemical fields:
+	// copy front to back, then diffuse
+	// TODO: is this any different to just diffuse (front, front) ? if not, we could eliminate this copy
+	// (or, would .swap() rather than .copy() work for us?)
+	chemical_field.copy();	
+	al_field2d_diffuse(fungus_dim, chemical_field.back(), chemical_field.front(), chemical_diffuse);
+	size_t elems = chemical_field.length();
+	for (size_t i=0; i<elems; i++) {
+		// the current simulated field values:
+		glm::vec3& chem = chemical_field.front()[i];
+		float f = fungus_field.front()[i];
+		// the current smoothed fields as used by the renderer:
+		glm::vec4& tex = field_texture[i];
+		// the current smoothed fungus value:
+		float f0 = tex.w; 
+
+		// fungus increases smoothly, but death is immediate:
+		float f1 = (f <= 0) ? f : (f0 + 0.05f * (f - f0));
+
+		// other fields just clamp & decay:
+		chem = glm::clamp(chem * chemical_decay, 0.f, 2.f);
+
+		// now copy these modified results back to the field_texture:
+		tex = glm::vec4(chem, f1);
+	}
 }
 
 void sim_update(double dt) { state->sim_update(dt); }
@@ -466,14 +498,8 @@ void State::sim_update(float dt) {
 	Alice& alice = Alice::Instance();
 	if (!alice.isSimulating) return;
 
-
-	// diffuse and decay the emission field:
-	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
-	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse);
-	emission_field.swap();
-
 	// run the fungus simulation:
-	fungus_update(dt);
+	fields_update(dt);
 
 	// deal with Kinect data:
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
@@ -591,6 +617,7 @@ void State::sim_update(float dt) {
 
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
+			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 			// get a normal for the land:
 			glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
 
@@ -606,7 +633,7 @@ void State::sim_update(float dt) {
 			//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
 			glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
 
-			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), glm::vec2(norm.x, norm.z));
+			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
 			
 			// get my distance from the ground:
 			float sdist; // creature's distance above the ground (or negative if below)
@@ -708,6 +735,18 @@ void State::sim_update(float dt) {
 			glm::vec3 push = o.velocity * (creature_fluid_push * (float)dt);
 			//fluid.velocities.front().addnorm(norm, &push.x);
 			al_field3d_addnorm_interp(field_dim, fluidpod.velocities.front(), norm, push);
+
+
+			// add some field stuff:
+			glm::vec3 chem;
+			if (i % 3 == 0) chem.r += 1.f;
+			if (i % 3 == 1) chem.g += 1.f;
+			if (i % 3 == 2) chem.b += 1.f;
+			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
+
+			float eat = glm::max(0.f, fungal);
+			al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
+
 		}
 	}
 
@@ -791,6 +830,7 @@ void onUnloadGPU() {
 	emissionTex.dest_closing();
 	distanceTex.dest_closing();
 	fungusTex.dest_closing();
+	noiseTex.dest_closing();
 	landTex.dest_closing();
 
 	projectors[0].fbo.dest_closing();
@@ -951,6 +991,7 @@ void draw_scene(int width, int height) {
 	double t = Alice::Instance().simTime;
 	//console.log("%f", t);
 
+	noiseTex.bind(3);
 	distanceTex.bind(4);
 	fungusTex.bind(5);
 	landTex.bind(6);
@@ -969,7 +1010,9 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uLandMatrix", state->world2field);
 		heightMeshShader.uniform("uLandMatrixInverse", state->field2world);
 		heightMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		heightMeshShader.uniform("uLandLoD", 1.5f);
 		heightMeshShader.uniform("uMapScale", 1.f);
+		heightMeshShader.uniform("uNoiseTex", 3);
 		heightMeshShader.uniform("uDistanceTex", 4);
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
@@ -1011,6 +1054,7 @@ void draw_scene(int width, int height) {
 		quadMesh.draw();
 	}
 
+	noiseTex.unbind(3);
 	distanceTex.unbind(4);
 	fungusTex.unbind(5);
 	landTex.unbind(6);
@@ -1177,6 +1221,7 @@ void State::animate(float dt) {
 		// stick to land surface:
 		auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), land, norm2);
 		p1 = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+		p1.y += o.scale*0.5f;
 
 		float distance = glm::length(p1 - o.location);
 		o.location = p1;
@@ -1470,7 +1515,9 @@ void onFrame(uint32_t width, uint32_t height) {
 		//fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
 		fluidTex.submit(field_dim, state->fluidpod.velocities.front());
 		emissionTex.submit(field_dim, state->emission_field.front());
-		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), state->fungus_field.front());
+		//fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), state->fungus_field.front());
+		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->field_texture[0]);
+		noiseTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->noise_texture[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 		
@@ -1942,6 +1989,12 @@ void State::reset() {
 
 	fluidpod.reset();
 
+	{
+		for (int i=0; i<FUNGUS_TEXELS; i++) {
+			noise_texture[i] = glm::linearRand(glm::vec4(0), glm::vec4(1));
+		}
+	}
+
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = objects[i];
 		o.location = world_centre+glm::ballRand(10.f);
@@ -2193,10 +2246,12 @@ extern "C" {
 			projectors[2].frustum_min = glm::vec2(-1.f) * aspectfactor;
 			projectors[2].frustum_max = glm::vec2(1.f) * aspectfactor;
 		}
+
+		landTex.generateMipMap = true;
 		
 		
 
-		enablers[SHOW_LANDMESH] = 0;
+		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;

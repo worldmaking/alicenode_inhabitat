@@ -64,6 +64,12 @@ struct Field2DPod {
 	T * front() { return data(0); }
 	T * back() { return data(1); }
 
+	// copy(0) will copy from front to back
+	// copy(1) will copy from back to front
+	void copy(bool backtofront=false) {
+		memcpy(data(!backtofront), data(backtofront), sizeof(T)*length());
+	}
+
 	size_t length() const { return DIM*DIM; }
 	glm::ivec2 dim() const { return glm::ivec2(DIM, DIM); }
 
@@ -181,7 +187,7 @@ struct State {
 	Hashspace2D<NUM_OBJECTS, 6> hashspace;
 
 	// the emission field is currently being used to store emissive light (as a form of smell)
-	Field2DPod<FUNGUS_DIM, glm::vec3> emission_field;
+	Field3DPod<FIELD_DIM, glm::vec3> emission_field;
 
 	// the basic height field
 	// .xyz represents the normal
@@ -199,6 +205,13 @@ struct State {
 
 	// the state of the lichen CA over the world
 	Field2DPod<FUNGUS_DIM> fungus_field;
+	// RGB corresponds to blood, food, nest
+	Field2DPod<FUNGUS_DIM, glm::vec3> chemical_field;
+	// the fungus + chemicals combined into a temporally-smoothed texture
+	glm::vec4 field_texture[FUNGUS_TEXELS];
+	
+	// a baked grid of randomness over the landscape:
+	glm::vec4 noise_texture[FUNGUS_TEXELS];
 
 	// the fluid simulation:
 	Fluid3DPod<> fluidpod;
@@ -229,8 +242,11 @@ struct State {
 	double fluid_noise = 8.;
 
 	float emission_decay = 0.98f;
-	float emission_diffuse = 0.01; // somwhere between 0.1 and 0.01 seems to be good
+	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
 	float emission_scale = 0.5;
+
+	glm::vec3 chemical_decay = glm::vec3(0.98f);
+	glm::vec3 chemical_diffuse = glm::vec3(0.01);
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;
@@ -241,7 +257,7 @@ struct State {
 	
 	// background threads:
 	void fluid_update(float dt);
-	void fungus_update(float dt);
+	void fields_update(float dt);
 	void sim_update(float dt);
 };
 

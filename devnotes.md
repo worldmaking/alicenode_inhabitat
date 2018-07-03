@@ -1,6 +1,23 @@
 # TODO list
 
+Bring in the inhabitat species behaviours!!
+
 # Korea notes
+
+gbuffer redesign. 
+- currently:
+      - ivec4 albedo (though alpha isn't currently used)
+      - vec3 normal
+      - vec3 position
+- we may also need:
+      - emission (intensity or color? if only intensity, pack into albedo.a?)
+      - texcoords (for creatures and other material detail)
+      - luma multiplier (e.g. the self-occlusion of creatures)
+      - material properties, e.g. type, shininess, patterning parameters, etc.
+- maybe the albedo can be float32 too? 
+- can also consider separating luma & chroma
+- see http://aras-p.info/texts/CompactNormalStorage.html#method04spheremap for a way to pack normals into vec2
+
 
 Since VR needs 90fps while the projections only need 30fps, why not interleave their FBO updates?
 

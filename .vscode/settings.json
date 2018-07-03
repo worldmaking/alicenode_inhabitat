@@ -32,7 +32,8 @@
         "__functional_base": "cpp",
         "atomic": "cpp",
         "system_error": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "__string": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

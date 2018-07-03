@@ -1804,57 +1804,64 @@ void threads_end() {
 	console.log("ended threads");
 }
 
-// The onReset event is triggered when pressing the "Backspace" key in Alice
 void onReset() {
-
 	threads_end();
 
-	// zero by default:
-	//memset(state, 0, sizeof(State));
-	// invoke constructor on it:
+	// zero then invoke constructor on it:
+	memset(state, 0, sizeof(State)); 
 	state = new(state) State;
+
+	state->reset();
+
+	// start working again:
+	onReloadGPU();
+	threads_begin();
+}
+
+// The onReset event is triggered when pressing the "Backspace" key in Alice
+void State::reset() {
 
 	// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
 	// this effectively defines the bounds of the fluid in the world:
 	// from transform(field2world(glm::vec3(0.)))
 	// to   transform(field2world(glm::vec3(1.)))
-	state->field2world_scale = state->world_max.x - state->world_min.x;
-	state->field2world = glm::scale(glm::vec3(state->field2world_scale));
+	field2world_scale = world_max.x - world_min.x;
+	field2world = glm::scale(glm::vec3(field2world_scale));
 	// how to convert world positions into normalized texture coordinates in the fluid field:
-	state->world2field = glm::inverse(state->field2world);
+	world2field = glm::inverse(field2world);
 
 	//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 		//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
-	state->leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
+	leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
 
 	/// initialize at zero so that the minimap is invisible
-	state->world2minimap = glm::scale(glm::vec3(0.f));
+	world2minimap = glm::scale(glm::vec3(0.f));
 	
-	cameraLoc = state->world_centre;
+	cameraLoc = world_centre;
 
 	//hashspace.reset(world_min, world_max);
-	state->hashspace.reset(glm::vec2(state->world_min.x, state->world_min.z), glm::vec2(state->world_max.x, state->world_max.z));
+	hashspace.reset(glm::vec2(world_min.x, world_min.z), glm::vec2(world_max.x, world_max.z));
 
-	state->fluidpod.reset();
+	fluidpod.reset();
 
 	for (int i=0; i<NUM_OBJECTS; i++) {
-		auto& o = state->objects[i];
-		o.location = state->world_centre+glm::ballRand(10.f);
+		auto& o = objects[i];
+		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::mix(glm::ballRand(1.f)*0.5f+0.5f, glm::vec3(0.3, 0.2, 0.8), 0.5f);
 		o.phase = rnd::uni();
 		o.scale = 1.;
 		o.accel = glm::vec3(0.f);
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto& o = state->segments[i];
-		o.location = state->world_centre+glm::ballRand(10.f);
+		auto& o = segments[i];
+		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::ballRand(1.f)*0.5f+0.5f;
 		o.phase = rnd::uni();
 		o.scale = 2.5;
 	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
-		auto& o = state->particles[i];
-		o.location = state->world_centre+glm::ballRand(10.f);
+		auto& o = particles[i];
+		o.location = world_centre+glm::ballRand(10.f);
 		o.color = glm::vec3(1.f);
 	}
 
@@ -1864,13 +1871,13 @@ void onReset() {
 		glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 		for (size_t y=0;y<dim.y;y++) {
 			for (size_t x=0;x<dim.x;x++) {
-				state->fungus_field.front()[i] = rnd::uni();
-				state->fungus_field.back()[i] = rnd::uni();
+				fungus_field.front()[i] = rnd::uni();
+				fungus_field.back()[i] = rnd::uni();
 			}
 		}
 	}
 
-	state->emission_field.reset();
+	emission_field.reset();
 
 	/*
 		Create the initial landscape:
@@ -1916,12 +1923,12 @@ void onReset() {
 
 				w = glm::max(w - 0.2f, 0.f);
 
-				state->land[i].w = w * 0.3 + 0.01;
+				land[i].w = w * 0.3 + 0.01;
 			}
 		}
 	}
 	{
-		// generate SDF from state->land height:
+		// generate SDF from land height:
 		int i=0;
 		glm::ivec3 dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
 		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
@@ -1932,21 +1939,21 @@ void onReset() {
 					glm::vec3 norm = coord/glm::vec3(dim);
 					
 					int ii = al_field2d_index(dim2, glm::ivec2(x, z));
-					float w = state->land[ ii ].w;
+					float w = land[ ii ].w;
 
-					state->distance[i] = norm.y < w ? -1. : 1.;
-					state->distance_binary[i] = state->distance[i] < 0.f ? 0.f : 1.f;
+					distance[i] = norm.y < w ? -1. : 1.;
+					distance_binary[i] = distance[i] < 0.f ? 0.f : 1.f;
 
 					i++;
 				}
 			}
 		}
-		sdf_from_binary(land_dim, state->distance_binary, state->distance);
-		//sdf_from_binary_deadreckoning(land_dim, state->distance_binary, state->distance);
-		al_field3d_scale(land_dim, state->distance, 1.f/land_dim.x);
+		sdf_from_binary(land_dim, distance_binary, distance);
+		//sdf_from_binary_deadreckoning(land_dim, distance_binary, distance);
+		al_field3d_scale(land_dim, distance, 1.f/land_dim.x);
 	}
 	{
-		// generate state->land normals:
+		// generate land normals:
 		int i=0;
 		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
 		for (size_t y=0;y<dim2.y;y++) {
@@ -1955,12 +1962,12 @@ void onReset() {
 				glm::vec2 norm = coord/glm::vec2(dim2);
 				glm::vec2 snorm = norm*2.f-1.f;
 
-				float w = state->land[i].w;
+				float w = land[i].w;
 
 				glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
 
-				glm::vec3 normal = sdf_field_normal4(land_dim, state->distance, norm3, 1.f/LAND_DIM);
-				state->land[i] = glm::vec4(normal, w);
+				glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm3, 1.f/LAND_DIM);
+				land[i] = glm::vec4(normal, w);
 			}
 		}
 	}
@@ -1968,7 +1975,7 @@ void onReset() {
 	if (1) {
 		int div = sqrt(NUM_DEBUGDOTS);
 		for (int i=0; i<NUM_DEBUGDOTS; i++) {
-			auto& o = state->debugdots[i];
+			auto& o = debugdots[i];
 			
 			float x = (i / div) / float(div);
 			float z = (i % div) / float(div);
@@ -1980,7 +1987,7 @@ void onReset() {
 
 			// get land data at this point:
 			// xyz is normal, w is height
-			glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
+			glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), land, glm::vec2(norm.x, norm.z));
 			
 			// if flatness == 1, land is horizontal. 
 			// if flatness == 0, land is vertical.
@@ -1989,7 +1996,7 @@ void onReset() {
 			flatness = powf(flatness, 2.f);				
 
 			// get land surface coordinate:
-			glm::vec3 land_coord = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z));
+			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
 			
 			// place on land
 			o.location = land_coord;
@@ -1999,10 +2006,6 @@ void onReset() {
 	}
 
 
-
-	onReloadGPU();
-
-	threads_begin();
 }
 
 void test() {

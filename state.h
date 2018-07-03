@@ -224,6 +224,8 @@ struct State {
 	void fluid_update(float dt);
 	void fungus_update(float dt);
 	void sim_update(float dt);
+
+	void reset();
 };
 
 #endif

@@ -25,7 +25,8 @@
         "__bit_reference": "cpp",
         "bitset": "cpp",
         "iterator": "cpp",
-        "map": "cpp"
+        "map": "cpp",
+        "__locale": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

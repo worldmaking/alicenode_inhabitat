@@ -690,7 +690,6 @@ void State::sim_update(float dt) {
 	}
 }
 
-
 void onUnloadGPU() {
 	// free resources:
 	landShader.dest_closing();
@@ -1058,6 +1057,9 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 }
 
 void onFrame(uint32_t width, uint32_t height) {
+
+	Timer timer;
+
 	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
 	float dt = alice.fps.dt;
@@ -1065,323 +1067,270 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
-	// for now, just create two teleport points:0
-	state->debugdots[0].location = transform(state->world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
-	state->debugdots[1].location = transform(state->world2minimap, glm::vec3(4., 1., 13.)); //land_coord
-	state->debugdots[2].location = transform(state->world2minimap, glm::vec3(60., 2., 13.)); //land_coord
-	state->debugdots[2].location = transform(state->world2minimap, glm::vec3(34.5, 17., 33.)); //top of mountain
-	
-	// later, figure out how to place teleport points in viable locations
-	/*
-	int div = sqrt(NUM_DEBUGDOTS);
-	for (int i=0; i<NUM_DEBUGDOTS; i++) {
 
-		auto& o = state->debugdots[i];
-		float x = (i / div) / float(div);
-		float z = (i % div) / float(div);
+	if (0) {	
+		// LEAP & TELEPORTING
 
-		// normalized coordinate (0..1)
-		glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
-		//glm::vec3 norm = transform(world2minimap, o.location);
-
-		// get land data at this point:
-		// xyz is normal, w is height
-		glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
-
-		// if flatness == 1, land is horizontal. 
-		// if flatness == 0, land is vertical.
-		float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
-		// make it more extreme
-		flatness = powf(flatness, 2.f);				
-
-		// get land surface coordinate:
-		glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
+		// for now, just create two teleport points:0
+		state->debugdots[0].location = transform(state->world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
+		state->debugdots[1].location = transform(state->world2minimap, glm::vec3(4., 1., 13.)); //land_coord
+		state->debugdots[2].location = transform(state->world2minimap, glm::vec3(60., 2., 13.)); //land_coord
+		state->debugdots[2].location = transform(state->world2minimap, glm::vec3(34.5, 17., 33.)); //top of mountain
 		
+		// later, figure out how to place teleport points in viable locations
+		/*
+		int div = sqrt(NUM_DEBUGDOTS);
+		for (int i=0; i<NUM_DEBUGDOTS; i++) {
+
+			auto& o = state->debugdots[i];
+			float x = (i / div) / float(div);
+			float z = (i % div) / float(div);
+
+			// normalized coordinate (0..1)
+			glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
+			//glm::vec3 norm = transform(world2minimap, o.location);
+
+			// get land data at this point:
+			// xyz is normal, w is height
+			glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
+
+			// if flatness == 1, land is horizontal. 
+			// if flatness == 0, land is vertical.
+			float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
+			// make it more extreme
+			flatness = powf(flatness, 2.f);				
+
+			// get land surface coordinate:
+			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
+			
+			
+			if (flatness == 1) {
+				// place on land
+				o.location = transform(world2minimap,land_coord);
+				//state->debugdots[1].location = transform(world2minimap, glm::vec3(20., 1., 37.)); //land_coord
+				//state->debugdots[2].location = transform(world2minimap, glm::vec3(4., 1., 13.)); //land_coord
+				o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+			}
+
+			//glm::vec3 handCoor = transform(world2minimap, hand.palmPos);
 		
-		if (flatness == 1) {
-			// place on land
-			o.location = transform(world2minimap,land_coord);
-			//state->debugdots[1].location = transform(world2minimap, glm::vec3(20., 1., 37.)); //land_coord
-			//state->debugdots[2].location = transform(world2minimap, glm::vec3(4., 1., 13.)); //land_coord
-			o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+			
+			//console.log("O: %f %f %f", o.location.x, o.location.y, o.location.z);
+			//console.log("%f %f %f", state->objects[1].location.x, state->objects[1].location.y, state->objects[1].location.z);
+			///console.log("%f %f %f", handCoor.x, handCoor.y, handCoor.z);
+
+				//auto& oo = state->debugdots[3];
+
+				
+
+			//console.log("%f %f %f", o.location.x, o.location.y, o.location.z);
+			//console.log("%f %f %f", hand.palmPos.x, hand.palmPos.y, hand.palmPos.z);
 		}
+		*/
+		if (true && alice.leap->isConnected) {
+			//console.log("leap connected!");
+			// copy bones into debugdots
+			glm::mat4 trans = viewMatInverse * state->leap2view;
 
-		//glm::vec3 handCoor = transform(world2minimap, hand.palmPos);
-	
+			int num_ray_dots = 64;
+			int num_hand_dots = 5*4;
+
+			for (int h=0; h<2; h++) {
 		
-		//console.log("O: %f %f %f", o.location.x, o.location.y, o.location.z);
-		//console.log("%f %f %f", state->objects[1].location.x, state->objects[1].location.y, state->objects[1].location.z);
-		///console.log("%f %f %f", handCoor.x, handCoor.y, handCoor.z);
+				int d = NUM_TELEPORT_POINTS + h * (num_hand_dots + num_ray_dots);
+				auto& hand = alice.leap->hands[h];
+				
+				glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
+				glm::vec3 head2map = mapPos - headPos;
 
-			//auto& oo = state->debugdots[3];
+				glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
+				float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
 
-			
+				float m = 0.005f / dist2map_squared;
 
-		//console.log("%f %f %f", o.location.x, o.location.y, o.location.z);
-		//console.log("%f %f %f", hand.palmPos.x, hand.palmPos.y, hand.palmPos.z);
-	}
-	*/
-	if (true && alice.leap->isConnected) {
-		//console.log("leap connected!");
-		// copy bones into debugdots
-		glm::mat4 trans = viewMatInverse * state->leap2view;
+				state->minimapScale = glm::mix(state->minimapScale, m, dt*3.f);
 
-		int num_ray_dots = 64;
-		int num_hand_dots = 5*4;
-
-		for (int h=0; h<2; h++) {
-	
-			int d = NUM_TELEPORT_POINTS + h * (num_hand_dots + num_ray_dots);
-			auto& hand = alice.leap->hands[h];
-			
-			glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
-			glm::vec3 head2map = mapPos - headPos;
-
-			glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
-			float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
-
-			float m = 0.005f / dist2map_squared;
-
-			state->minimapScale = glm::mix(state->minimapScale, m, dt*3.f);
-
-			glm::vec3 midPoint = (state->world_min + state->world_max)/2.f;
-				midPoint.y = 0;
-			state->world2minimap = 
-					glm::translate(glm::vec3(mapPos)) * 
-					glm::scale(glm::vec3(state->minimapScale)) *
-					glm::translate(-midPoint);
-			
-			if (hand.pinch == 1) {
-				vrLocation = glm::vec3(20., 1., 37.);
-				//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
-				if (hand.palmPos == state->debugdots[1].location) {
+				glm::vec3 midPoint = (state->world_min + state->world_max)/2.f;
+					midPoint.y = 0;
+				state->world2minimap = 
+						glm::translate(glm::vec3(mapPos)) * 
+						glm::scale(glm::vec3(state->minimapScale)) *
+						glm::translate(-midPoint);
+				
+				if (hand.pinch == 1) {
 					vrLocation = glm::vec3(20., 1., 37.);
+					//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
+					if (hand.palmPos == state->debugdots[1].location) {
+						vrLocation = glm::vec3(20., 1., 37.);
+						}
+				} 
+
+				/*
+				if (h == 0) {
+					if (hand.normal.y >= 0.4f) {
+
+					glm::vec3 mapPos = transform(trans, hand.palmPos);
+					//console.log("hand normal");
+					glm::vec3 midPoint = (world_min + world_max)/2.f;
+					midPoint.y = 0;
+
+					world2minimap = 
+						glm::translate(glm::vec3(mapPos)) * 
+						glm::scale(glm::vec3(minimapScale)) *
+						glm::translate(-midPoint) *
+						glm::mat4(1.0f);
+						console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
+
+					} else {
+						//console.log("No hand normal");
+						//world2minimap = glm::scale(glm::vec3(0.f));
 					}
-			} 
 
+				}*/
 
-			//if (dist2map_squared < 0.4f) {
-				//Show spots you can move to
-				
-				
+				//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
+				float cf = fmod(hand.id / 6.f, 1.f);
+				glm::vec3 col = glm::vec3(cf, 1.-cf, h);
+				if (!hand.isVisible) {
+					col = glm::vec3(0.2);
+				};
 
-				
-			//}
+				for (int f=0; f<5; f++) {
+					auto& finger = hand.fingers[f];
+					for (int b=0; b<4; b++) {
+						auto& bone = finger.bones[b];
+						
+						if (hand.isVisible) state->debugdots[d].location = transform(trans, bone.center);
+						state->debugdots[d].color = col;
 
-				
-
-
-			
-
-			/*
-			if (h == 0) {
-				if (hand.normal.y >= 0.4f) {
-
-				glm::vec3 mapPos = transform(trans, hand.palmPos);
-				//console.log("hand normal");
-				glm::vec3 midPoint = (world_min + world_max)/2.f;
-				midPoint.y = 0;
-
-				world2minimap = 
-					glm::translate(glm::vec3(mapPos)) * 
-					glm::scale(glm::vec3(minimapScale)) *
-					glm::translate(-midPoint) *
-					glm::mat4(1.0f);
-					console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
-
-				} else {
-					//console.log("No hand normal");
-					//world2minimap = glm::scale(glm::vec3(0.f));
+						d++;
+					}
 				}
 
-			}*/
+				//get hand position and direction and cast ray forward until it hits land
+				glm::vec3 handPos = hand.palmPos;
+				glm::vec3 handDir = hand.direction;
 
-			//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
-			float cf = fmod(hand.id / 6.f, 1.f);
-			glm::vec3 col = glm::vec3(cf, 1.-cf, h);
-			if (!hand.isVisible) {
-				col = glm::vec3(0.2);
-			};
+				//glm::vec3 handNormall = glm::vec3(0.,1.,0.);
 
-			for (int f=0; f<5; f++) {
-				auto& finger = hand.fingers[f];
-				for (int b=0; b<4; b++) {
-					auto& bone = finger.bones[b];
-					
-					if (hand.isVisible) state->debugdots[d].location = transform(trans, bone.center);
-					state->debugdots[d].color = col;
+				// these are in 'leap' space, need to convert to world space
+				handPos = transform(trans, handPos);
+				handDir = transform(trans, handDir);
+
+				auto a = hand.fingers[3].bones[0].center;
+				auto b = hand.fingers[3].bones[1].center;
+
+				a = transform(trans, a);
+				b = transform(trans, b);
+
+
+				handDir = glm::normalize(b - a);
+				//handDir = safe_normalize(glm::mix(handDir, glm::vec3(0,1,0), 0.25));
+				handPos = a;
+
+				auto rotaxis = safe_normalize(glm::cross(handDir, glm::vec3(0, 1, 0)));
+				auto warp = glm::rotate(-0.1f, rotaxis);
+
+				glm::vec3 p = a;
+
+				/*
+				for (int i=0; i<num_ray_dots; i++) {
+					glm::vec3 loc = state->debugdots[d].location;
+					//loc = p;
+					if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
+					p = loc;
+
+					//handDir = safe_normalize(transform(warp, handDir));
+					handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
+
+					auto norm = transform(world2field, p);
+					float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
+
+					// distance in world coordinates:
+					//float dist_w = field2world_scale * dist;
+
+					p = p + 0.01f * handDir;
+
+					float c = 0.01;
+					c = c / (c + dist);
+					state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
+					if (dist <= 0) break;
 
 					d++;
 				}
+				*/
 			}
-
-			//get hand position and direction and cast ray forward until it hits land
-			glm::vec3 handPos = hand.palmPos;
-			glm::vec3 handDir = hand.direction;
-
-			//glm::vec3 handNormall = glm::vec3(0.,1.,0.);
-
-			// these are in 'leap' space, need to convert to world space
-			handPos = transform(trans, handPos);
-			handDir = transform(trans, handDir);
-
-			auto a = hand.fingers[3].bones[0].center;
-			auto b = hand.fingers[3].bones[1].center;
-
-			a = transform(trans, a);
-			b = transform(trans, b);
-
-
-			handDir = glm::normalize(b - a);
-			//handDir = safe_normalize(glm::mix(handDir, glm::vec3(0,1,0), 0.25));
-			handPos = a;
-
-			auto rotaxis = safe_normalize(glm::cross(handDir, glm::vec3(0, 1, 0)));
-			auto warp = glm::rotate(-0.1f, rotaxis);
-
-			glm::vec3 p = a;
-
-			/*
-			for (int i=0; i<num_ray_dots; i++) {
-				glm::vec3 loc = state->debugdots[d].location;
-				//loc = p;
-				if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
-				p = loc;
-
-				//handDir = safe_normalize(transform(warp, handDir));
-				handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
-
-				auto norm = transform(world2field, p);
-				float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
-
-				// distance in world coordinates:
-				//float dist_w = field2world_scale * dist;
-
-				p = p + 0.01f * handDir;
-
-				float c = 0.01;
-				c = c / (c + dist);
-				state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
-				if (dist <= 0) break;
-
-				d++;
-			}
-			*/
 		}
+		console.log("leap %f", timer.measure());
 	}
 
-
+	// animation
 	if (alice.isSimulating && isRunning) {
-		// keep the simulation in here to absolute minimum
+		// keep the computation in here to absolute minimum
 		// since it detracts from frame rate
-		// here we should only be extrapolating visible features
-		// such as location (and maybe also orientation?)
+		// here we should only be extrapolating raw visible features
+		// such as location, orientation
+		// that would otherwise look jerky when animated from the simulation thread
 
-		if (1) {
+		for (int i=0; i<NUM_PARTICLES; i++) {
+			Particle &o = state->particles[i];
+			o.location = o.location + o.velocity * dt;
+			o.location = wrap(o.location, state->world_min, state->world_max);
+		}
+	
+		for (int i=0; i<NUM_OBJECTS; i++) {
+			auto &o = state->objects[i];
+			// TODO: dt-ify this:	
+			
+			o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
 
-			for (int i=0; i<NUM_PARTICLES; i++) {
-				Particle &o = state->particles[i];
-				o.location = o.location + o.velocity * dt;
-				o.location = wrap(o.location, state->world_min, state->world_max);
+			// get norm'd coordinate:
+			glm::vec3 norm = transform(state->world2field, o.location);
+			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+
+			
+			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, norm2);
+			o.location = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z));
+
+			//glm::vec3 land_normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
+			glm::vec3 land_normal = glm::vec3(landpt);
+
+			// apply change of orientation here too
+			// slerping by dt is a close approximation to rotation in radians per second
+			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
+
+			// re-align the creature to the surface normal:
+			{
+				// re-orient relative to ground:
+				float creature_land_orient_factor = 1.f;//0.25f;
+				o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
 			}
-		
-			for (int i=0; i<NUM_OBJECTS; i++) {
-				auto &o = state->objects[i];
-				// TODO: dt-ify this:	
-				
+
+			o.phase += dt;
+		}
+
+		for (int i=0; i<NUM_SEGMENTS; i++) {
+			auto &o = state->segments[i];
+			if (i % PREDATOR_SEGMENTS_EACH == 0) {
+				// a root;
+				// TODO: dt-ify
+				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
 				o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
-
-				// get norm'd coordinate:
-				glm::vec3 norm = transform(state->world2field, o.location);
-				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
-
-				
-				auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, norm2);
-				o.location = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z));
-
-				//glm::vec3 land_normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
-				glm::vec3 land_normal = glm::vec3(landpt);
-
-				// apply change of orientation here too
-				// slerping by dt is a close approximation to rotation in radians per second
-				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
-
-				// re-align the creature to the surface normal:
-				{
-					// re-orient relative to ground:
-					float creature_land_orient_factor = 1.f;//0.25f;
-					o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
-				}
-
 				o.phase += dt;
-			}
-
-			for (int i=0; i<NUM_SEGMENTS; i++) {
-				auto &o = state->segments[i];
-				if (i % PREDATOR_SEGMENTS_EACH == 0) {
-					// a root;
-					// TODO: dt-ify
-					o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-					o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
-					o.phase += dt;
-				} else {
-					auto& p = state->segments[i-1];
-					o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
-					glm::vec3 uz = quat_uz(p.orientation);
-					o.location = p.location + uz*o.scale;
-					o.phase = p.phase + 0.1f;
-					//o.phase += dt;
-				}
-			}
-
-			//change mode to have object[0], segement[0], or nothing in focus
-			//float oScale = state->objects[0].scale;
-			//console.log("%f", oScale);
-
-
-			int speciesCount = 6;
-			speciesCount++;
-			if(debugMode % speciesCount == 1){
-				state->objects[0].location = state->world_centre;
-				state->objects[0].scale = 2.0;
-				state->segments[0].scale = 2.5;
-				//console.log("Creature 1");
-			}else if(debugMode % speciesCount == 2){
-				state->objects[1].location = state->world_centre;
-				state->objects[1].scale = 2.0;
-				state->objects[0].scale = 1.0;
-				state->segments[0].scale = 2.5;
-				//console.log("Creature 2");
-			}else if(debugMode % speciesCount == 3){
-				state->objects[2].location = state->world_centre;
-				state->objects[2].scale = 2.0;
-				state->objects[1].scale = 1.0;
-				state->segments[0].scale = 2.5;
-				//console.log("Creature 3");
-			}else if(debugMode % speciesCount == 4){
-				state->objects[3].location = state->world_centre;
-				state->objects[3].scale = 2.0;
-				state->objects[2].scale = 1.0;
-				state->segments[0].scale = 2.5;
-				//console.log("Creature 4");
-			}else if(debugMode % speciesCount == 5){
-				state->objects[4].location = state->world_centre;
-				state->objects[4].scale = 2.0;
-				state->objects[3].scale = 1.0;
-				state->segments[0].scale = 2.5;
-				//console.log("Creature 5");
-			}else if(debugMode % speciesCount == 6){
-				state->segments[0].location = state->world_centre;
-				state->segments[0].scale = 5.0;
-				state->objects[4].scale = 1.0;
-				state->objects[0].scale = 1.0;
-			}else{
-				state->segments[0].scale = 2.5;
-				state->objects[0].scale = 1.0;
+			} else {
+				auto& p = state->segments[i-1];
+				o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
+				glm::vec3 uz = quat_uz(p.orientation);
+				o.location = p.location + uz*o.scale;
+				o.phase = p.phase + 0.1f;
+				//o.phase += dt;
 			}
 		}
-		
+		console.log("animation %f", timer.measure());
+	}
 
+	// upload data to GPU:
+	if (alice.isSimulating && isRunning) {
 		// upload VBO data to GPU:
 		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
@@ -1404,12 +1353,12 @@ void onFrame(uint32_t width, uint32_t height) {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, 
 			GL_UNSIGNED_BYTE, image.color);
 		//}
+		console.log("gpu upload %f", timer.measure());
 	}
 
-	
+	// render the projectors:
 	for (int i=0; i<2; i++) {
 		SimpleFBO& fbo = projFBOs[i];
-
 
 		// move K-world points to inhabitat-world points:
 		//kinect0.cloudTransform
@@ -1483,7 +1432,9 @@ void onFrame(uint32_t width, uint32_t height) {
 		draw_gbuffer(fbo, gBufferProj, glm::vec2(1.f), glm::vec2(0.f));
 		glDisable(GL_SCISSOR_TEST);
 	}
+	console.log("render projectors %f", timer.measure());
 	
+	// render the VR viewpoint:
 	Hmd& vive = *alice.hmd;
 	SimpleFBO& fbo = vive.fbo;
 	if (width && height) {
@@ -1661,9 +1612,11 @@ void onFrame(uint32_t width, uint32_t height) {
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
+	console.log("render main %f", timer.measure());
 		
 	alice.hmd->submit();
 	glFlush(); glFinish();
+	console.log("hmd submit %f", timer.measure());
 
 
 	glViewport(0, 0, width, height);
@@ -1683,6 +1636,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
 	}
+	console.log("show onscreen %f", timer.measure());
 }
 
 
@@ -2068,7 +2022,6 @@ extern "C" {
 		console.log("sim state %p should be size %d", state, sizeof(State));
 		//state_initialize();
 		console.log("onload state initialized");
-
 
 		onReset();
 		

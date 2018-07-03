@@ -26,7 +26,13 @@
         "bitset": "cpp",
         "iterator": "cpp",
         "map": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "memory": "cpp",
+        "type_traits": "cpp",
+        "__functional_base": "cpp",
+        "atomic": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

@@ -8,6 +8,7 @@ in vec3 ray_direction, ray_origin, eyepos;
 in vec3 vertexpos;
 in float phase;
 in vec3 basecolor;
+in vec4 params;
 in vec3 flow;
 flat in int id;
 

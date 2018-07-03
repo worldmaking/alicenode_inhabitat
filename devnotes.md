@@ -1,9 +1,16 @@
+# TODO list
+
 # Korea notes
 
 Since VR needs 90fps while the projections only need 30fps, why not interleave their FBO updates?
 
+The object.frag shader was way too expensive. To do multiple species need to use the same code with different parameters. And maybe skip hair for now.
 
+Need to decide on a reasonable world and gallery scale. 
 
+While hashspace query seems to work, it also seems to be expensive, and potentially biased. 
+I wonder if we can treat it differently, by collating a list of 'near links' in one pass, then iterating over these links to enact their effects?
+Have a look at CoS, which I think did something similar
 
 
 # better frame rates
@@ -25,12 +32,6 @@ To what extent can this be helped by interleaving sim & render, so that while th
 
 Q: can GPU upload happen on a different thread? There are some GL features that allow this (kind of like mmap)
 
-
-# refactoring
-
-Annoying to put state-> everywhere; can avoid this by putting the sim methods into the State struct
-
-Problem is that there must still be some state that is 
 
 
 

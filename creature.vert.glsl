@@ -10,6 +10,7 @@ layout (location = 3) in vec4 iOrientation;
 layout (location = 4) in float iScale;
 layout (location = 5) in float iPhase;
 layout (location = 6) in vec3 iColor;
+layout (location = 7) in vec4 iParams;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
@@ -21,6 +22,7 @@ out vec3 vertexpos;
 // other parameters:
 out float phase;
 out vec3 basecolor;
+out vec4 params;
 out vec3 flow;
 flat out int id;
 
@@ -65,6 +67,7 @@ void main() {
 	world_orientation = iOrientation;
 	phase = iPhase;
 	basecolor = iColor;
+	params = iParams;
 	id = gl_InstanceID;
 
 	// converting vertex into world space:

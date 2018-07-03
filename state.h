@@ -18,14 +18,16 @@ namespace glm {
 #endif
 
 #define NUM_PREDATORS 124
-#define NUM_CREATURES NUM_PREDATORS
 
 #define PREDATOR_SEGMENTS_EACH 1
 #define NUM_SEGMENTS (NUM_PREDATORS*PREDATOR_SEGMENTS_EACH)
 
-#define NUM_OBJECTS	32
-#define NUM_PARTICLES 1024*256
+#define NUM_OBJECTS	512
 
+#define NUM_CREATURES NUM_OBJECTS
+#define NUM_CREATURE_PARTS NUM_CREATURES
+
+#define NUM_PARTICLES 1024*256
 #define NUM_DEBUGDOTS 2*5*4
 //2*5*4
 
@@ -122,10 +124,12 @@ struct Object {
 	glm::vec3 location;
 	float scale;
 	glm::quat orientation;
-	float phase;
-	glm::vec3 velocity;
 	glm::vec3 color;
+	float phase;
+	glm::vec4 params;
 	
+	// non-render:
+	glm::vec3 velocity;
 	glm::quat rot_vel;
 	glm::vec3 accel;
 };
@@ -137,6 +141,15 @@ struct Segment {
 	float phase;
 	glm::vec3 velocity;
 	glm::vec3 color;
+};
+
+struct CreaturePart {
+	glm::vec3 location;
+	float scale;
+	glm::quat orientation;
+	glm::vec3 color;
+	float phase;
+	glm::vec4 params;
 };
 
 struct Particle {
@@ -158,13 +171,14 @@ struct State {
 	
 	// for simulation:
 	Object objects[NUM_OBJECTS];
+	Segment segments[NUM_SEGMENTS];
 
 	// for rendering:
 	Particle particles[NUM_PARTICLES];
-	Segment segments[NUM_SEGMENTS];
+	CreaturePart creatureparts[NUM_CREATURE_PARTS];
 	DebugDot debugdots[NUM_DEBUGDOTS];
 
-	Hashspace2D<NUM_OBJECTS> hashspace;
+	Hashspace2D<NUM_OBJECTS, 6> hashspace;
 
 	// the emission field is currently being used to store emissive light (as a form of smell)
 	Field2DPod<FUNGUS_DIM, glm::vec3> emission_field;
@@ -219,7 +233,7 @@ struct State {
 	float emission_scale = 0.5;
 
 	float particleSize = 0.005;
-	float creature_fluid_push = 0.75f;
+	float creature_fluid_push = 0.25f;
 
 	// main thread:
 	void animate(float dt);

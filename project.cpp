@@ -274,14 +274,16 @@ EBO tableEBO;
 unsigned int table_elements;
 
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
-VAO objectVAO;
-VBO objectInstancesVBO(sizeof(State::objects));
+VAO creatureVAO;
+VBO creaturePartsVBO(sizeof(State::creatureparts));
 VAO segmentVAO;
 VBO segmentInstancesVBO(sizeof(State::segments));
 VAO particlesVAO;
 VBO particlesVBO(sizeof(State::particles));
 VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
+
+int rendercreaturecount = 0;
 
 #define NUM_PROJECTORS 3
 Projector projectors[NUM_PROJECTORS];
@@ -312,7 +314,7 @@ glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 0;
+int soloView = 2;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -582,132 +584,131 @@ void State::sim_update(float dt) {
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = objects[i];
 
-		// get norm'd coordinate:
-		glm::vec3 norm = transform(world2field, o.location);
-		// get a normal for the land:
-		glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
-		// 0..1 factors:
-		//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
-		float flatness = fabsf(land_normal.y);
-		float steepness = 1.f-flatness;
-		// a direction along which the ground is horizontal (contour)
-		//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
-		glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
-
-		// get my distance from the ground:
-		float sdist; // creature's distance above the ground (or negative if below)
-		al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
-
-		float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), glm::vec2(norm.x, norm.z));
-
-		// get fluid flow:
-		//glm::vec3 flow;
-		//fluid.velocities.front().readnorm(norm, &flow.x);
-		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
-		// convert to meters per second:
-		// (why is this needed? shouldn't it be m/s already?)
-		flow *= idt;
-		
-		// get orientation:
-		glm::quat& oq = o.orientation;
-		
-		// derive from orientation:
-		glm::vec3 up = quat_uy(oq);
-		glm::vec3 uf = quat_uf(oq);
-
-		// get neighbours:
-		// maximum number of agents a spatial query can return
-		const int NEIGHBOURS_MAX = 12;
-		// see who's around:
-		std::vector<int32_t> neighbours;
-		float agent_range_of_view = o.scale * 8.;
-		float field_of_view = 0.; // in -1..1
-		int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(o.location.x, o.location.z), i, agent_range_of_view);
-		//if (nres) console.log("near %d %d", i, nres);
-
-		glm::vec3 avoid;
-		for (int j=0; j<nres; j++) {
-			auto& n = objects[j];
-
-			// get relative vector from a to n:
-			glm::vec3 rel = n.location - o.location;
-			float cdistance = glm::length(rel);
-		
-			// get distance between bodies (never be negative)
-			float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
-			
-			// skip if not in my field of view
-			float similarity = glm::dot(quat_uf(o.orientation), glm::normalize(rel));
-			if (similarity < field_of_view) continue;
-
-			// if too close, avoid:
-			float agent_personal_space = o.scale * 1.;
-			if (distance < agent_personal_space) {
-				// add an avoidance force:
-				float mag = 1. - (distance / agent_personal_space);
-				float avoid_factor = -0.5;
-				avoid += rel * (mag * avoid_factor);
-			}
-
-			/*
-			// accumulate avoidances:
-			// base this on where we are going to be next:
-			glm::vec3 future_rel = n.pos - a.pos + ((n.vel - a.vel) * agent_lookahead_frames);
-			float future_distance = glm::max(glm::length(future_rel) - a.size - n.size, 0.f);
-			// if likely to collide:
-			if (future_distance < agent_personal_space) {
-				// add an avoidance force:
-				float mag = 1. - (future_distance / agent_personal_space);
-				glm::vec3 avoid += future_rel * -mag;
-			}
-			*/
-
-
-		}
-
-		// wander means changing orientation around the creature's up axis
 		{
-			float range = M_PI * steepness * M_PI;
-			glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
-			float wander_factor = 0.5f;
-			o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
-		}
+			// TODO: alive state checking etc.
+			// if alive:
+			//a.health -= predator_lifespan_decay;
 
-		// go slower when moving uphill? 
-		// positive value means going uphill, range is -1 to 1
-		//float downhill = glm::dot(uf, glm::vec3(0.f,1.f,0.f)); 
-		float uphill = uf.y;  
-		float downhill = -uphill;
+			// get norm'd coordinate:
+			glm::vec3 norm = transform(world2field, o.location);
+			// get a normal for the land:
+			glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
 
+			// re-orient relative to ground:
+			// this happens in main thread, no need here
+			//o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
+				
+			// 0..1 factors:
+			//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
+			float flatness = fabsf(land_normal.y);
+			float steepness = 1.f-flatness;
+			// a direction along which the ground is horizontal (contour)
+			//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
+			glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
 
-		float gravity = 2.0f;
-		o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
-		if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
-			// jump!
-			float jump = rnd::uni();
-			o.accel.y = jump * gravity * 2.f * o.scale;
-
-			// this is a good time to also emit a pulse:
-			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, o.color * emission_scale * jump);
-		}
-
-		// set my velocity, in meters per second:
-		// float speed = 2.f * o.scale * (1. + downhill*0.5f);
-		// o.vel = speed * (uf + avoid);
-		o.velocity = avoid + flow + o.accel*dt;
-		
-		// wander:
-		o.orientation = safe_normalize(glm::slerp(o.orientation, quat_random() * o.orientation, 0.025f));
-
-		// get a normal for the land:
-		glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
-		// re-orient relative to ground:
-		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
+			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), glm::vec2(norm.x, norm.z));
 			
-		// add my direction to the fluid current
-		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-		//fluid.velocities.front().addnorm(norm, &push.x);
-		al_field3d_addnorm_interp(field_dim, fluidpod.velocities.front(), norm, push);
+			// get my distance from the ground:
+			float sdist; // creature's distance above the ground (or negative if below)
+			al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+
+			// get fluid flow:
+			//glm::vec3 flow;
+			//fluid.velocities.front().readnorm(norm, &flow.x);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
+			// convert to meters per second:
+			// (why is this needed? shouldn't it be m/s already?)
+			flow *= idt;
+
+
+			// get orientation:
+			glm::quat& oq = o.orientation;
+			
+			// derive from orientation:
+			glm::vec3 up = quat_uy(oq);
+			glm::vec3 uf = quat_uf(oq);
+			// go slower when moving uphill? 
+			// positive value means going uphill, range is -1 to 1
+			//float downhill = glm::dot(uf, glm::vec3(0.f,1.f,0.f)); 
+			float uphill = uf.y;  
+			float downhill = -uphill;
+
+			// wander means changing orientation around the creature's up axis
+			if (1) {
+				float range = M_PI * steepness * M_PI;
+				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+				float wander_factor = 0.5f;
+				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+			}
+
+			// maximum number of agents a spatial query can return
+			const int NEIGHBOURS_MAX = 8;
+			// see who's around:
+			std::vector<int32_t> neighbours;
+			float agent_range_of_view = o.scale * 3.;
+			float field_of_view = 0.; // in -1..1
+			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(o.location.x, o.location.z), i, agent_range_of_view, 0.f);
+
+			glm::vec3 avoid;
+			for (auto j : neighbours) {
+				auto& n = objects[j];
+
+				// get relative vector from a to n:
+				glm::vec3 rel = n.location - o.location;
+				float cdistance = glm::length(rel);
+			
+				// get distance between bodies (never be negative)
+				float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
+				
+				// if too close, avoid:
+				float agent_personal_space = o.scale * 1.;
+				if (distance < agent_personal_space) {
+					// add an avoidance force:
+					float mag = 1. - (distance / agent_personal_space);
+					float avoid_factor = -0.5;
+					avoid += rel * (mag * avoid_factor);
+				}
+
+				// skip if not in my field of view
+				float similarity = glm::dot(quat_uf(o.orientation), glm::normalize(rel));
+				if (similarity < field_of_view) continue;
+
+				/*
+				// accumulate avoidances:
+				// base this on where we are going to be next:
+				glm::vec3 future_rel = n.pos - a.pos + ((n.vel - a.vel) * agent_lookahead_frames);
+				float future_distance = glm::max(glm::length(future_rel) - a.size - n.size, 0.f);
+				// if likely to collide:
+				if (future_distance < agent_personal_space) {
+					// add an avoidance force:
+					float mag = 1. - (future_distance / agent_personal_space);
+					glm::vec3 avoid += future_rel * -mag;
+				}
+				*/
+			}
+
+			float gravity = 2.0f;
+			o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
+			if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
+				// jump!
+				float jump = rnd::uni();
+				o.accel.y = jump * gravity * 2.f * o.scale;
+
+				// this is a good time to also emit a pulse:
+				al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, o.color * emission_scale * jump);
+			}
+
+			// set my velocity, in meters per second:
+			float speed = 2.f * o.scale * (1. + downhill*0.5f);
+			o.velocity = speed * glm::normalize(uf + avoid);
+			//o.velocity = avoid + flow + o.accel*dt;
+			
+			// add my direction to the fluid current
+			//glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
+			glm::vec3 push = o.velocity * (creature_fluid_push * (float)dt);
+			//fluid.velocities.front().addnorm(norm, &push.x);
+			al_field3d_addnorm_interp(field_dim, fluidpod.velocities.front(), norm, push);
+		}
 	}
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -779,8 +780,8 @@ void onUnloadGPU() {
 
 	quadMesh.dest_closing();
 	cubeVBO.dest_closing();
-	objectInstancesVBO.dest_closing();
-	objectVAO.dest_closing();
+	creaturePartsVBO.dest_closing();
+	creatureVAO.dest_closing();
 	segmentInstancesVBO.dest_closing();
 	segmentVAO.dest_closing();
 	particlesVAO.dest_closing();
@@ -890,15 +891,16 @@ void onReloadGPU() {
 	gridVAO.attr(1, &Vertex::normal);
 	gridVAO.attr(2, &Vertex::texcoord);
 
-	objectVAO.bind();
+	creatureVAO.bind();
 	cubeVBO.bind();
-	objectVAO.attr(0, 3, GL_FLOAT, sizeof(glm::vec3), 0);
-	objectInstancesVBO.bind();
-	objectVAO.attr(2, &Object::location, true);
-	objectVAO.attr(3, &Object::orientation, true);
-	objectVAO.attr(4, &Object::scale, true);
-	objectVAO.attr(5, &Object::phase, true);
-	objectVAO.attr(6, &Object::color, true);
+	creatureVAO.attr(0, 3, GL_FLOAT, sizeof(glm::vec3), 0);
+	creaturePartsVBO.bind();
+	creatureVAO.attr(2, &CreaturePart::location, true);
+	creatureVAO.attr(3, &CreaturePart::orientation, true);
+	creatureVAO.attr(4, &CreaturePart::scale, true);
+	creatureVAO.attr(5, &CreaturePart::phase, true);
+	creatureVAO.attr(6, &CreaturePart::color, true);
+	creatureVAO.attr(7, &CreaturePart::params, true);
 		
 	segmentVAO.bind();
 	cubeVBO.bind();
@@ -1030,7 +1032,7 @@ void draw_scene(int width, int height) {
 			creatureShader.uniform("uFluidTex", 7);
 			creatureShader.uniform("uFluidMatrix", state->world2field);
 		}
-		objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
+		creatureVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), rendercreaturecount);
 	}
 
 	if (enablers[SHOW_SEGMENTS]) {
@@ -1153,6 +1155,9 @@ void State::animate(float dt) {
 	// such as location, orientation
 	// that would otherwise look jerky when animated from the simulation thread
 
+	// reset how many creature parts we will render:
+	rendercreaturecount = 0;
+
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = particles[i];
 		o.location = o.location + o.velocity * dt;
@@ -1161,33 +1166,45 @@ void State::animate(float dt) {
 
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto &o = objects[i];
-		// TODO: dt-ify this:	
 		
-		o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+		// update location
+		glm::vec3 p1 = wrap(o.location + o.velocity * dt, world_min, world_max);
 
 		// get norm'd coordinate:
-		glm::vec3 norm = transform(world2field, o.location);
+		glm::vec3 norm = transform(world2field, p1);
 		glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 
-		
+		// stick to land surface:
 		auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), land, norm2);
-		o.location = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+		p1 = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
 
-		//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
-		glm::vec3 land_normal = glm::vec3(landpt);
-
+		float distance = glm::length(p1 - o.location);
+		o.location = p1;
+		
 		// apply change of orientation here too
 		// slerping by dt is a close approximation to rotation in radians per second
 		o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
 
 		// re-align the creature to the surface normal:
+		//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
+		glm::vec3 land_normal = glm::vec3(landpt);
 		{
 			// re-orient relative to ground:
 			float creature_land_orient_factor = 1.f;//0.25f;
 			o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
 		}
 
-		o.phase += dt;
+		o.phase += distance;
+
+		// copy data into the creatureparts:
+		CreaturePart& part = creatureparts[rendercreaturecount];
+		part.location = o.location;
+		part.scale = o.scale;
+		part.orientation = o.orientation;
+		part.color = o.color;
+		part.phase = o.phase;
+		part.params = o.params;
+		rendercreaturecount++;
 	}
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -1444,7 +1461,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	// upload data to GPU:
 	if (alice.isSimulating && isRunning) {
 		// upload VBO data to GPU:
-		objectInstancesVBO.submit(&state->objects[0], sizeof(state->objects));
+		creaturePartsVBO.submit(&state->creatureparts[0], sizeof(state->creatureparts));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
 		particlesVBO.submit(&state->particles[0], sizeof(state->particles));
 		debugVBO.submit(&state->debugdots[0], sizeof(state->debugdots));
@@ -1932,6 +1949,7 @@ void State::reset() {
 		o.phase = rnd::uni();
 		o.scale = 1.;
 		o.accel = glm::vec3(0.f);
+		o.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
 	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto& o = segments[i];
@@ -2178,7 +2196,7 @@ extern "C" {
 		
 		
 
-		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;

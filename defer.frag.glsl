@@ -172,7 +172,7 @@ void main() {
 
 	// base viz:
 	color.rgb = basecolor.xyz;
-
+	color.rg = vec2(color.b);
 	
 
 	// uv grid viz:
@@ -189,6 +189,7 @@ void main() {
 
 	// pos viz:
 	//color.rgb = position.xyz;
+	//color.rgb = (position.xyz - 40.)/40.;
 	//color.rgb = mod(position.xyz * vec3(1.), 1.);
 	
 	// viewspace:
@@ -226,7 +227,7 @@ void main() {
 
 	//color.rgb = vec3(vec2(mod(dist * 16., 1.)), mod(position.x, 1.));
 
-	color += normal*0.25;
+	color += normal*0.125;
 	
 	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 	FragColor.rgb = color;	

@@ -1,10 +1,11 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
 
-in vec3 ray_direction, ray_origin, eyepos;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
+in vec3 ray_direction, ray_origin, eyepos;
+in vec3 vertexpos;
 in float phase;
 in vec3 basecolor;
 in vec3 flow;
@@ -864,21 +865,7 @@ vec3 fScene_tex_z(vec3 p) {
 
 	//return vec3(d.xy, d.z * scl);
 	vec3 baseGeo;
-	/*
-	switch(species){
-		case 0.0: {
-			baseGeo = d;
-		}break;
-		case 1.0: {
-			baseGeo = f;
-		}break;
-		case 2.0: {
-			baseGeo = j;
-		}break;
-
-	}//*/
-	//int speciesInt = int(species);
-
+	
 	if(species == 0){
 		baseGeo = d;
 	}else if (species <= 1){
@@ -890,13 +877,13 @@ vec3 fScene_tex_z(vec3 p) {
 	}else if (species <= 4){
 		baseGeo = wingFinal;
 	}else{
-		//baseGeo = d;
+		baseGeo = d;
 	}
-
-	//baseGeo = test;//testFinal;
-
-	//return vec3(baseGeo.xy, baseGeo.z * scl);
-	
+	vec3 baseGeometry = baseGeo;
+    
+	if(species == 2 || species == 1) {
+		return vec3(baseGeometry.xy, baseGeometry.z * scl);
+	}
 
 	//making grass/hair on the creature
 	//--------------------------------------------------
@@ -919,8 +906,7 @@ vec3 fScene_tex_z(vec3 p) {
 	const mat2 rot9 = mat2(0.62160996827,0.78332690962,-0.78332690962,0.62160996827);
 	const mat2 rot10 = mat2(0.54030230586,0.8414709848,-0.8414709848,0.54030230586);
 
-	vec3 baseGeometry = baseGeo;
-    vec3 normP = normalize(p);
+	vec3 normP = normalize(p);
 	float angleP = acos(normP.y);
 
 	p = pRotXZ(p, angleP);
@@ -969,8 +955,8 @@ vec3 fScene_tex_z(vec3 p) {
 
 	float gg = smin(g, baseGeometry.z, 0.01);
 	//return vec3(min(g, baseGeometry.x), id, h);
-	if(species == 2 || species == 1) return vec3(baseGeometry.xy, baseGeometry.z * scl);
-	else return vec3(baseGeometry.xy, gg * scl);
+	
+	return vec3(baseGeometry.xy, gg * scl);
 	//*/
 	
 }
@@ -1079,9 +1065,8 @@ void main() {
 		//FragColor.xy = -pn.zy*0.5+0.5;
 		d_tex.xy = -pn.zy*0.5+0.5;
 		//d_tex.y = (acos(sin(50*d_tex.y + 1.5)) * 0.05);
-		FragColor.rgb = vec3(d_tex.x, d_tex.y, (species) / 6.);
-		//FragColor.rgb = vec3((species) / 6.);
-		//FragColor.rgb = vec3(acos(sin(d_tex.x)) * 0.5, d_tex.y, 0.5);
+		FragColor.rgb = vec3(d_tex.x, d_tex.y, cheap_self_occlusion);
+		//FragColor.b = species / 6.;
 
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .0015 * world_distance));
 		
@@ -1095,8 +1080,7 @@ void main() {
 	} else {
 		// too many ray steps
 
-		FragColor.rb = vec2(1.);
-		
+		//FragColor.rb = vec2(1.);
 		//FragNormal.xyz = rd;
 		//FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
 		discard;

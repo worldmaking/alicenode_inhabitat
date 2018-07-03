@@ -22,7 +22,7 @@ out vec3 vertexpos;
 out float phase;
 out vec3 basecolor;
 out vec3 flow;
-flat out int species;
+flat out int id;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
@@ -65,9 +65,7 @@ void main() {
 	world_orientation = iOrientation;
 	phase = iPhase;
 	basecolor = iColor;
-
-	int id = gl_InstanceID;
-	species = id % 5;
+	id = gl_InstanceID;
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;

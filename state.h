@@ -220,12 +220,15 @@ struct State {
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.75f;
+
+	// main thread:
+	void animate(float dt);
+	void reset();
 	
+	// background threads:
 	void fluid_update(float dt);
 	void fungus_update(float dt);
 	void sim_update(float dt);
-
-	void reset();
 };
 
 #endif

@@ -1,18 +1,22 @@
-# multiple windows
+# Korea notes
 
-alice should have a window manager, that has a list of windows
+Since VR needs 90fps while the projections only need 30fps, why not interleave their FBO updates?
 
-glfw can share contexts, which is good, but VAO and FBO objects can't be shared; they would need to be created on each context.
 
-all of this could be avoided if we can create a mosaic desktop via Nvidia perhaps?
+
+
 
 # better frame rates
 
 was unable to maintain 90fps for Rift on main thread
 
-TODO: find out what are the bottlenecksg
+TODO: find out what are the bottlenecks
 
-Q: if this is primarily limited by the main-thread sim:
+A: the biggest one was the object shader, no surprise. Need to find a cheaper routine that can generate all species from the same code path.
+
+Q: if this is primarily limited by the main-thread sim?
+A: actually it isn't, the animation is pretty cheap.
+
 
 To what extent can this be helped by interleaving sim & render, so that while the current frame is drawing, the next frame's data is being prepared:
 
@@ -20,8 +24,6 @@ To what extent can this be helped by interleaving sim & render, so that while th
       <ren0><ren1><ren2>...
 
 Q: can GPU upload happen on a different thread? There are some GL features that allow this (kind of like mmap)
-
-Q: since VR needs 90fps while the projections only need 30fps, can these be 
 
 
 # refactoring

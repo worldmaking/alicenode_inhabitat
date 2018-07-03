@@ -14,6 +14,29 @@
 #include "alice.h"
 #include "state.h"
 
+struct Profiler {
+	Timer timer;
+
+	std::vector<std::string> logs;
+
+	void reset() {
+		logs.clear();
+		timer.measure();
+	}
+
+	void log(std::string msg, double dt) {
+		double m = timer.measure();
+		char message[256];
+		snprintf(message, 256, "%s: %f%%", msg.c_str(), m * 100./dt);
+		logs.push_back(std::string(message));
+	}
+
+	void dump() {
+		for (int i=0; i<logs.size(); i++) {
+			console.log(logs[i].c_str());
+		}
+	}
+};
 
 /*
 	A helper for deferred rendering
@@ -174,10 +197,52 @@ glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
 	return safe_normalize(diff * q);	
 }
 
+struct Projector {
+	SimpleFBO fbo;
+
+	// from calibration
+	/*"ground_position" : [ -0.072518, -0.247243, -2.588981 ],
+	"ground_quat" : [ -0.010204, -0.015899, -0.018713, 0.999646 ],
+	"position" : [ -0.136746, -0.264017, 0.320403 ],
+	"frustum" : [ -0.643185, 0.593786, -0.356418, 0.423955, 1.0, 10.0 ],
+	"rotatexyz" : [ -1.656007, -2.649486, -2.022311 ],
+	"quat" : [ -0.014037, -0.022858, -0.017975, 0.999479 ]*/
+
+	glm::quat orientation;
+	glm::vec3 location;
+	glm::vec2 frustum_min, frustum_max; // assuming a near-clip distance of 1
+
+	glm::mat4 viewMat;
+	glm::mat4 projMat;
+
+	Projector() {
+		fbo.dim.x = 1920;
+		fbo.dim.y = 1080;
+	}
+
+	glm::mat4 view() {
+		return glm::inverse(
+			glm::translate(location) 
+			* glm::mat4_cast(orientation)
+		);
+	}
+
+	glm::mat4 projection(float near_clip, float far_clip) {
+		return glm::frustum(
+			near_clip * frustum_min.x,
+			near_clip * frustum_max.x,
+			near_clip * frustum_min.y,
+			near_clip * frustum_max.y,
+			near_clip,
+			far_clip);
+	}
+};
+
 //// RENDER STUFF ////
 
 Shader objectShader;
 Shader segmentShader;
+Shader creatureShader;
 Shader particleShader;
 Shader landShader;
 Shader heightMeshShader;
@@ -197,8 +262,6 @@ SimpleOBJ tableObj("island.obj", true, 1.f);
 
 std::vector<Vertex> gridVertices;
 std::vector<unsigned int> gridElements;
-
-SimpleFBO projFBOs[2];
 
 VAO gridVAO;
 VBO gridVBO;
@@ -220,6 +283,9 @@ VBO particlesVBO(sizeof(State::particles));
 VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
+#define NUM_PROJECTORS 3
+Projector projectors[NUM_PROJECTORS];
+
 GBuffer gBufferVR;
 GBuffer gBufferProj;
 
@@ -237,9 +303,8 @@ glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 0;
+int camMode = 3; // 0=WASD, 1=object follow, 2=segment follow, 3=orbit
 int objectSel = 0; //Used for changing which object is in focus
-int objSelMod = 0;
 int camModeMax = 4;
 bool camFast = false;
 glm::vec3 camVel, camTurn;
@@ -247,8 +312,19 @@ glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 1;
+int soloView = 0;
+bool showFPS = 0;
 
+bool enablers[10];
+#define SHOW_LANDMESH 0
+#define SHOW_AS_GRID 1
+#define SHOW_MINIMAP 2
+#define SHOW_OBJECTS 3
+#define SHOW_SEGMENTS 4
+#define SHOW_PARTICLES 5
+#define SHOW_DEBUGDOTS 6
+
+Profiler profiler;
 
 //// RUNTIME STUFF ///.
 
@@ -697,6 +773,7 @@ void onUnloadGPU() {
 	particleShader.dest_closing();
 	objectShader.dest_closing();
 	segmentShader.dest_closing();
+	creatureShader.dest_closing();
 	deferShader.dest_closing();
 	simpleShader.dest_closing();
 
@@ -715,8 +792,9 @@ void onUnloadGPU() {
 	fungusTex.dest_closing();
 	landTex.dest_closing();
 
-	projFBOs[0].dest_closing();
-	projFBOs[1].dest_closing();
+	projectors[0].fbo.dest_closing();
+	projectors[1].fbo.dest_closing();
+	projectors[2].fbo.dest_closing();
 
 	gBufferVR.dest_closing();
 	gBufferProj.dest_closing();
@@ -737,6 +815,7 @@ void onReloadGPU() {
 	simpleShader.readFiles("simple.vert.glsl", "simple.frag.glsl");
 	objectShader.readFiles("object.vert.glsl", "object.frag.glsl");
 	segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
+	creatureShader.readFiles("creature.vert.glsl", "creature.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
 	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
 	heightMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
@@ -855,8 +934,9 @@ void onReloadGPU() {
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	projFBOs[0].dest_changed();
-	projFBOs[1].dest_changed();
+	projectors[0].fbo.dest_changed();
+	projectors[1].fbo.dest_changed();
+	projectors[2].fbo.dest_changed();
 
 	gBufferVR.dest_changed();
 	gBufferProj.dest_changed();
@@ -880,7 +960,7 @@ void draw_scene(int width, int height) {
 		tableVAO.drawElements(tableObj.indices.size());
 	}
 
-	if (1) {
+	if (enablers[SHOW_LANDMESH]) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
@@ -892,13 +972,13 @@ void draw_scene(int width, int height) {
 		heightMeshShader.uniform("uFungusTex", 5);
 		heightMeshShader.uniform("uLandTex", 6);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
 	//Mini
-	if (1) {
+	if (enablers[SHOW_MINIMAP]) {
 		heightMeshShader.use();
 		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
 		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
@@ -933,17 +1013,27 @@ void draw_scene(int width, int height) {
 	fungusTex.unbind(5);
 	landTex.unbind(6);
 
-	if (1) {
-		objectShader.use();
-		objectShader.uniform("time", t);
-		objectShader.uniform("uViewMatrix", viewMat);
-		objectShader.uniform("uViewProjectionMatrix", viewProjMat);
-		objectShader.uniform("uFluidTex", 7);
-		objectShader.uniform("uFluidMatrix", state->world2field);
+	if (enablers[SHOW_OBJECTS]) {
+
+		if (0) {
+			objectShader.use();
+			objectShader.uniform("time", t);
+			objectShader.uniform("uViewMatrix", viewMat);
+			objectShader.uniform("uViewProjectionMatrix", viewProjMat);
+			objectShader.uniform("uFluidTex", 7);
+			objectShader.uniform("uFluidMatrix", state->world2field);
+		} else {
+			creatureShader.use();
+			creatureShader.uniform("time", t);
+			creatureShader.uniform("uViewMatrix", viewMat);
+			creatureShader.uniform("uViewProjectionMatrix", viewProjMat);
+			creatureShader.uniform("uFluidTex", 7);
+			creatureShader.uniform("uFluidMatrix", state->world2field);
+		}
 		objectVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_OBJECTS);
 	}
 
-	if (1) {
+	if (enablers[SHOW_SEGMENTS]) {
 		segmentShader.use();
 		segmentShader.uniform("time", t);
 		segmentShader.uniform("uEyePos", eyePos);
@@ -952,7 +1042,7 @@ void draw_scene(int width, int height) {
 		segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
 	}
 
-	if (1) {
+	if (enablers[SHOW_PARTICLES]) {
 		particleShader.use(); 
 		particleShader.uniform("time", t);
 		particleShader.uniform("uViewMatrix", viewMat);
@@ -975,7 +1065,7 @@ void draw_scene(int width, int height) {
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	if (1) {
+	if (enablers[SHOW_DEBUGDOTS]) {
 		debugShader.use(); 
 		debugShader.uniform("uViewMatrix", viewMat);
 		debugShader.uniform("uViewMatrixInverse", viewMatInverse);
@@ -1056,9 +1146,71 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 	fbo.end();
 }
 
-void onFrame(uint32_t width, uint32_t height) {
+void State::animate(float dt) {
+	// keep the computation in here to absolute minimum
+	// since it detracts from frame rate
+	// here we should only be extrapolating raw visible features
+	// such as location, orientation
+	// that would otherwise look jerky when animated from the simulation thread
 
-	Timer timer;
+	for (int i=0; i<NUM_PARTICLES; i++) {
+		Particle &o = particles[i];
+		o.location = o.location + o.velocity * dt;
+		o.location = wrap(o.location, world_min, world_max);
+	}
+
+	for (int i=0; i<NUM_OBJECTS; i++) {
+		auto &o = objects[i];
+		// TODO: dt-ify this:	
+		
+		o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+
+		// get norm'd coordinate:
+		glm::vec3 norm = transform(world2field, o.location);
+		glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+
+		
+		auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), land, norm2);
+		o.location = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+
+		//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
+		glm::vec3 land_normal = glm::vec3(landpt);
+
+		// apply change of orientation here too
+		// slerping by dt is a close approximation to rotation in radians per second
+		o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
+
+		// re-align the creature to the surface normal:
+		{
+			// re-orient relative to ground:
+			float creature_land_orient_factor = 1.f;//0.25f;
+			o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
+		}
+
+		o.phase += dt;
+	}
+
+	for (int i=0; i<NUM_SEGMENTS; i++) {
+		auto &o = segments[i];
+		if (i % PREDATOR_SEGMENTS_EACH == 0) {
+			// a root;
+			// TODO: dt-ify
+			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
+			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
+			o.phase += dt;
+		} else {
+			auto& p = segments[i-1];
+			o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
+			glm::vec3 uz = quat_uz(p.orientation);
+			o.location = p.location + uz*o.scale;
+			o.phase = p.phase + 0.1f;
+			//o.phase += dt;
+		}
+	}
+}
+
+void onFrame(uint32_t width, uint32_t height) {
+	profiler.reset();
 
 	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
@@ -1261,72 +1413,32 @@ void onFrame(uint32_t width, uint32_t height) {
 				*/
 			}
 		}
-		console.log("leap %f", timer.measure());
+		profiler.log("leap", alice.fps.dt);
+	}
+
+	// navigation
+	{
+		// follow a creature mode:
+		auto& o = state->objects[objectSel % NUM_OBJECTS];
+		
+		auto boom = glm::vec3(0., o.scale*1.f, o.scale*2.);
+		
+		glm::vec3 loc = o.location + quat_rotate(projectors[2].orientation, boom);
+		loc = glm::mix(projectors[2].location, loc, 0.1f);
+
+		// keep this above ground:
+		glm::vec3 norm = transform(state->world2field, loc);
+		auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+		projectors[2].location = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w+0.01f), norm.z));
+
+		projectors[2].location = glm::mix(projectors[2].location, loc, 0.1f);
+		projectors[2].orientation = glm::slerp(projectors[2].orientation, o.orientation, 0.1f);
 	}
 
 	// animation
 	if (alice.isSimulating && isRunning) {
-		// keep the computation in here to absolute minimum
-		// since it detracts from frame rate
-		// here we should only be extrapolating raw visible features
-		// such as location, orientation
-		// that would otherwise look jerky when animated from the simulation thread
-
-		for (int i=0; i<NUM_PARTICLES; i++) {
-			Particle &o = state->particles[i];
-			o.location = o.location + o.velocity * dt;
-			o.location = wrap(o.location, state->world_min, state->world_max);
-		}
-	
-		for (int i=0; i<NUM_OBJECTS; i++) {
-			auto &o = state->objects[i];
-			// TODO: dt-ify this:	
-			
-			o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
-
-			// get norm'd coordinate:
-			glm::vec3 norm = transform(state->world2field, o.location);
-			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
-
-			
-			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, norm2);
-			o.location = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z));
-
-			//glm::vec3 land_normal = sdf_field_normal4(land_dim, state->distance, norm, 0.5f/LAND_DIM);
-			glm::vec3 land_normal = glm::vec3(landpt);
-
-			// apply change of orientation here too
-			// slerping by dt is a close approximation to rotation in radians per second
-			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
-
-			// re-align the creature to the surface normal:
-			{
-				// re-orient relative to ground:
-				float creature_land_orient_factor = 1.f;//0.25f;
-				o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
-			}
-
-			o.phase += dt;
-		}
-
-		for (int i=0; i<NUM_SEGMENTS; i++) {
-			auto &o = state->segments[i];
-			if (i % PREDATOR_SEGMENTS_EACH == 0) {
-				// a root;
-				// TODO: dt-ify
-				o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-				o.location = wrap(o.location + o.velocity * dt, state->world_min, state->world_max);
-				o.phase += dt;
-			} else {
-				auto& p = state->segments[i-1];
-				o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
-				glm::vec3 uz = quat_uz(p.orientation);
-				o.location = p.location + uz*o.scale;
-				o.phase = p.phase + 0.1f;
-				//o.phase += dt;
-			}
-		}
-		console.log("animation %f", timer.measure());
+		state->animate(dt);
+		profiler.log("animation", alice.fps.dt);
 	}
 
 	// upload data to GPU:
@@ -1353,13 +1465,15 @@ void onFrame(uint32_t width, uint32_t height) {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cColorWidth, cColorHeight, 0, GL_RGB, 
 			GL_UNSIGNED_BYTE, image.color);
 		//}
-		console.log("gpu upload %f", timer.measure());
+		profiler.log("gpu upload", alice.fps.dt);
 	}
 
 	// render the projectors:
-	for (int i=0; i<2; i++) {
-		SimpleFBO& fbo = projFBOs[i];
+	for (int i=0; i<NUM_PROJECTORS; i++) {
+		Projector& proj = projectors[i];
+		SimpleFBO& fbo = proj.fbo;
 
+		/*
 		// move K-world points to inhabitat-world points:
 		//kinect0.cloudTransform
 		glm::vec3 ksc;
@@ -1398,12 +1512,12 @@ void onFrame(uint32_t width, uint32_t height) {
 			* (k2proj)
 		);
 
-		/*
-			kinect0.cloudTransform captures how the kinect space transforms into world space
+		// 
+		// 	kinect0.cloudTransform captures how the kinect space transforms into world space
 
-			we want to render the world from the POV of the kinect, but at the scale of the world
-			POV p we can get via transform(kinect0.cloudTransform, glm::vec3(0.f));
-		*/
+		// 	we want to render the world from the POV of the kinect, but at the scale of the world
+		// 	POV p we can get via transform(kinect0.cloudTransform, glm::vec3(0.f));
+		// 
 
 		// let this define the view matrix:
 		//viewMat = glm::inverse(kinect0.cloudTransform);
@@ -1414,6 +1528,11 @@ void onFrame(uint32_t width, uint32_t height) {
 		projMat = glm::frustum(-0.0631f, 0.0585f, -0.038f, 0.038f, 0.1f, state->far_clip);
 				//glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
 		
+		*/
+
+		viewMat = proj.view();
+		projMat = proj.projection(state->near_clip, state->far_clip);
+
 		viewProjMat = projMat * viewMat;
 		projMatInverse = glm::inverse(projMat);
 		viewMatInverse = glm::inverse(viewMat);
@@ -1432,7 +1551,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		draw_gbuffer(fbo, gBufferProj, glm::vec2(1.f), glm::vec2(0.f));
 		glDisable(GL_SCISSOR_TEST);
 	}
-	console.log("render projectors %f", timer.measure());
+	profiler.log("render projectors", alice.fps.dt);
 	
 	// render the VR viewpoint:
 	Hmd& vive = *alice.hmd;
@@ -1533,7 +1652,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				} break;
 				case 1: {
 					// follow a creature mode:
-					auto& o = state->objects[objSelMod];
+					auto& o = state->objects[objectSel % NUM_OBJECTS];
 
 					glm::vec3 fluidloc = transform(state->world2field, o.location);
 					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
@@ -1612,12 +1731,10 @@ void onFrame(uint32_t width, uint32_t height) {
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
-	console.log("render main %f", timer.measure());
+	profiler.log("render 1st person", alice.fps.dt);
 		
 	alice.hmd->submit();
-	glFlush(); glFinish();
-	console.log("hmd submit %f", timer.measure());
-
+	profiler.log("hmd submit", alice.fps.dt);
 
 	glViewport(0, 0, width, height);
 	glEnable(GL_DEPTH_TEST);
@@ -1626,17 +1743,23 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (soloView) {
 		switch (soloView) {
 			case 1: fbo.draw(); break;
-			case 2: projFBOs[0].draw(); break;
-			case 3: projFBOs[1].draw(); break;
+			case 2: projectors[0].fbo.draw(); break;
+			case 3: projectors[1].fbo.draw(); break;
+			case 4: projectors[2].fbo.draw(); break;
 			default: soloView = 0;
 		}
 	} else {
-		projFBOs[0].draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
-		projFBOs[1].draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
-
+		projectors[0].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
+		projectors[1].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
+		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
 		fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
 	}
-	console.log("show onscreen %f", timer.measure());
+	profiler.log("draw to window", alice.fps.dt);
+
+	if (showFPS) {
+		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, gBufferVR.dim.x, gBufferVR.dim.y);
+		profiler.dump();
+	}
 }
 
 
@@ -1656,7 +1779,11 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 		case GLFW_KEY_9: {
 			int num = keycode - GLFW_KEY_0;
 			if (downup) {
-				soloView = (soloView != num) ? num : 0;
+				if (shift) {
+					enablers[num] = !enablers[num];
+				} else {
+					soloView = (soloView != num) ? num : 0;
+				}
 			}
 		}
 		break;
@@ -1688,8 +1815,8 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 
 		case GLFW_KEY_F: {
 			if(downup){
-				objectSel++;
-				objSelMod = objectSel % 5;
+				objectSel = (objectSel + 1) % NUM_OBJECTS;
+				camMode = 1;
 			}
 		} break;
 
@@ -1728,7 +1855,7 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			break;
 
 		case GLFW_KEY_T:
-			console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, gBufferVR.dim.x, gBufferVR.dim.y);
+			if (downup) showFPS = !showFPS;
 			break;
 
 		default:
@@ -2024,9 +2151,40 @@ extern "C" {
 		console.log("onload state initialized");
 
 		onReset();
+
+		// set up projectors:
+		{
+			projectors[0].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
+			projectors[0].location = 0.5f * (state->world_min + state->world_max);
+			projectors[0].location.y *= 10.f;
+			glm::vec2 aspectfactor = glm::vec2(float(projectors[0].fbo.dim.x) / projectors[0].fbo.dim.y, 1.f);
+			projectors[0].frustum_min = glm::vec2(-.1f) * aspectfactor;
+			projectors[0].frustum_max = glm::vec2(.1f) * aspectfactor;
+		}
+		{
+			projectors[1].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
+			projectors[1].location = 0.5f * (state->world_min + state->world_max);
+			glm::vec2 aspectfactor = glm::vec2(float(projectors[1].fbo.dim.x) / projectors[1].fbo.dim.y, 1.f);
+			projectors[1].frustum_min = glm::vec2(-.25f) * aspectfactor;
+			projectors[1].frustum_max = glm::vec2(.25f) * aspectfactor;
+		}
+		{
+			projectors[2].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
+			projectors[2].location = 0.5f * (state->world_min + state->world_max);
+			glm::vec2 aspectfactor = glm::vec2(float(projectors[2].fbo.dim.x) / projectors[2].fbo.dim.y, 1.f);
+			projectors[2].frustum_min = glm::vec2(-1.f) * aspectfactor;
+			projectors[2].frustum_max = glm::vec2(1.f) * aspectfactor;
+		}
 		
-		projFBOs[0].dim.x = projFBOs[1].dim.x = 1920;
-		projFBOs[0].dim.y = projFBOs[1].dim.y = 1080;
+		
+
+		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_AS_GRID] = 0;
+		enablers[SHOW_MINIMAP] = 0;//1;
+		enablers[SHOW_OBJECTS] = 1;
+		enablers[SHOW_SEGMENTS] = 0;//1;
+		enablers[SHOW_PARTICLES] = 0;//1;
+		enablers[SHOW_DEBUGDOTS] = 0;//1;
 
 		threads_begin();
 		

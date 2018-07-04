@@ -334,6 +334,7 @@ Profiler profiler;
 
 std::mutex sim_mutex;
 MetroThread simThread(30);
+MetroThread fieldThread(30);
 MetroThread fluidThread(10);
 bool isRunning = 1;
 
@@ -344,7 +345,6 @@ Mmap<State> statemap;
 
 void fluid_update(double dt) { 
 	state->fluid_update(dt); 
-	state->fields_update(dt);
 }
 
 void State::fluid_update(float dt) {
@@ -415,79 +415,91 @@ void State::fluid_update(float dt) {
 	
 }
 
+void fields_update(double dt) { state->fields_update(dt); }
+
 void State::fields_update(float dt) {
 	const glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
-	float * const src_array = fungus_field.front(); 
-	float * dst_array = fungus_field.back(); 
+	const glm::vec2 invdim = 1.f/glm::vec2(dim);
 
-	for (int i=0, y=0; y<dim.y; y++) {
-		for (int x=0; x<dim.x; x++, i++) {
-			const glm::vec2 cell = glm::vec2(float(x),float(y));			
-			const glm::vec2 norm = cell/glm::vec2(dim); // TODO convert to premultiplier
-			float C = src_array[i];
-			float C1 = C - 0.1;
-			//float h = 20 * .1;//heightmap_array.sample(norm);
-			glm::vec4 l;
-			al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), land, norm, &l);
-			float h = 20.f * l.w;
-			float hu = 0.;//humanmap_array.sample(norm);
-			float dst = C;
-			if (h <= 0 || hu > 0.1) {
-				// force lowlands to be vacant
-				// (note, human will also do this)
-				dst = 0;
-			} else if (C < -0.1) {
-				// very negative values gradually drift back to zero
-				dst = C * 0.999;
-			} else if (C < 0) {
-				// and then jump to zero when in [-0.1,0) range
-				dst = 0;
-			} else if (h < C1 || rnd::uni() < 0.00005*h) {
-				// if land lower than vitality, decrease vitality
-				// also random chance of decay for any living cell
-				dst = h*rnd::uni();
-			} else if (rnd::uni() < 0.06*h) {
-				// migration chance increases with altitude
-				// pick a neighbour cell:
-				glm::vec2 tc = cell + glm::vec2(floor(rnd::uni()*3)-1, floor(rnd::uni()*3)-1);
-				float tv = al_field2d_read(dim, src_array, tc); //src_array.samplepix(tc);
-				// if alive, copy it
-				if (tv > 0.) { dst = tv; }
+	if (1) {
+		// this block is quite expensive, apparently
+		float * const src_array = fungus_field.front(); 
+		float * dst_array = fungus_field.back(); 
+
+
+		for (int i=0, y=0; y<dim.y; y++) {
+			for (int x=0; x<dim.x; x++, i++) {
+				const glm::vec2 cell = glm::vec2(float(x),float(y));
+				const glm::vec2 norm = cell*invdim;
+				float C = src_array[i];
+				float C1 = C - 0.1;
+				//float h = 20 * .1;//heightmap_array.sample(norm);
+				glm::vec4 l;
+				al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), land, norm, &l);
+				float h = 20.f * l.w;
+				float hu = 0.;//humanmap_array.sample(norm);
+				float dst = C;
+				if (h <= 0 || hu > 0.1) {
+					// force lowlands to be vacant
+					// (note, human will also do this)
+					dst = 0;
+				} else if (C < -0.1) {
+					// very negative values gradually drift back to zero
+					dst = C * 0.999;
+				} else if (C < 0) {
+					// and then jump to zero when in [-0.1,0) range
+					dst = 0;
+				} else if (h < C1 || rnd::uni() < 0.00005*h) {
+					// if land lower than vitality, decrease vitality
+					// also random chance of decay for any living cell
+					dst = h*rnd::uni();
+				} else if (rnd::uni() < 0.06*h) {
+					// migration chance increases with altitude
+					// pick a neighbour cell:
+					glm::vec2 tc = cell + glm::vec2(floor(rnd::uni()*3)-1, floor(rnd::uni()*3)-1);
+					float tv = al_field2d_read(dim, src_array, tc); //src_array.samplepix(tc);
+					// if alive, copy it
+					if (tv > 0.) { dst = tv; }
+				}
+				dst_array[i] = dst;
 			}
-			dst_array[i] = dst;
+		}
+		fungus_field.swap();
+	}
+
+	if (1) {
+		// diffuse & decay the chemical fields:
+		// copy front to back, then diffuse
+		// TODO: is this any different to just diffuse (front, front) ? if not, we could eliminate this copy
+		// (or, would .swap() rather than .copy() work for us?)
+		chemical_field.swap();	
+		al_field2d_diffuse(fungus_dim, chemical_field.back(), chemical_field.front(), chemical_diffuse, 2);
+		size_t elems = chemical_field.length();
+		for (size_t i=0; i<elems; i++) {
+			// the current simulated field values:
+			glm::vec3& chem = chemical_field.front()[i];
+			float f = fungus_field.front()[i];
+			// the current smoothed fields as used by the renderer:
+			glm::vec4& tex = field_texture[i];
+			// the current smoothed fungus value:
+			float f0 = tex.w; 
+
+			// fungus increases smoothly, but death is immediate:
+			float f1 = (f <= 0) ? f : (f0 + 0.05f * (f - f0));
+
+			// other fields just clamp & decay:
+			chem = glm::clamp(chem * chemical_decay, 0.f, 2.f);
+
+			// now copy these modified results back to the field_texture:
+			tex = glm::vec4(chem, f1);
 		}
 	}
-	fungus_field.swap();
 
-	// diffuse and decay the emission field:
-	al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
-	al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse);
-	emission_field.swap();
-
-	// diffuse & decay the chemical fields:
-	// copy front to back, then diffuse
-	// TODO: is this any different to just diffuse (front, front) ? if not, we could eliminate this copy
-	// (or, would .swap() rather than .copy() work for us?)
-	chemical_field.copy();	
-	al_field2d_diffuse(fungus_dim, chemical_field.back(), chemical_field.front(), chemical_diffuse);
-	size_t elems = chemical_field.length();
-	for (size_t i=0; i<elems; i++) {
-		// the current simulated field values:
-		glm::vec3& chem = chemical_field.front()[i];
-		float f = fungus_field.front()[i];
-		// the current smoothed fields as used by the renderer:
-		glm::vec4& tex = field_texture[i];
-		// the current smoothed fungus value:
-		float f0 = tex.w; 
-
-		// fungus increases smoothly, but death is immediate:
-		float f1 = (f <= 0) ? f : (f0 + 0.05f * (f - f0));
-
-		// other fields just clamp & decay:
-		chem = glm::clamp(chem * chemical_decay, 0.f, 2.f);
-
-		// now copy these modified results back to the field_texture:
-		tex = glm::vec4(chem, f1);
+	if (1) {
+		// diffuse and decay the emission field:
+		al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
+		al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse, 5);
+		emission_field.swap();
 	}
 }
 
@@ -681,7 +693,7 @@ void State::sim_update(float dt) {
 			std::vector<int32_t> neighbours;
 			float agent_range_of_view = o.scale * 3.;
 			float field_of_view = 0.; // in -1..1
-			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(o.location.x, o.location.z), i, agent_range_of_view, 0.f);
+			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(o.location.x, o.location.z), i, agent_range_of_view, 0.f, false);
 
 			glm::vec3 avoid;
 			for (auto j : neighbours) {
@@ -746,9 +758,9 @@ void State::sim_update(float dt) {
 
 			// add some field stuff:
 			glm::vec3 chem;
-			if (i % 3 == 0) chem.r += 1.f;
-			if (i % 3 == 1) chem.g += 1.f;
-			if (i % 3 == 2) chem.b += 1.f;
+			if (i % 3 == 0) chem.r += 4.f * dt;
+			if (i % 3 == 1) chem.g += 4.f * dt;
+			if (i % 3 == 2) chem.b += 4.f * dt;
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
 
 			
@@ -1825,8 +1837,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	profiler.log("draw to window", alice.fps.dt);
 
 	if (showFPS) {
-		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, gBufferVR.dim.x, gBufferVR.dim.y);
-		profiler.dump();
+		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f)wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, gBufferVR.dim.x, gBufferVR.dim.y);
+		//profiler.dump();
 	}
 }
 
@@ -1940,6 +1952,7 @@ void threads_begin() {
 	// allow threads to run
 	isRunning = true;
 	simThread.begin(sim_update);
+	fieldThread.begin(fields_update);
 	fluidThread.begin(fluid_update);
 	console.log("started threads");
 }
@@ -1949,6 +1962,7 @@ void threads_end() {
 	isRunning = false;
 	console.log("ending threads");
 	simThread.end();
+	fieldThread.end();
 	fluidThread.end();
 	console.log("ended threads");
 }
@@ -2236,17 +2250,17 @@ extern "C" {
 		{
 			projectors[0].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
 			projectors[0].location = 0.5f * (state->world_min + state->world_max);
-			projectors[0].location.y *= 10.f;
 			glm::vec2 aspectfactor = glm::vec2(float(projectors[0].fbo.dim.x) / projectors[0].fbo.dim.y, 1.f);
-			projectors[0].frustum_min = glm::vec2(-.1f) * aspectfactor;
-			projectors[0].frustum_max = glm::vec2(.1f) * aspectfactor;
+			projectors[0].frustum_min = glm::vec2(-.25f) * aspectfactor;
+			projectors[0].frustum_max = glm::vec2(.25f) * aspectfactor;
 		}
 		{
 			projectors[1].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
 			projectors[1].location = 0.5f * (state->world_min + state->world_max);
+			projectors[1].location.y *= 10.f;
 			glm::vec2 aspectfactor = glm::vec2(float(projectors[1].fbo.dim.x) / projectors[1].fbo.dim.y, 1.f);
-			projectors[1].frustum_min = glm::vec2(-.25f) * aspectfactor;
-			projectors[1].frustum_max = glm::vec2(.25f) * aspectfactor;
+			projectors[1].frustum_min = glm::vec2(-.1f) * aspectfactor;
+			projectors[1].frustum_max = glm::vec2(.1f) * aspectfactor;
 		}
 		{
 			projectors[2].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));

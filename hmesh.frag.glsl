@@ -38,9 +38,9 @@ void main() {
 	//float steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
 	float steepness = abs(1. - nnorm.y);
 
-	float blood = fields.r;
-	float food = fields.g;
-	float nest = fields.b;
+	float blood = fields1.r;
+	float food = fields1.g;
+	float nest = fields1.b;
 	float fungus = fields1.a;
 
 

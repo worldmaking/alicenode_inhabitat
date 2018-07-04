@@ -18,10 +18,6 @@ layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
 
-vec3 blood_color = 4. * vec3(158./255., 73./255., 43./255.);
-vec3 food_color = 2.5*vec3(0.7, 0.3, 0.45);
-vec3 nest_color = 2.5*vec3(0.15, 0.2, 0.15);
-
 void main() {
 	// uncomment this line for contours:
 	//if (mod(position.y*4.,1.) > 0.2) discard;
@@ -38,9 +34,7 @@ void main() {
 	//float steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
 	float steepness = abs(1. - nnorm.y);
 
-	float blood = fields1.r;
-	float food = fields1.g;
-	float nest = fields1.b;
+	vec3 chem = fields1.rgb;
 	float fungus = fields1.a;
 
 
@@ -53,7 +47,7 @@ void main() {
 		float factor = fungus * 0.7;
 		//factor += noise.z * 0.1;
 		//color = mix(vec3(1) * min(1., position.y*0.5), color, factor);
-		color *= vec3(fungus);
+		color = vec3(fungus);
 		
 	} else {
 		//color -= 0.8*(0.8-steepness);
@@ -61,19 +55,15 @@ void main() {
 		// darken lowlands:
 		color *= clamp(position.y*0.1, 0., 1.);
 		//color = vec3(0);
+
+		
 	}
+
+	// add chems:
+	color += chem;
 
 	// // darken steep slopes:
 	color *= vec3(1. - steepness);
-
-	// // add phero emissions
-	// //color += vec3(blood, food, nest);
-	// // smells:
-	if(true) {
-		color += blood * blood_color;
-		color += food * food_color;
-		color += nest * nest_color;
-	}
 
 	// humanshadow:
 	//float hu = texture2D(tex4, texcoord0).z;

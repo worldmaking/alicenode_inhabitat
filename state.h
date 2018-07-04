@@ -245,8 +245,13 @@ struct State {
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
 	float emission_scale = 0.5;
 
-	glm::vec3 chemical_decay = glm::vec3(0.98f);
-	glm::vec3 chemical_diffuse = glm::vec3(0.01);
+	glm::vec3 chemical_decay = glm::vec3(0.999f);
+	glm::vec3 chemical_diffuse = glm::vec3(0.001);
+
+	glm::vec3 blood_color = glm::vec3(1., 0.461, 0.272); 
+	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
+	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
+
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;

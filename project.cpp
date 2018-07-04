@@ -344,7 +344,7 @@ Mmap<State> statemap;
 
 
 void fluid_update(double dt) { 
-	state->fluid_update(dt); 
+	if (Alice::Instance().isSimulating) state->fluid_update(dt); 
 }
 
 void State::fluid_update(float dt) {
@@ -415,7 +415,9 @@ void State::fluid_update(float dt) {
 	
 }
 
-void fields_update(double dt) { state->fields_update(dt); }
+void fields_update(double dt) { 
+	if (Alice::Instance().isSimulating) state->fields_update(dt); 
+}
 
 void State::fields_update(float dt) {
 	const glm::ivec2 dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
@@ -494,16 +496,18 @@ void State::fields_update(float dt) {
 			tex = glm::vec4(chem, f1);
 		}
 	}
-
+		
 	if (1) {
 		// diffuse and decay the emission field:
 		al_field3d_scale(field_dim, emission_field.back(), glm::vec3(emission_decay));
-		al_field3d_diffuse(field_dim, emission_field.back(), emission_field.back(), emission_diffuse, 5);
+		al_field3d_diffuse(field_dim, emission_field.back(), emission_field.front(), emission_diffuse);
 		emission_field.swap();
 	}
 }
 
-void sim_update(double dt) { state->sim_update(dt); }
+void sim_update(double dt) { 
+	if (Alice::Instance().isSimulating) state->sim_update(dt); 
+}
 
 void State::sim_update(float dt) {
 
@@ -647,10 +651,10 @@ void State::sim_update(float dt) {
 			glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
 
 			size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
-			float fungal = fungus_field.front()[fungus_idx];
-			//float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
+			//float fungal = fungus_field.front()[fungus_idx];
+			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
 			//if(i == objectSel) console.log("fungal %f", fungal);
-			float eat = glm::max(0.f, fungal);
+			float eat = glm::max(0.f, fungal) * 1.5f;
 			//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
 			fungus_field.front()[fungus_idx] -= eat;
 			
@@ -740,8 +744,7 @@ void State::sim_update(float dt) {
 				float jump = rnd::uni();
 				o.accel.y = jump * gravity * 2.f * o.scale;
 
-				// this is a good time to also emit a pulse:
-				al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, o.color * emission_scale * jump);
+				
 			}
 
 			// set my velocity, in meters per second:
@@ -758,11 +761,12 @@ void State::sim_update(float dt) {
 
 			// add some field stuff:
 			glm::vec3 chem;
-			if (i % 3 == 0) chem.r += 4.f * dt;
-			if (i % 3 == 1) chem.g += 4.f * dt;
-			if (i % 3 == 2) chem.b += 4.f * dt;
+			if (i % 3 == 0) chem = blood_color * 2.f * dt;
+			if (i % 3 == 1) chem = food_color * 2.f * dt;
+			if (i % 3 == 2) chem = nest_color * 2.f * dt;
+			// add to land, add to emission:
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
-
+			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
 			
 		}
 	}
@@ -1499,7 +1503,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// follow a creature mode:
 		auto& o = state->objects[objectSel % NUM_OBJECTS];
 		
-		auto boom = glm::vec3(0., o.scale*1.f, o.scale*2.);
+		auto boom = glm::vec3(0., o.scale*.5f, o.scale*1.f);
 		
 		glm::vec3 loc = o.location + quat_rotate(projectors[2].orientation, boom);
 		loc = glm::mix(projectors[2].location, loc, 0.1f);
@@ -1521,6 +1525,8 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	// upload data to GPU:
 	if (alice.isSimulating && isRunning) {
+
+		
 		// upload VBO data to GPU:
 		creaturePartsVBO.submit(&state->creatureparts[0], sizeof(state->creatureparts));
 		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
@@ -2008,8 +2014,8 @@ void State::reset() {
 	fluidpod.reset();
 
 	fungus_field.reset();
-	al_field2d_add(fungus_dim, fungus_field.front(), 0.5f);
-	fungus_field.copy();
+	//al_field2d_add(fungus_dim, fungus_field.front(), 0.5f);
+	//fungus_field.copy();
 
 	{
 		for (int i=0; i<FUNGUS_TEXELS; i++) {

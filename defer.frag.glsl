@@ -134,7 +134,7 @@ void main() {
 
 	// get environmental light from emissive sources
 	// by lookup in the normal direction
-	float nearby = .25;
+	float nearby = 2.;
 	vec3 texcoord_for_normal = (uFluidMatrix * vec4(position + normal*nearby, 1.)).xyz;
 	vec3 envcolor = texture(uEmissionTex, texcoord_for_normal).rgb;
 	vec3 texcoord_for_ref = (uFluidMatrix * vec4(position + ref*nearby, 1.)).xyz;
@@ -173,6 +173,11 @@ void main() {
 	// base viz:
 	color.rgb = basecolor.xyz;
 	//color.rg = vec2(color.b);
+
+	// emissive:
+	//color.rgb = envcolor;
+	//color.rgb = envcolor_ref;
+	color.rgb += envcolor_ref * 0.5;
 	
 
 	// uv grid viz:

@@ -4,6 +4,14 @@ Bring in the inhabitat species behaviours!!
 
 # Korea notes
 
+Need to decide on a reasonable world and gallery scale. 
+
+
+
+fluid boundaries: shouldn't be toroidal, but shouldn't either drift much beyond the islands! 
+
+creatures are kind of sliding due to collision avoidance, but instead they should turn & move
+
 gbuffer redesign. 
 - currently:
       - ivec4 albedo (though alpha isn't currently used)
@@ -23,7 +31,6 @@ Since VR needs 90fps while the projections only need 30fps, why not interleave t
 
 The object.frag shader was way too expensive. To do multiple species need to use the same code with different parameters. And maybe skip hair for now.
 
-Need to decide on a reasonable world and gallery scale. 
 
 While hashspace query seems to work, it also seems to be expensive, and potentially biased. 
 I wonder if we can treat it differently, by collating a list of 'near links' in one pass, then iterating over these links to enact their effects?

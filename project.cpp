@@ -342,7 +342,10 @@ Mmap<State> statemap;
 
 
 
-void fluid_update(double dt) { state->fluid_update(dt); }
+void fluid_update(double dt) { 
+	state->fluid_update(dt); 
+	state->fields_update(dt);
+}
 
 void State::fluid_update(float dt) {
 	
@@ -498,8 +501,6 @@ void State::sim_update(float dt) {
 	Alice& alice = Alice::Instance();
 	if (!alice.isSimulating) return;
 
-	// run the fungus simulation:
-	fields_update(dt);
 
 	// deal with Kinect data:
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
@@ -633,7 +634,13 @@ void State::sim_update(float dt) {
 			//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
 			glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
 
-			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
+			size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
+			float fungal = fungus_field.front()[fungus_idx];
+			//float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
+			//if(i == objectSel) console.log("fungal %f", fungal);
+			float eat = glm::max(0.f, fungal);
+			//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
+			fungus_field.front()[fungus_idx] -= eat;
 			
 			// get my distance from the ground:
 			float sdist; // creature's distance above the ground (or negative if below)
@@ -744,9 +751,7 @@ void State::sim_update(float dt) {
 			if (i % 3 == 2) chem.b += 1.f;
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
 
-			float eat = glm::max(0.f, fungal);
-			al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
-
+			
 		}
 	}
 
@@ -765,7 +770,6 @@ void State::sim_update(float dt) {
 
 			al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
 			*/
-
 
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
@@ -1989,6 +1993,10 @@ void State::reset() {
 
 	fluidpod.reset();
 
+	fungus_field.reset();
+	al_field2d_add(fungus_dim, fungus_field.front(), 0.5f);
+	fungus_field.copy();
+
 	{
 		for (int i=0; i<FUNGUS_TEXELS; i++) {
 			noise_texture[i] = glm::linearRand(glm::vec4(0), glm::vec4(1));
@@ -1997,7 +2005,8 @@ void State::reset() {
 
 	for (int i=0; i<NUM_OBJECTS; i++) {
 		auto& o = objects[i];
-		o.location = world_centre+glm::ballRand(10.f);
+		o.location = glm::linearRand(world_min,world_max);
+		o.orientation = quat_random();
 		o.color = glm::mix(glm::ballRand(1.f)*0.5f+0.5f, glm::vec3(0.3, 0.2, 0.8), 0.5f);
 		o.phase = rnd::uni();
 		o.scale = 1.;

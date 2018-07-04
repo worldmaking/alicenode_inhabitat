@@ -50,30 +50,30 @@ void main() {
 
 	if (fungus > 0.) {
 		// fungus:
-		float factor = fungus;
+		float factor = fungus * 0.7;
 		//factor += noise.z * 0.1;
-		color = mix(vec3(1) * min(1., position.y*0.1), color, factor);
-		//color = vec3(factor);
+		//color = mix(vec3(1) * min(1., position.y*0.5), color, factor);
+		color *= vec3(fungus);
 		
 	} else {
 		//color -= 0.8*(0.8-steepness);
-		color *= 0.25;
+		//color *= 0.25;
 		// darken lowlands:
 		color *= clamp(position.y*0.1, 0., 1.);
+		//color = vec3(0);
 	}
 
-
-
 	// // darken steep slopes:
-	color *= vec3(1. - steepness*1.5);
+	color *= vec3(1. - steepness);
 
 	// // add phero emissions
 	// //color += vec3(blood, food, nest);
 	// // smells:
-	color += blood * blood_color;
-	color += food * food_color;
-	color += nest * nest_color;
-
+	if(true) {
+		color += blood * blood_color;
+		color += food * food_color;
+		color += nest * nest_color;
+	}
 
 	// humanshadow:
 	//float hu = texture2D(tex4, texcoord0).z;

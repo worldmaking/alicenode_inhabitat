@@ -38,7 +38,7 @@ void main() {
 	float fungus = fields1.a;
 
 
-	vec3 color = normalize(vec3(texCoord, 0.5));
+	vec3 color = normalize(vec3(texCoord, 0.5)) * 0.25;
 	
 	// TODO: color += rock colour
 

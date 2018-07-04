@@ -229,8 +229,6 @@ struct State {
 	glm::mat4 world2minimap;
 	float minimapScale = 0.005f;
 	float kinect2world_scale = 10.f;
-	float near_clip = 0.02f;
-	float far_clip = 1200.f;
 
 	// parameters:
 

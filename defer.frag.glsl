@@ -38,7 +38,8 @@ out vec4 FragColor;
 #define PI 3.14159265359
 
 vec3 sky(vec3 dir) {
-	vec3 n = dir*0.5+0.5;
+	vec3 n0 = dir*0.5+0.5;
+	vec3 n = n0;
 	float a = time * 0.3;
 	// detail
 	n.r = sin(2.*PI* n.r*n.g + a)*0.5+0.5;
@@ -46,7 +47,12 @@ vec3 sky(vec3 dir) {
 	// simplify
 	n.g = mix(n.g, n.r, 0.5);
 	// lighten
-	return mix(n, vec3(0.), 0.5);
+	n = mix(n, vec3(0.), 0.5);
+
+	// below y=0 should be black
+	
+
+	return n * (n0.y - 0.2);
 }
 
 float fScene(vec3 p) {
@@ -177,7 +183,7 @@ void main() {
 	// emissive:
 	//color.rgb = envcolor;
 	//color.rgb = envcolor_ref;
-	color.rgb += envcolor_ref * 0.5;
+	color.rgb += envcolor_ref * 0.25;
 	
 
 	// uv grid viz:
@@ -233,8 +239,10 @@ void main() {
 	//color.rgb = vec3(vec2(mod(dist * 16., 1.)), mod(position.x, 1.));
 
 	//color += normal*0.125;
+
+	// TODO: how about fog by cone tracing through uEmissionTex?
 	
-	//color.rgb = mix(color.rgb, fogcolor, fogmix);
+	color.rgb = mix(color.rgb, fogcolor, fogmix);
 	FragColor.rgb = color;	
 	//FragColor.rgb += vec3(texCoord, 0.);
 }

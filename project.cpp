@@ -211,6 +211,7 @@ struct Projector {
 	glm::quat orientation;
 	glm::vec3 location;
 	glm::vec2 frustum_min, frustum_max; // assuming a near-clip distance of 1
+	float near_clip, far_clip;
 
 	glm::mat4 viewMat;
 	glm::mat4 projMat;
@@ -227,7 +228,7 @@ struct Projector {
 		);
 	}
 
-	glm::mat4 projection(float near_clip, float far_clip) {
+	glm::mat4 projection() {
 		return glm::frustum(
 			near_clip * frustum_min.x,
 			near_clip * frustum_max.x,
@@ -307,7 +308,7 @@ glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 3; // 0=WASD, 1=object follow, 2=segment follow, 3=orbit
+int camMode = 1; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 bool camFast = false;
@@ -1007,7 +1008,7 @@ void onReloadGPU() {
 
 }
 
-void draw_scene(int width, int height) {
+void draw_scene(int width, int height, Projector& projector) {
 	double t = Alice::Instance().simTime;
 	//console.log("%f", t);
 
@@ -1065,8 +1066,8 @@ void draw_scene(int width, int height) {
 		landShader.uniform("time", t);
 		landShader.uniform("uViewProjectionMatrix", viewProjMat);
 		landShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		landShader.uniform("uNearClip", state->near_clip);
-		landShader.uniform("uFarClip", state->far_clip);
+		landShader.uniform("uNearClip", projector.near_clip);
+		landShader.uniform("uFarClip", projector.far_clip);
 		landShader.uniform("uDistanceTex", 4);
 		landShader.uniform("uFungusTex", 5);
 		landShader.uniform("uLandTex", 6);
@@ -1156,7 +1157,7 @@ void draw_scene(int width, int height) {
 	glDisable(GL_CULL_FACE);
 }
 
-void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
+void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
 
 	fbo.begin();
 	glScissor(
@@ -1191,8 +1192,8 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, glm::vec2 viewport_scale=glm
 		deferShader.uniform("uViewMatrix", viewMat);
 		deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
 		deferShader.uniform("uFluidMatrix", state->world2field);
-		deferShader.uniform("uNearClip", state->near_clip);
-		deferShader.uniform("uFarClip", state->far_clip);
+		deferShader.uniform("uNearClip", projector.near_clip);
+		deferShader.uniform("uFarClip", projector.far_clip);
 		
 		deferShader.uniform("time", Alice::Instance().simTime);
 		deferShader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
@@ -1617,7 +1618,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		*/
 
 		viewMat = proj.view();
-		projMat = proj.projection(state->near_clip, state->far_clip);
+		projMat = proj.projection();
 
 		viewProjMat = projMat * viewMat;
 		projMatInverse = glm::inverse(projMat);
@@ -1631,10 +1632,10 @@ void onFrame(uint32_t width, uint32_t height) {
 			glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
 			glEnable(GL_DEPTH_TEST);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			draw_scene(gBufferProj.dim.x, gBufferProj.dim.y);
+			draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
 		gBufferProj.end();
 		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-		draw_gbuffer(fbo, gBufferProj, glm::vec2(1.f), glm::vec2(0.f));
+		draw_gbuffer(fbo, gBufferProj, proj, glm::vec2(1.f), glm::vec2(0.f));
 		glDisable(GL_SCISSOR_TEST);
 	}
 	profiler.log("render projectors", alice.fps.dt);
@@ -1645,8 +1646,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (width && height) {
 		if (vive.connected) {	
 				
-			vive.near_clip = state->near_clip;
-			vive.far_clip = state->far_clip;	
+			vive.near_clip = projectors[2].near_clip;
+			vive.far_clip = projectors[2].far_clip;	
 			vive.update();
 			glEnable(GL_SCISSOR_TEST);
 
@@ -1692,16 +1693,16 @@ void onFrame(uint32_t width, uint32_t height) {
 					glEnable(GL_DEPTH_TEST);
 					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-					draw_scene(viewport.dim.x, viewport.dim.y);
+					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
 				gBufferVR.end();
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferVR, viewport_scale, viewport_offset);
+				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
 			
-			switch (camMode){
+			switch (camMode % 2){
 				case 0: {
 					// WASD mode:
 					float camera_turnangle = 1.f;
@@ -1732,43 +1733,8 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::vec3 boom = glm::vec3(0., 1.7, 1.7);
 					//glm::vec3 boom = glm::vec3(0.);
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					projMat = glm::perspective(glm::radians(110.0f), aspect, state->near_clip, state->far_clip);
+					projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
 					//console.log("Cam Mode 0 Active");
-				
-				} break;
-				case 1: {
-					// follow a creature mode:
-					auto& o = state->objects[objectSel % NUM_OBJECTS];
-
-					glm::vec3 fluidloc = transform(state->world2field, o.location);
-					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
-					flow = flow * dt * 100.0f;
-					
-					cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
-					cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
-					//TODO: Once creatures follow the ground, fix boom going into the earth
-					
-					auto boom = glm::vec3(0., o.scale*2.f, o.scale*4.);
-					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					projMat = glm::perspective(glm::radians(75.0f), aspect, state->near_clip, state->far_clip);
-				
-				} break;
-				case 2: {
-					// follow a predator
-					double a = M_PI * t / 30.;
-					auto& o = state->segments[0];
-
-					glm::vec3 fluidloc = transform(state->world2field, o.location);
-					glm::vec3 flow = al_field3d_readnorm_interp(field_dim, state->fluidpod.velocities.front(), fluidloc);
-					flow = flow * dt * 100.0f;
-					
-					cameraLoc = glm::mix(cameraLoc, o.location + flow, 0.1f);
-					cameraOri = glm::slerp(cameraOri, o.orientation, 0.01f);
-					//TODO: Once creatures follow the ground, fix boom going into the earth
-
-					auto boom = glm::vec3(0., o.scale*2.f, o.scale*4.);
-					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					projMat = glm::perspective(glm::radians(75.0f), aspect, state->near_clip, state->far_clip);
 				
 				} break;
 				default: {
@@ -1788,7 +1754,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					cameraOri = glm::slerp(cameraOri, newori, 0.01f);
 
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
-					projMat = glm::perspective(glm::radians(75.0f), aspect, state->near_clip, state->far_clip);
+					projMat = glm::perspective(glm::radians(75.0f), aspect, projectors[2].near_clip, 80.f);
 					//console.log("Default Cam mode Active");
 				}
 			}
@@ -1807,13 +1773,13 @@ void onFrame(uint32_t width, uint32_t height) {
 				glViewport(0, 0, gBufferVR.dim.x, gBufferVR.dim.y);
 				glEnable(GL_DEPTH_TEST);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				draw_scene(gBufferVR.dim.x, gBufferVR.dim.y);
+				draw_scene(gBufferVR.dim.x, gBufferVR.dim.y, projectors[2]);
 		
 			gBufferVR.end();
 			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 
 			// now process the GBuffer and render the result into the fbo
-			draw_gbuffer(alice.hmd->fbo, gBufferVR, glm::vec2(1.f), glm::vec2(0.f));
+			draw_gbuffer(alice.hmd->fbo, gBufferVR, projectors[2], glm::vec2(1.f), glm::vec2(0.f));
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
@@ -1837,8 +1803,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	} else {
 		projectors[0].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
 		projectors[1].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
-		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
-		fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
+		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
+		fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
 	}
 	profiler.log("draw to window", alice.fps.dt);
 
@@ -1894,7 +1860,7 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 		
 		case GLFW_KEY_C: {
 			if (downup) { 
-				camMode = (camMode+1) % camModeMax;
+				camMode++;
 				console.log("Cam mode %d", camMode);
 			}
 		} break;
@@ -1902,7 +1868,6 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 		case GLFW_KEY_F: {
 			if(downup){
 				objectSel = (objectSel + 1) % NUM_OBJECTS;
-				camMode = 1;
 			}
 		} break;
 
@@ -2259,6 +2224,8 @@ extern "C" {
 			glm::vec2 aspectfactor = glm::vec2(float(projectors[0].fbo.dim.x) / projectors[0].fbo.dim.y, 1.f);
 			projectors[0].frustum_min = glm::vec2(-.25f) * aspectfactor;
 			projectors[0].frustum_max = glm::vec2(.25f) * aspectfactor;
+			projectors[0].near_clip = projectors[0].location.y * 0.5;
+			projectors[0].far_clip = projectors[0].location.y * 4.;
 		}
 		{
 			projectors[1].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
@@ -2267,6 +2234,8 @@ extern "C" {
 			glm::vec2 aspectfactor = glm::vec2(float(projectors[1].fbo.dim.x) / projectors[1].fbo.dim.y, 1.f);
 			projectors[1].frustum_min = glm::vec2(-.1f) * aspectfactor;
 			projectors[1].frustum_max = glm::vec2(.1f) * aspectfactor;
+			projectors[1].near_clip = projectors[1].location.y * 0.5;
+			projectors[1].far_clip = projectors[1].location.y * 4.;
 		}
 		{
 			projectors[2].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
@@ -2274,6 +2243,8 @@ extern "C" {
 			glm::vec2 aspectfactor = glm::vec2(float(projectors[2].fbo.dim.x) / projectors[2].fbo.dim.y, 1.f);
 			projectors[2].frustum_min = glm::vec2(-1.f) * aspectfactor;
 			projectors[2].frustum_max = glm::vec2(1.f) * aspectfactor;
+			projectors[2].near_clip = 0.05;
+			projectors[2].far_clip = 40.f;
 		}
 
 		landTex.generateMipMap = true;

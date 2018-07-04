@@ -6,7 +6,8 @@ Bring in the inhabitat species behaviours!!
 
 Need to decide on a reasonable world and gallery scale. 
 
-
+creatures shouldn't wander off to lands below the min height; they should turn away
+- also, edge-of-world should mean death
 
 fluid boundaries: shouldn't be toroidal, but shouldn't either drift much beyond the islands! 
 

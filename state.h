@@ -22,9 +22,7 @@ namespace glm {
 #define PREDATOR_SEGMENTS_EACH 1
 #define NUM_SEGMENTS (NUM_PREDATORS*PREDATOR_SEGMENTS_EACH)
 
-#define NUM_OBJECTS	512
-
-#define NUM_CREATURES NUM_OBJECTS
+#define NUM_CREATURES 512
 #define NUM_CREATURE_PARTS NUM_CREATURES
 
 #define NUM_PARTICLES 1024*256
@@ -121,20 +119,6 @@ struct Creature {
 	Creature() {}
 };
 
-struct Object {
-	glm::vec3 location;
-	float scale;
-	glm::quat orientation;
-	glm::vec3 color;
-	float phase;
-	glm::vec4 params;
-	
-	// non-render:
-	glm::vec3 velocity;
-	glm::quat rot_vel;
-	glm::vec3 accel;
-};
-
 struct Segment {
 	glm::vec3 location;
 	float scale;
@@ -175,8 +159,6 @@ struct State {
 	CellSpace<LAND_DIM> dead_space;
 	Creature creatures[NUM_CREATURES];
 
-
-	Object objects[NUM_OBJECTS];
 	Segment segments[NUM_SEGMENTS];
 
 	// for rendering:
@@ -184,7 +166,7 @@ struct State {
 	CreaturePart creatureparts[NUM_CREATURE_PARTS];
 	DebugDot debugdots[NUM_DEBUGDOTS];
 
-	Hashspace2D<NUM_OBJECTS, 6> hashspace;
+	Hashspace2D<NUM_CREATURES, 6> hashspace;
 
 	// the emission field is currently being used to store emissive light (as a form of smell)
 	Field3DPod<FIELD_DIM, glm::vec3> emission_field;
@@ -247,7 +229,7 @@ struct State {
 	glm::vec3 chemical_decay = glm::vec3(0.999f);
 	glm::vec3 chemical_diffuse = glm::vec3(0.001);
 
-	glm::vec3 blood_color = glm::vec3(1., 0.461, 0.272); 
+	glm::vec3 blood_color = glm::vec3(1., 0.461, 0.272) * 4.f; 
 	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
 	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
 
@@ -256,7 +238,7 @@ struct State {
 	float creature_fluid_push = 0.25f;
 
 	float alive_lifespan_decay = 0.125;
-	float dead_lifespan_decay = 0.125;
+	float dead_lifespan_decay = 0.25;
 
 	// main thread:
 	void animate(float dt);
@@ -303,6 +285,7 @@ struct State {
 		int deathcount = 0;
 		int recyclecount = 0;
 
+		
 		// spawn new?
 		//console.log("creature pool count %d", creature_pool.count);
 		if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {
@@ -319,13 +302,28 @@ struct State {
 				if (a.health < 0) {
 					//console.log("death of %d", i);
 					deathcount++;
-					// TODO: add to deadspace
+					// remove from hashspace:
+					hashspace.remove(i);
+					// set new state:
 					a.state = Creature::STATE_DECAYING;
+					
 					continue;
 				}
 
 				// simulate as alive
 				//... 
+
+				// birth chance?
+				if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
+					auto j = creature_pool.pop();
+					birthcount++;
+					//console.log("spawn %d", i);
+					creature_reset(j);
+					Creature& child = creatures[j];
+					child.location = a.location;
+					child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
+				}
+
 
 				// TODO: make this species-dependent?
 				a.health -= dt * alive_lifespan_decay;// * (1.+rnd::bi()*0.1);
@@ -351,14 +349,15 @@ struct State {
 				float decay = dt * dead_lifespan_decay;// * (1.+rnd::bi()*0.1);
 				a.health -= decay;
 
-				// blend to grey:
-				float grey = (o.color.x + o.color.y + o.color.z)*0.333f;
-				o.color = mix(o.color, glm::vec3(grey), decay);
+				// blend to dull grey:
+				float grey = (a.color.x + a.color.y + a.color.z)*0.25f;
+				a.color += dt * (glm::vec3(grey) - a.color);
 
 				// deposit blood:
-				al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, glm::vec3(decay, 0., 0.));
+				al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, decay * blood_color);
 
 				// retain corpse in deadspace:
+				// (TODO: Is this needed, or could a hashspace query do what we need?)
 				dead_space.set_safe(i, norm2);
 			}
 		}

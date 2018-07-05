@@ -593,8 +593,6 @@ void State::sim_update(float dt) {
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
 	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
 
-	// update all creatures
-	creatures_update(dt);
 
 	if (1) {
 		for (int i=0; i<NUM_PARTICLES; i++) {
@@ -614,24 +612,30 @@ void State::sim_update(float dt) {
 			
 			// sometimes assign to a random creature?
 			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
-				int idx = i % NUM_OBJECTS;
-				o.location = objects[idx].location;
+				int idx = i % NUM_CREATURES;
+				o.location = creatures[idx].location;
 			}
 		}
 	} 
 
+
+	// update all creatures
+	creatures_update(dt);
+
 	// simulate creature pass:
-	for (int i=0; i<NUM_OBJECTS; i++) {
-		auto &o = objects[i];
+	for (int i=0; i<NUM_CREATURES; i++) {
+		auto &o = creatures[i];
 		// update location in hashspace:
-		hashspace.move(i, glm::vec2(o.location.x, o.location.z));
+		if (o.state == Creature::STATE_ALIVE) {
+			hashspace.move(i, glm::vec2(o.location.x, o.location.z));
+		}
 	}
 
 	// simulate creature pass:
-	for (int i=0; i<NUM_OBJECTS; i++) {
-		auto &o = objects[i];
+	for (int i=0; i<NUM_CREATURES; i++) {
+		auto &o = creatures[i];
 
-		{
+		if (o.state == Creature::STATE_ALIVE) {
 			
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
@@ -702,7 +706,7 @@ void State::sim_update(float dt) {
 
 			glm::vec3 avoid;
 			for (auto j : neighbours) {
-				auto& n = objects[j];
+				auto& n = creatures[j];
 
 				// get relative vector from a to n:
 				glm::vec3 rel = n.location - o.location;
@@ -1228,48 +1232,51 @@ void State::animate(float dt) {
 		o.location = wrap(o.location, world_min, world_max);
 	}
 
-	for (int i=0; i<NUM_OBJECTS; i++) {
-		auto &o = objects[i];
+	for (int i=0; i<NUM_CREATURES; i++) {
+		auto &o = creatures[i];
 		
-		// update location
-		glm::vec3 p1 = wrap(o.location + o.velocity * dt, world_min, world_max);
+		if (o.state == Creature::STATE_ALIVE) {
+			// update location
+			glm::vec3 p1 = wrap(o.location + o.velocity * dt, world_min, world_max);
 
-		// get norm'd coordinate:
-		glm::vec3 norm = transform(world2field, p1);
-		glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+			// get norm'd coordinate:
+			glm::vec3 norm = transform(world2field, p1);
+			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 
-		// stick to land surface:
-		auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), land, norm2);
-		p1 = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
-		p1.y += o.scale*0.5f;
+			// stick to land surface:
+			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), land, norm2);
+			p1 = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+			p1.y += o.scale*0.5f;
 
-		float distance = glm::length(p1 - o.location);
-		o.location = p1;
-		
-		// apply change of orientation here too
-		// slerping by dt is a close approximation to rotation in radians per second
-		o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
+			float distance = glm::length(p1 - o.location);
+			o.location = p1;
+			
+			// apply change of orientation here too
+			// slerping by dt is a close approximation to rotation in radians per second
+			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
 
-		// re-align the creature to the surface normal:
-		//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
-		glm::vec3 land_normal = glm::vec3(landpt);
-		{
-			// re-orient relative to ground:
-			float creature_land_orient_factor = 1.f;//0.25f;
-			o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
+			// re-align the creature to the surface normal:
+			//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
+			glm::vec3 land_normal = glm::vec3(landpt);
+			{
+				// re-orient relative to ground:
+				float creature_land_orient_factor = 1.f;//0.25f;
+				o.orientation = safe_normalize(glm::slerp(o.orientation, align_up_to(o.orientation, land_normal), creature_land_orient_factor));
+			}
+
+			o.phase += distance;
 		}
-
-		o.phase += distance;
-
-		// copy data into the creatureparts:
-		CreaturePart& part = creatureparts[rendercreaturecount];
-		part.location = o.location;
-		part.scale = o.scale;
-		part.orientation = o.orientation;
-		part.color = o.color;
-		part.phase = o.phase;
-		part.params = o.params;
-		rendercreaturecount++;
+		if (o.state != Creature::STATE_BARDO) {
+			// copy data into the creatureparts:
+			CreaturePart& part = creatureparts[rendercreaturecount];
+			part.location = o.location;
+			part.scale = o.scale;
+			part.orientation = o.orientation;
+			part.color = o.color;
+			part.phase = o.phase;
+			part.params = o.params;
+			rendercreaturecount++;
+		}
 	}
 
 	for (int i=0; i<NUM_SEGMENTS; i++) {
@@ -1501,7 +1508,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	// navigation
 	{
 		// follow a creature mode:
-		auto& o = state->objects[objectSel % NUM_OBJECTS];
+		auto& o = state->creatures[objectSel % NUM_CREATURES];
 		
 		auto boom = glm::vec3(0., o.scale*.5f, o.scale*1.f);
 		
@@ -1866,7 +1873,7 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 
 		case GLFW_KEY_F: {
 			if(downup){
-				objectSel = (objectSel + 1) % NUM_OBJECTS;
+				objectSel = (objectSel + 1) % NUM_CREATURES;
 			}
 		} break;
 
@@ -1999,16 +2006,6 @@ void State::reset() {
 		creature_reset(i);
 	}
 
-	for (int i=0; i<NUM_OBJECTS; i++) {
-		auto& o = objects[i];
-		o.location = glm::linearRand(world_min,world_max);
-		o.orientation = quat_random();
-		o.color = glm::mix(glm::ballRand(1.f)*0.5f+0.5f, glm::vec3(0.3, 0.2, 0.8), 0.5f);
-		o.phase = rnd::uni();
-		o.scale = 1.;
-		o.accel = glm::vec3(0.f);
-		o.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
-	}
 	for (int i=0; i<NUM_SEGMENTS; i++) {
 		auto& o = segments[i];
 		o.location = world_centre+glm::ballRand(10.f);

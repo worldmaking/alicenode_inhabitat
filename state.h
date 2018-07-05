@@ -331,30 +331,38 @@ struct State {
 				a.health -= dt * alive_lifespan_decay;// * (1.+rnd::bi()*0.1);
 
 			} else if (a.state == Creature::STATE_DECAYING) {
-				if (a.health < -1) {
-					//console.log("recycle of %d", i);
-					recyclecount++;
-					a.state = Creature::STATE_BARDO;
-					creature_pool.push(i);
-					continue;
-				}
 				
 				glm::vec3 norm = transform(world2field, a.location);
 				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 				
+				// decay complete?
+				if (a.health < -1) {
+					//console.log("recycle of %d", i);
+					recyclecount++;
+					a.state = Creature::STATE_BARDO;
+					dead_space.unset(norm2);
+					creature_pool.push(i);
+					continue;
+				}
 
-				// retain in deadspace:
-				dead_space.set_safe(i, norm2);
-
-				// simulate as dead
+				// simulate as dead:
+				
+				// rate of decay:
 				float decay = dt * dead_lifespan_decay;// * (1.+rnd::bi()*0.1);
 				a.health -= decay;
-				// TODO deposit blood:
+
+				// blend to grey:
+				float grey = (o.color.x + o.color.y + o.color.z)*0.333f;
+				o.color = mix(o.color, glm::vec3(grey), decay);
+
+				// deposit blood:
 				al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, glm::vec3(decay, 0., 0.));
 
+				// retain corpse in deadspace:
+				dead_space.set_safe(i, norm2);
 			}
 		}
-		console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
+		//console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
 	}
 };
 

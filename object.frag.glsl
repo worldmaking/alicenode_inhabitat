@@ -14,6 +14,7 @@ flat in int species;
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
+layout (location = 3) out vec3 FragTexCoord;
 
 #define PI 3.14159265359
 #define TWOPI 6.283185307
@@ -1065,10 +1066,11 @@ void main() {
 		//FragColor.xy = -pn.zy*0.5+0.5;
 		d_tex.xy = -pn.zy*0.5+0.5;
 		//d_tex.y = (acos(sin(50*d_tex.y + 1.5)) * 0.05);
-		FragColor.rgb = vec3(d_tex.x, d_tex.y, cheap_self_occlusion);
+		FragColor.rgb = basecolor * cheap_self_occlusion;
 		//FragColor.b = species / 6.;
 
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .0015 * world_distance));
+		FragTexCoord.xy = d_tex.xy;
 		
 	} else if (t >= maxd) {
     	// shot through to background

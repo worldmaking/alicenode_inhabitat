@@ -15,6 +15,26 @@ fluid boundaries: shouldn't be toroidal, but shouldn't either drift much beyond 
 
 creatures are kind of sliding due to collision avoidance, but instead they should turn & move
 
+render process currently:
+- upload to gpu
+- for each proj   
+      - draw to gbuffer
+      - draw gbuffer
+- for each vr eye
+      - draw to gbuffer
+      - draw gbuffer
+- hmd submit
+- draw the four fbos to the window
+
+drawscene:
+- depends on width, height, projector
+- binds: kinectrgb?, null, null, noise, distance, fungus, land, fluid 
+      
+drawgbuffer:
+- depends on destfbo, gbuffer, projector, viewport-into-fbo
+- binds: gbuf1, gbuf2, gbuf3, null, distance, fungus, emission, fluid
+
+
 gbuffer redesign. 
 - currently:
       - ivec4 albedo (though alpha isn't currently used)

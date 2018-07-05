@@ -12,6 +12,7 @@ in vec3 vertexpos;
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
+layout (location = 3) out vec3 FragTexCoord;
 
 #define PI 3.14159265359
 #define TWOPI 6.283185307
@@ -512,11 +513,12 @@ void main() {
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
-		FragColor.rgb = vec3(d_tex.xy, 0.5);
+		FragColor.rgb = vec3(cheap_self_occlusion);
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
 
 		vec3 pn = normalize(p);
-		//FragColor.xy = pn.zx*0.5+0.5;
+		//FragTexCoord.xy = pn.zx*0.5+0.5;
+		FragTexCoord.xy = d_tex.xy;
 		
 	} else if (t >= maxd) {
     	// shot through to background
@@ -526,8 +528,8 @@ void main() {
 		// too many ray steps
 		
 		//FragNormal.xyz = rd;
-		FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
-		//discard;
+		//FragNormal.xyz = quat_rotate(world_orientation, normal4(p, .01));
+		discard;
 	}
 	
 	// also write to depth buffer, so that landscape occludes other creatures:

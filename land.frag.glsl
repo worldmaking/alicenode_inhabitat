@@ -13,6 +13,7 @@ in vec3 ray, origin, eyepos;
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
+layout (location = 3) out vec3 FragTexCoord;
 
 #define PI 3.14159265359
 #define EPS 0.01
@@ -572,7 +573,7 @@ void main() {
 
 	
 	
-    	
+    FragTexCoord.xy = texCoord;
 	FragPosition.xyz = p;
 	// also write to depth buffer, so that landscape occludes other creatures:
 	gl_FragDepth = computeDepth(p, uViewProjectionMatrix);

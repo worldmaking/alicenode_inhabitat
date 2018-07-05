@@ -19,6 +19,7 @@ bloom, colour correction, antialiasing
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform sampler2D gTexCoord;
 uniform sampler3D uDistanceTex;
 //uniform sampler3D uLandTex;
 uniform sampler3D uEmissionTex;
@@ -77,6 +78,7 @@ void main() {
 	vec4 basecolor = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
+	vec3 objtexcoord = texture(gTexCoord, texCoord).xyz;
 
 	// TODO: fluid scale / transform?
 	vec3 fluidtexcoord = (uFluidMatrix * vec4(position, 1.)).xyz;
@@ -292,7 +294,7 @@ void main() {
 	color = mix(color + fcolor, fcolor, t1);
 	*/
 
-	
+	color = objtexcoord;
 
 	FragColor.rgb = color;	
 	//FragColor.rgb += vec3(texCoord, 0.);

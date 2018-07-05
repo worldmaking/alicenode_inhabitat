@@ -44,23 +44,23 @@ struct Profiler {
 */
 struct GBuffer {
 
-	static const int numBuffers = 3;
+	static const int numBuffers = 4;
 
 	unsigned int fbo;
 	unsigned int rbo;
 	std::vector<unsigned int> textures;
 	std::vector<unsigned int> attachments;
 
-	//GLint min_filter = GL_LINEAR; 
-	//GLint mag_filter = GL_LINEAR;
-	GLint min_filter = GL_NEAREST;
-	GLint mag_filter = GL_NEAREST;
+	GLint min_filter = GL_LINEAR; 
+	GLint mag_filter = GL_LINEAR;
+	//GLint min_filter = GL_NEAREST;
+	//GLint mag_filter = GL_NEAREST;
 
 	glm::ivec2 dim = glm::ivec2(1024, 1024);
 
-	GBuffer(int numbuffers = 3) {
-		textures.resize(numbuffers);
-		attachments.resize(numbuffers);
+	GBuffer() {
+		textures.resize(numBuffers);
+		attachments.resize(numBuffers);
 	}
 
 	void configureTexture(int attachment=0, GLint internalFormat = GL_RGBA, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE) {
@@ -89,6 +89,8 @@ struct GBuffer {
 		configureTexture(1, GL_RGB16F, GL_RGB, GL_FLOAT);
 		// position buffer
 		configureTexture(2, GL_RGB16F, GL_RGB, GL_FLOAT);
+		// texcoord buffer
+		configureTexture(3, GL_RGB16F, GL_RGB, GL_FLOAT);
 		
 		// configure RBO:
 		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
@@ -1187,6 +1189,7 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::v
 		deferShader.uniform("gColor", 0);
 		deferShader.uniform("gNormal", 1);
 		deferShader.uniform("gPosition", 2);
+		deferShader.uniform("gTexCoord", 3);
 		deferShader.uniform("uDistanceTex", 4);
 		deferShader.uniform("uFungusTex", 5);
 		deferShader.uniform("uEmissionTex", 6);

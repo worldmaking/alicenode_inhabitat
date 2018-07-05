@@ -1794,10 +1794,10 @@ void onFrame(uint32_t width, uint32_t height) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if (soloView) {
 		switch (soloView) {
-			case 1: fbo.draw(); break;
-			case 2: projectors[0].fbo.draw(); break;
-			case 3: projectors[1].fbo.draw(); break;
-			case 4: projectors[2].fbo.draw(); break;
+			case 1: projectors[0].fbo.draw(); break;
+			case 2: projectors[1].fbo.draw(); break;
+			case 3: projectors[2].fbo.draw(); break;
+			case 4: fbo.draw(); break;
 			default: soloView = 0;
 		}
 	} else {
@@ -2248,6 +2248,7 @@ extern "C" {
 		}
 
 		landTex.generateMipMap = true;
+		emissionTex.generateMipMap = true;
 		
 		
 

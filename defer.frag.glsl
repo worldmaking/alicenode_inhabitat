@@ -92,6 +92,8 @@ void main() {
 	float depth = length(view_position); 
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
+	vec3 ro = (uFluidMatrix * vec4(ray_origin, 1.)).xyz;
+	vec3 ro1 = fluidtexcoord;
 
 
 	vec3 color;
@@ -242,7 +244,56 @@ void main() {
 
 	// TODO: how about fog by cone tracing through uEmissionTex?
 	
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
+	
+
+
+	//color.rgb = mix(color.rgb, fogcolor, fogmix);
+
+	//color.rgb = ro;
+
+	/*
+	#define FOG_STEPS 8
+	//float perstep = 1./float(FOG_STEPS);
+
+	// what is n such that a*(n^FOG_STEPS)  == 1?
+	// n = (1/a)^(1/FOG_STEPS)?
+	
+	// should be non-zero:
+	float t = 0.125 / float(FOG_STEPS);
+	// the step multipler that gets t to 1 after FOG_STEPS steps
+	float n = pow(1./t, 1./float(FOG_STEPS));
+	//float n = pow(1./t, 1./float(FOG_STEPS));
+
+	// t1 is 1 when looking across the entire field dim
+	float t1 = length(ro1 - ro);
+	// TODO: actually we want to quit when we reach far_clip, which could be lower than the world_dim
+	// how to get rid of banding??
+	vec3 fcolor = vec3(0);
+	for (int i=0; i<FOG_STEPS; i++) {
+		float t2 = t * n;
+		float overshoot = max(0.,t2-t1);
+		float dt = (t2 - t) - overshoot;
+		vec3 pt = ro + t*rd;
+		vec3 c = textureLod(uEmissionTex, pt, 0.).rgb;
+		float luma = dot(c,c);
+		c = mix(c, fogcolor, t);
+		//color = mix(color, vec3(luma), luma);
+		fcolor += c * dt;
+		//color = mix(color, c, min(1., dt * luma * 20.));
+		//color = mix(color, vec3(luma), luma);
+		//t += dt;	// this ought to grow as we go
+		t = t2;
+		if (t2 >= t1) {
+			// something clever here for banding
+			break;
+		}
+	}
+
+	color = mix(color + fcolor, fcolor, t1);
+	*/
+
+	
+
 	FragColor.rgb = color;	
 	//FragColor.rgb += vec3(texCoord, 0.);
 }

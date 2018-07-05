@@ -5,6 +5,7 @@
 #include "al/al_field2d.h"
 #include "al/al_gl.h"
 #include "al/al_obj.h"
+#include "al/al_pod.h"
 #include "al/al_kinect2.h"
 #include "al/al_mmap.h"
 #include "al/al_hmd.h"
@@ -334,8 +335,8 @@ Profiler profiler;
 //// RUNTIME STUFF ///.
 
 std::mutex sim_mutex;
-MetroThread simThread(30);
-MetroThread fieldThread(30);
+MetroThread simThread(25);
+MetroThread fieldThread(25);
 MetroThread fluidThread(10);
 bool isRunning = 1;
 
@@ -350,30 +351,30 @@ void fluid_update(double dt) {
 
 void State::fluid_update(float dt) {
 	
-	const glm::ivec3 dim = fluidpod.dim();
+	const glm::ivec3 dim = fluid_velocities.dim();
 	const glm::vec3 field_dimf = glm::vec3(field_dim);
 	// diffuse the velocities (viscosity)
-	fluidpod.velocities.swap();
-	al_field3d_diffuse(dim, fluidpod.velocities.back(), fluidpod.velocities.front(), glm::vec3(fluid_viscosity), fluid_passes);
+	fluid_velocities.swap();
+	al_field3d_diffuse(dim, fluid_velocities.back(), fluid_velocities.front(), glm::vec3(fluid_viscosity), fluid_passes);
 
 	// stabilize:
 	// prepare new gradient data:
-	al_field3d_zero(dim, fluidpod.gradient.back());
-	al_field3d_derive_gradient(dim, fluidpod.velocities.back(), fluidpod.gradient.back()); 
+	al_field3d_zero(dim, fluid_gradient.back());
+	al_field3d_derive_gradient(dim, fluid_velocities.back(), fluid_gradient.back()); 
 	// diffuse it:
-	al_field3d_diffuse(dim, fluidpod.gradient.back(), fluidpod.gradient.front(), 0.5f, fluid_passes / 2);
+	al_field3d_diffuse(dim, fluid_gradient.back(), fluid_gradient.front(), 0.5f, fluid_passes / 2);
 	// subtract from current velocities:
-	al_field3d_subtract_gradient(dim, fluidpod.gradient.front(), fluidpod.velocities.front());
+	al_field3d_subtract_gradient(dim, fluid_gradient.front(), fluid_velocities.front());
 	
 	// advect:
-	fluidpod.velocities.swap(); 
-	al_field3d_advect(dim, fluidpod.velocities.front(), fluidpod.velocities.back(), fluidpod.velocities.front(), 1.);
+	fluid_velocities.swap(); 
+	al_field3d_advect(dim, fluid_velocities.front(), fluid_velocities.back(), fluid_velocities.front(), 1.);
 
 	// apply boundary effect to the velocity field
 	// boundary effect is the landscape, forcing the fluid to align to it when near
 	{
 		int i = 0;
-		glm::vec3 * velocities = fluidpod.velocities.front();
+		glm::vec3 * velocities = fluid_velocities.front();
 		for (size_t z = 0; z<field_dim.z; z++) {
 			for (size_t y = 0; y<field_dim.y; y++) {
 				for (size_t x = 0; x<field_dim.x; x++, i++) {
@@ -412,7 +413,7 @@ void State::fluid_update(float dt) {
 	}
 
 	// friction:
-	al_field3d_scale(dim, fluidpod.velocities.front(), glm::vec3(fluid_decay));
+	al_field3d_scale(dim, fluid_velocities.front(), glm::vec3(fluid_decay));
 	
 }
 
@@ -592,7 +593,9 @@ void State::sim_update(float dt) {
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
 	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
 
-	
+	// update all creatures
+	creatures_update(dt);
+
 	if (1) {
 		for (int i=0; i<NUM_PARTICLES; i++) {
 			Particle &o = particles[i];
@@ -602,7 +605,7 @@ void State::sim_update(float dt) {
 
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(transform(world2field, o.location), &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
 
 			// noise:
 			flow += glm::sphericalRand(0.0002f);
@@ -629,10 +632,7 @@ void State::sim_update(float dt) {
 		auto &o = objects[i];
 
 		{
-			// TODO: alive state checking etc.
-			// if alive:
-			//a.health -= predator_lifespan_decay;
-
+			
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
 			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
@@ -666,7 +666,7 @@ void State::sim_update(float dt) {
 			// get fluid flow:
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(norm, &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
 			// convert to meters per second:
 			// (why is this needed? shouldn't it be m/s already?)
 			flow *= idt;
@@ -757,14 +757,13 @@ void State::sim_update(float dt) {
 			//glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
 			glm::vec3 push = o.velocity * (creature_fluid_push * (float)dt);
 			//fluid.velocities.front().addnorm(norm, &push.x);
-			al_field3d_addnorm_interp(field_dim, fluidpod.velocities.front(), norm, push);
+			al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
 
 
 			// add some field stuff:
 			glm::vec3 chem;
-			if (i % 3 == 0) chem = blood_color * 2.f * dt;
-			if (i % 3 == 1) chem = food_color * 2.f * dt;
-			if (i % 3 == 2) chem = nest_color * 2.f * dt;
+			if (i % 2 == 1) chem = food_color * 2.f * dt;
+			if (i % 2 == 0) chem = nest_color * 2.f * dt;
 			// add to land, add to emission:
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
@@ -794,7 +793,7 @@ void State::sim_update(float dt) {
 			// get fluid flow:
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(norm, &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluidpod.velocities.front(), norm);
+			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
 
 			// get my distance from the ground:
 			float sdist; // creature's distance above the ground (or negative if below)
@@ -1536,7 +1535,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		// upload texture data to GPU:
 		//fluidTex.submit(fluid.velocities.dim(), (glm::vec3 *)fluid.velocities.front()[0]);
-		fluidTex.submit(field_dim, state->fluidpod.velocities.front());
+		fluidTex.submit(field_dim, state->fluid_velocities.front());
 		emissionTex.submit(field_dim, state->emission_field.front());
 		//fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), state->fungus_field.front());
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->field_texture[0]);
@@ -1975,8 +1974,12 @@ void State::reset() {
 
 	//hashspace.reset(world_min, world_max);
 	hashspace.reset(glm::vec2(world_min.x, world_min.z), glm::vec2(world_max.x, world_max.z));
+	dead_space.reset();
 
-	fluidpod.reset();
+	fluid_velocities.reset();
+	fluid_gradient.reset();
+
+	creature_pool.init();
 
 	fungus_field.reset();
 	//al_field2d_add(fungus_dim, fungus_field.front(), 0.5f);
@@ -1986,6 +1989,14 @@ void State::reset() {
 		for (int i=0; i<FUNGUS_TEXELS; i++) {
 			noise_texture[i] = glm::linearRand(glm::vec4(0), glm::vec4(1));
 		}
+	}
+
+	for (int i=0; i<NUM_CREATURES; i++) {
+		Creature& a = creatures[i];
+		a.idx = i;
+		a.type = rnd::integer(4) + 1;
+
+		creature_reset(i);
 	}
 
 	for (int i=0; i<NUM_OBJECTS; i++) {

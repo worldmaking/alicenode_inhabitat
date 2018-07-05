@@ -48,82 +48,77 @@ static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
 static const glm::ivec2 fungus_dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 
-template<int DIM=32, typename T=float>
-struct Field2DPod {
+struct Creature {
+	enum {
+		STATE_BARDO = 0,
+		STATE_ALIVE = 1,
+		STATE_DECAYING = 2
+	};
+	enum {
+		TYPE_NOTHING = 0,
+		TYPE_ANT = 1,
+		TYPE_BOID = 2,
+		TYPE_BUG = 3,
+		TYPE_PREDATOR_HEAD = 4,
+		TYPE_PREDATOR_BODY = 5
+	};
 
-	Field2DPod() { reset(); }
+	// identity:
+	int32_t idx = 0;
+	int32_t type = TYPE_NOTHING;
+	int32_t state = STATE_BARDO;
+	// above zero means alive
+	// above -1 means decaying
+	// below -1 means recycle it
+	float health = 1.;
 
-	void reset() {
-		memset(data0, 0, sizeof(data0));
-		memset(data1, 0, sizeof(data1));
-	}
+	// properties:
+	glm::vec3 location;
+	float scale = 1.;
+	glm::quat orientation;
+	glm::vec3 color;
+	float phase = 0.;
+	glm::vec4 params;
+	
+	// non-render:
+	glm::vec3 velocity;
+	glm::quat rot_vel;
+	glm::vec3 accel;
 
-	T * data(bool back=false) { return (!isSwapped != !back) ? data1 : data0; }
-	const T * data(bool back=false) const { return (!isSwapped != !back) ? data1 : data0; }
+	// species-specific:
+	union {
+		struct {
+			float food;
+			float nestness;
+			int64_t nest_idx;
+		} ant;
+		struct {
+			glm::vec2 influence = glm::vec2(0);
+			glm::vec2 copy = glm::vec2(0);
+			glm::vec2 avoid = glm::vec2(0);
+			glm::vec2 center = glm::vec2(0);
+			glm::vec3 song = glm::vec3(0);
+			float speed;
+			int64_t eating;
+		} boid;
+		struct {
+			float rate;
+			float itchy;
+			float healthshow;
+			float eating;
+		} bug;
+		struct {
+			float full_size;
+			glm::vec2 vel;
+			int64_t carried = 0;
+		} pred_head;
+		struct {
+			int32_t root;
+		} pred_body;
+	};
 
-	T * front() { return data(0); }
-	T * back() { return data(1); }
-
-	// copy(0) will copy from front to back
-	// copy(1) will copy from back to front
-	void copy(bool backtofront=false) {
-		memcpy(data(!backtofront), data(backtofront), sizeof(T)*length());
-	}
-
-	size_t length() const { return DIM*DIM; }
-	glm::ivec2 dim() const { return glm::ivec2(DIM, DIM); }
-
-	void swap() { isSwapped = !isSwapped; }
-
-	T data0[DIM*DIM];
-	T data1[DIM*DIM];
-	int isSwapped = 0;
-};
-
-template<int DIM=32, typename T=float>
-struct Field3DPod {
-
-	Field3DPod() { reset(); }
-
-	void reset() {
-		memset(data0, 0, sizeof(data0));
-		memset(data1, 0, sizeof(data1));
-	}
-
-	T * data(bool back=false) { return (!isSwapped != !back) ? data1 : data0; }
-	const T * data(bool back=false) const { return (!isSwapped != !back) ? data1 : data0; }
-
-	T * front() { return data(0); }
-	T * back() { return data(1); }
-
-	size_t length() const { return DIM*DIM*DIM; }
-	glm::ivec3 dim() const { return glm::ivec3(DIM, DIM, DIM); }
-
-	void swap() { isSwapped = !isSwapped; }
-
-	T data0[DIM*DIM*DIM];
-	T data1[DIM*DIM*DIM];
-	int isSwapped = 0;
-};
-
-template<int DIM=32>
-struct Fluid3DPod {
-
-	Fluid3DPod() { reset(); }
-
-	void reset() {
-		velocities.reset();
-		gradient.reset();
-	}
-
-	size_t length() const { return DIM*DIM*DIM; }
-	glm::ivec3 dim() const { return glm::ivec3(DIM, DIM, DIM); }
-
-	// TODO: I guess a clever thing would be to use vec4, xyz=velocity, w=gradient... 
-	Field3DPod<DIM, glm::vec3> velocities;
-	Field3DPod<DIM, float> gradient;
-
-	bool isFlipped = 0;
+	// provide a default constructor to suppress compile error due to union member
+	Creature() {}
 };
 
 struct Object {
@@ -176,6 +171,11 @@ struct State {
 	float test = 34;
 	
 	// for simulation:
+	Lifo<NUM_CREATURES> creature_pool;
+	CellSpace<LAND_DIM> dead_space;
+	Creature creatures[NUM_CREATURES];
+
+
 	Object objects[NUM_OBJECTS];
 	Segment segments[NUM_SEGMENTS];
 
@@ -214,7 +214,8 @@ struct State {
 	glm::vec4 noise_texture[FUNGUS_TEXELS];
 
 	// the fluid simulation:
-	Fluid3DPod<> fluidpod;
+	Field3DPod<FIELD_DIM, glm::vec3> fluid_velocities;
+	Field3DPod<FIELD_DIM, float> fluid_gradient;
 
 	// transforms:
 	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
@@ -254,6 +255,9 @@ struct State {
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;
 
+	float alive_lifespan_decay = 0.125;
+	float dead_lifespan_decay = 0.125;
+
 	// main thread:
 	void animate(float dt);
 	void reset();
@@ -262,6 +266,96 @@ struct State {
 	void fluid_update(float dt);
 	void fields_update(float dt);
 	void sim_update(float dt);
+
+	void creature_reset(int i) {
+		Creature& a = creatures[i];
+		a.idx = i;
+		a.type = rnd::integer(4) + 1;
+		a.state = Creature::STATE_ALIVE;
+		a.health = rnd::uni();
+
+		a.location = glm::linearRand(world_min,world_max);
+		a.scale = rnd::uni(0.5f) + 0.75f;
+		a.orientation = quat_random();
+		a.color = glm::ballRand(1.f)*0.5f+0.5f;
+		a.phase = rnd::uni();
+		a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
+
+		a.velocity = glm::vec3(0);
+		a.rot_vel = glm::quat();
+		a.accel = glm::vec3(0);
+
+		switch(a.type) {
+			case Creature::TYPE_ANT:
+				break;
+			case Creature::TYPE_BUG:
+				break;
+			case Creature::TYPE_BOID:
+				break;
+			case Creature::TYPE_PREDATOR_HEAD:
+				break;
+		}
+	}
+
+	void creatures_update(float dt) {
+
+		int birthcount = 0;
+		int deathcount = 0;
+		int recyclecount = 0;
+
+		// spawn new?
+		//console.log("creature pool count %d", creature_pool.count);
+		if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {
+			auto i = creature_pool.pop();
+			birthcount++;
+			//console.log("spawn %d", i);
+			creature_reset(i);
+		}
+
+		// visit each creature:
+		for (int i=0; i<NUM_CREATURES; i++) {
+			Creature& a = creatures[i];
+			if (a.state == Creature::STATE_ALIVE) {
+				if (a.health < 0) {
+					//console.log("death of %d", i);
+					deathcount++;
+					// TODO: add to deadspace
+					a.state = Creature::STATE_DECAYING;
+					continue;
+				}
+
+				// simulate as alive
+				//... 
+
+				// TODO: make this species-dependent?
+				a.health -= dt * alive_lifespan_decay;// * (1.+rnd::bi()*0.1);
+
+			} else if (a.state == Creature::STATE_DECAYING) {
+				if (a.health < -1) {
+					//console.log("recycle of %d", i);
+					recyclecount++;
+					a.state = Creature::STATE_BARDO;
+					creature_pool.push(i);
+					continue;
+				}
+				
+				glm::vec3 norm = transform(world2field, a.location);
+				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+				
+
+				// retain in deadspace:
+				dead_space.set_safe(i, norm2);
+
+				// simulate as dead
+				float decay = dt * dead_lifespan_decay;// * (1.+rnd::bi()*0.1);
+				a.health -= decay;
+				// TODO deposit blood:
+				al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, glm::vec3(decay, 0., 0.));
+
+			}
+		}
+		console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
+	}
 };
 
 #endif

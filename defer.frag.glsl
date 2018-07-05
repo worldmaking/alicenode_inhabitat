@@ -294,7 +294,7 @@ void main() {
 	color = mix(color + fcolor, fcolor, t1);
 	*/
 
-	color = objtexcoord;
+	//color = objtexcoord;
 
 	FragColor.rgb = color;	
 	//FragColor.rgb += vec3(texCoord, 0.);

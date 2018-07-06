@@ -9,6 +9,7 @@ in vec3 color;
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
+layout (location = 3) out vec3 FragTexCoord;
 
 vec3 sky(vec3 dir) {
 	vec3 n = dir*0.5+0.5;
@@ -211,6 +212,7 @@ void main() {
 	FragColor.rgb = color;
 	FragNormal.xyz = spherenormal;
 	FragPosition.xyz = world_position + sphere * world_scale;
+	FragTexCoord.xy = spherenormal.xz*0.5+0.5;
 
 	// place this fragment properly in the depth buffer
 	// if you don't do this, the depth will be at the billboard location

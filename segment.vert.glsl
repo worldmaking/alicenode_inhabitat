@@ -1,7 +1,6 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix, uViewMatrix;
 uniform vec3 uEyePos;
-uniform float uMini2World;
 
 // vertex in object space:
 layout (location = 0) in vec3 aPos;
@@ -74,7 +73,6 @@ void main() {
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
 
-	//vec3 eyepos = uEyePos / uMini2World;
 	vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 

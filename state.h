@@ -14,6 +14,62 @@ namespace glm {
 	struct ivec2 { int x, y; ivec2(int, int); };
 	struct ivec3 { int x, y, z; ivec3(int, int, int); };
 	struct ivec4 { int x, y, z, w; ivec4(int, int, int, int); };
+
+	struct glm::mat4 { float m[16]; };
+
+	template<int MAX_OBJECTS = 1024, int RESOLUTION = 5>
+	struct Hashspace3D {
+			struct Object {
+				int32_t id;		///< which object ID this is
+				int32_t next, prev;
+				uint32_t hash;	///< which voxel ID it belongs to (or invalidHash())
+				glm::vec3 pos;
+			};
+			
+			struct Voxel {
+				/// the linked list of objects in this voxel
+				int32_t first;
+			};
+			
+			struct Shell {
+				uint32_t start;
+				uint32_t end;
+			};
+		Object mObjects[MAX_OBJECTS];
+		Voxel mVoxels[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
+		Shell mShells[(1<<RESOLUTION) * (1<<RESOLUTION)]; // indices into mVoxelsByDistance
+		uint32_t mVoxelsByDistance[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
+		
+		uint32_t mShift, mShift2, mDim, mDim2, mDim3, mDimHalf, mWrap, mWrap3;
+		
+		glm::mat4 world2voxels;
+		glm::mat4 voxels2world;
+		float world2voxels_scale;
+	};
+
+	template<int N=128, typename T=int32_t>
+	struct Lifo {
+		T list[N];
+		int64_t count;
+	};
+		template<int SPACE_DIM, typename T=int32_t, T invalid=T(-1)>
+	struct CellSpace {
+		T cells[SPACE_DIM * SPACE_DIM];
+	};
+	
+	template<int DIM=32, typename T=float>
+	struct Field3DPod { 
+		T data0[DIM*DIM*DIM];
+		T data1[DIM*DIM*DIM];
+		int isSwapped = 0;
+	};
+
+	template<int DIM=32, typename T=float>
+	struct Field2DPod {
+		T data0[DIM*DIM];
+		T data1[DIM*DIM];
+		int isSwapped = 0;
+	};
 }
 #endif
 

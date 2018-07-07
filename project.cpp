@@ -2076,9 +2076,7 @@ void threads_end() {
 void onReset() {
 	threads_end();
 
-	// zero then invoke constructor on it:
-	memset(state, 0, sizeof(State)); 
-	state = new(state) State;
+	
 
 	state->reset();
 
@@ -2089,6 +2087,10 @@ void onReset() {
 
 // The onReset event is triggered when pressing the "Backspace" key in Alice
 void State::reset() {
+
+	// zero then invoke constructor on it:
+	memset(state, 0, sizeof(State)); 
+	state = new(state) State;
 
 	// how to convert the normalized coordinates of the fluid (0..1) into positions in the world:
 	// this effectively defines the bounds of the fluid in the world:
@@ -2355,7 +2357,7 @@ extern "C" {
 
 		audiostate = audiostatemap.create("audio/audiostate.bin", true);
 
-		onReset();
+		//onReset();
 
 		// set up projectors:
 		{

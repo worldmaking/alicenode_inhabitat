@@ -1,0 +1,10 @@
+<jittershader name="shader"> 
+	<param name="tex" type="int" default="0" />
+	<param name="layer" type="float" default="0" />
+	<language name="glsl" version="1.0">
+		<bind param="tex" program="fp" />
+		<bind param="layer" program="vp" />
+		<program name="vp" type="vertex" source="bg.vp.glsl" />
+		<program name="fp" type="fragment" source="bg.fp.glsl" />
+	</language> 
+</jittershader>

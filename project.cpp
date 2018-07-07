@@ -1066,7 +1066,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (alice.framecount % 60 == 0) console.log("fps %f at %f; fluid %f(%f) sim %f(%f) wxh %dx%d %f", alice.fpsAvg, t, fluidThread.fps.fps, fluidThread.potentialFPS(), simThread.fps.fps, simThread.potentialFPS(), width, height, dt);
 
 
-	if (true && alice.leap->isConnected) {
+	if (0 && alice.leap->isConnected) {
 		//console.log("leap connected!");
 		// copy bones into debugdots
 		glm::mat4 trans = viewMatInverse * leap2view;

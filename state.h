@@ -31,6 +31,8 @@ namespace glm {
 
 #define NUM_TELEPORT_POINTS 10
 
+#define NUM_AUDIO_FRAMES 1024
+
 #define FIELD_DIM 32
 #define FIELD_TEXELS FIELD_DIM*FIELD_DIM
 #define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
@@ -147,6 +149,16 @@ struct Particle {
 struct DebugDot {
 	glm::vec3 location;
 	glm::vec3 color;
+};
+
+struct AudioState {
+	struct Frame {
+		glm::vec3 pos;
+		float state;
+		glm::vec4 params;
+	};
+
+	Frame frames[NUM_AUDIO_FRAMES];
 };
 
 struct State {

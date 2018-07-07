@@ -346,7 +346,8 @@ bool isRunning = 1;
 State * state;
 Mmap<State> statemap;
 
-
+AudioState * audiostate;
+Mmap<AudioState> audiostatemap;
 
 void fluid_update(double dt) { 
 	if (Alice::Instance().isSimulating) state->fluid_update(dt); 
@@ -2168,28 +2169,6 @@ void State::reset() {
 
 void test() {
 
-	// // create a dummy grainstate.bin
-	// size_t numframes = 1024;
-	// size_t numchans = 8;
-
-	// float src[numframes*numchans];
-
-
-	// const char * fname = "grainstate.bin";
-	// std::ofstream myFile(fname);
-
-	// for (int i=0; i<numframes; i++) {
-	// 	for (int j=0; j<numchans; j++) {
-	// 		float f =  wrap((i * j) / float(numframes), 1.f);
-	// 		src[j + i*numchans] = f;
-
-	// 		myFile << f;
-	// 	}
-	// }
-
-	
-	// myFile.close();
-
 	
 	// // try loading a jxf:
 	// // "projector_calibration/"
@@ -2249,6 +2228,8 @@ extern "C" {
 		console.log("sim state %p should be size %d", state, sizeof(State));
 		//state_initialize();
 		console.log("onload state initialized");
+
+		audiostate = audiostatemap.create("audiostate.bin", true);
 
 		onReset();
 
@@ -2345,6 +2326,8 @@ extern "C" {
     	
     	// export/free state
     	statemap.destroy(true);
+		audiostatemap.destroy(true);
+		
 		console.log("let go of map");
 	
 		console.log("onunload done.");

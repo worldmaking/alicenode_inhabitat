@@ -331,6 +331,7 @@ bool enablers[10];
 #define SHOW_SEGMENTS 4
 #define SHOW_PARTICLES 5
 #define SHOW_DEBUGDOTS 6
+#define USE_OBJECT_SHADER 7
 
 Profiler profiler;
 
@@ -1087,7 +1088,7 @@ void draw_scene(int width, int height, Projector& projector) {
 
 	if (enablers[SHOW_OBJECTS]) {
 
-		if (0) {
+		if (enablers[USE_OBJECT_SHADER]) {
 			objectShader.use();
 			objectShader.uniform("time", t);
 			objectShader.uniform("uViewMatrix", viewMat);
@@ -2166,47 +2167,70 @@ void State::reset() {
 }
 
 void test() {
-	
-	// try loading a jxf:
-	// "projector_calibration/"
-	//console.log("%s", cwd());
 
-	const char * fname = "projector_calibration/chesspoints_all.jxf";
-    FILE* filp = fopen(fname, "rb" );
-    if (!filp) { 
-		console.error("Error: could not open file %s", fname);  
-	}
-	console.log("opened %s ok", fname);
+	// // create a dummy grainstate.bin
+	// size_t numframes = 1024;
+	// size_t numchans = 8;
 
-	JXFHeader header;
-	int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
-	console.log("read %d ok of %d", bytes_read, sizeof(header));
-
-	// need to BE->LE this:
-	header.container_id = SWAP32(header.container_id);
-	header.form_id = SWAP32(header.form_id);
-	header.version_id = SWAP32(header.version_id);
-	header.matrix_id = SWAP32(header.matrix_id);
+	// float src[numframes*numchans];
 
 
-	header.filesize = SWAP32(header.filesize);
+	// const char * fname = "grainstate.bin";
+	// std::ofstream myFile(fname);
 
-	if (header.container_id != 'FORM' 
-		|| header.form_id != 'JIT!'
-		|| header.version_id != 'FVER'
-		|| header.matrix_id != 'MTRX'
-	) {
-		console.error("bad chunk");
-		goto out;
-	}
-	
+	// for (int i=0; i<numframes; i++) {
+	// 	for (int j=0; j<numchans; j++) {
+	// 		float f =  wrap((i * j) / float(numframes), 1.f);
+	// 		src[j + i*numchans] = f;
 
-	console.log("filesize %d", header.filesize);
-	
+	// 		myFile << f;
+	// 	}
+	// }
 
 	
-	out:
-	fclose(filp);
+	// myFile.close();
+
+	
+	// // try loading a jxf:
+	// // "projector_calibration/"
+	// //console.log("%s", cwd());
+
+	// const char * fname = "projector_calibration/chesspoints_all.jxf";
+    // FILE* filp = fopen(fname, "rb" );
+    // if (!filp) { 
+	// 	console.error("Error: could not open file %s", fname);  
+	// }
+	// console.log("opened %s ok", fname);
+
+	// JXFHeader header;
+	// int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
+	// console.log("read %d ok of %d", bytes_read, sizeof(header));
+
+	// // need to BE->LE this:
+	// header.container_id = SWAP32(header.container_id);
+	// header.form_id = SWAP32(header.form_id);
+	// header.version_id = SWAP32(header.version_id);
+	// header.matrix_id = SWAP32(header.matrix_id);
+
+
+	// header.filesize = SWAP32(header.filesize);
+
+	// if (header.container_id != 'FORM' 
+	// 	|| header.form_id != 'JIT!'
+	// 	|| header.version_id != 'FVER'
+	// 	|| header.matrix_id != 'MTRX'
+	// ) {
+	// 	console.error("bad chunk");
+	// 	goto out;
+	// }
+	
+
+	// console.log("filesize %d", header.filesize);
+	
+
+	
+	// out:
+	// fclose(filp);
 }
 
 
@@ -2270,6 +2294,7 @@ extern "C" {
 		enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
+		enablers[USE_OBJECT_SHADER] = 0;//1;
 
 		threads_begin();
 		

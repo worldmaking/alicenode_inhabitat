@@ -916,6 +916,7 @@ void State::creatures_update(float dt) {
 				Creature& child = creatures[j];
 				child.location = a.location;
 				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
+				child.color = a.color;
 			}
 
 
@@ -1836,7 +1837,10 @@ void onFrame(uint32_t width, uint32_t height) {
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
-			
+			int slices = 8;
+			float slicewidth = 1.f/slices;
+			float sliceoffset = (alice.fps.count % slices) / float(slices);
+				
 			switch (camMode % 2){
 				case 0: {
 					// WASD mode:
@@ -1868,7 +1872,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::vec3 boom = glm::vec3(0., 1.7, 1.7);
 					//glm::vec3 boom = glm::vec3(0.);
 					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
+					//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
 					//console.log("Cam Mode 0 Active");
 				
 				} break;
@@ -1883,16 +1887,33 @@ void onFrame(uint32_t width, uint32_t height) {
 						glm::vec3(0., 1., 0.));
 					*/
 					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
-					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*40.f;
+					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*4.f;
 
 					cameraLoc = glm::mix(cameraLoc, newloc, 0.1f);
 					cameraOri = glm::slerp(cameraOri, newori, 0.01f);
 
-					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri));
-					projMat = glm::perspective(glm::radians(75.0f), aspect, projectors[2].near_clip, 80.f);
+					auto camq = glm::angleAxis(float (M_PI * -1.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) *  cameraOri;
+
+					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
+					//projMat = glm::perspective(glm::radians(75.0f), aspect, projectors[2].near_clip, 80.f);
 					//console.log("Default Cam mode Active");
 				}
 			}
+			
+			auto camq = glm::angleAxis(float (M_PI * -2.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) * cameraOri;
+
+			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
+
+			float f = projectors[2].near_clip ;
+			float f0 = (sliceoffset * 2.f - 1.f) * f;
+			float f1 = ((sliceoffset+slicewidth) * 2.f - 1.f) * f;
+
+			if (1) {
+				float ff = 3.2f;
+				f0 = -slicewidth * f * ff;
+				f1 = slicewidth * f * ff;
+			}
+			projMat = glm::frustum(f0, f1, -f, f, projectors[2].near_clip, projectors[2].far_clip);
 
 			viewProjMat = projMat * viewMat;
 			projMatInverse = glm::inverse(projMat);
@@ -1901,6 +1922,38 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			// draw the scene into the GBuffer:
 			glEnable(GL_SCISSOR_TEST);
+			{
+				glm::vec2 viewport_scale = glm::vec2(slicewidth, 1.f);
+				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
+
+				gBufferVR.begin();
+
+					viewport.pos = glm::ivec2(gBufferVR.dim.x * viewport_offset.x, gBufferVR.dim.y * viewport_offset.y);
+					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x + 1, gBufferVR.dim.y * viewport_scale.y);
+
+					//console.log("eye %d vp %d %d %d %d", eye, viewport.pos.x, viewport.pos.y, viewport.dim.x, viewport.dim.y);
+
+					glScissor(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
+					glViewport(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
+					glEnable(GL_DEPTH_TEST);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
+				gBufferVR.end();
+
+				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
+			}
+
+			/*
 			gBufferVR.begin();
 			
 				// No HMD:
@@ -1915,6 +1968,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			// now process the GBuffer and render the result into the fbo
 			draw_gbuffer(alice.hmd->fbo, gBufferVR, projectors[2], glm::vec2(1.f), glm::vec2(0.f));
+			*/
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
@@ -1939,7 +1993,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		projectors[0].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
 		projectors[1].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
 		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
-		fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
+		fbo				 .draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
 	}
 	profiler.log("draw to window", alice.fps.dt);
 
@@ -2075,12 +2129,7 @@ void threads_end() {
 
 void onReset() {
 	threads_end();
-
-	
-
 	state->reset();
-
-	// start working again:
 	onReloadGPU();
 	threads_begin();
 }

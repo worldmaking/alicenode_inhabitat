@@ -331,6 +331,7 @@ bool enablers[10];
 #define SHOW_SEGMENTS 4
 #define SHOW_PARTICLES 5
 #define SHOW_DEBUGDOTS 6
+#define USE_OBJECT_SHADER 7
 
 Profiler profiler;
 
@@ -345,7 +346,8 @@ bool isRunning = 1;
 State * state;
 Mmap<State> statemap;
 
-
+AudioState * audiostate;
+Mmap<AudioState> audiostatemap;
 
 void fluid_update(double dt) { 
 	if (Alice::Instance().isSimulating) state->fluid_update(dt); 
@@ -636,6 +638,7 @@ void State::sim_update(float dt) {
 	// simulate creature pass:
 	for (int i=0; i<NUM_CREATURES; i++) {
 		auto &o = creatures[i];
+		AudioState::Frame& audioframe = audiostate->frames[i % NUM_AUDIO_FRAMES];
 
 		if (o.state == Creature::STATE_ALIVE) {
 			
@@ -773,7 +776,15 @@ void State::sim_update(float dt) {
 			// add to land, add to emission:
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
+
+			audioframe.state = o.type;
+			audioframe.health = o.phase;
+			audioframe.norm2 = norm2;
+			audioframe.params = glm::vec4(o.health, o.color);
 			
+		} else {
+
+			audioframe.state = 0;
 		}
 	}
 
@@ -1087,7 +1098,7 @@ void draw_scene(int width, int height, Projector& projector) {
 
 	if (enablers[SHOW_OBJECTS]) {
 
-		if (0) {
+		if (enablers[USE_OBJECT_SHADER]) {
 			objectShader.use();
 			objectShader.uniform("time", t);
 			objectShader.uniform("uViewMatrix", viewMat);
@@ -2166,47 +2177,48 @@ void State::reset() {
 }
 
 void test() {
-	
-	// try loading a jxf:
-	// "projector_calibration/"
-	//console.log("%s", cwd());
-
-	const char * fname = "projector_calibration/chesspoints_all.jxf";
-    FILE* filp = fopen(fname, "rb" );
-    if (!filp) { 
-		console.error("Error: could not open file %s", fname);  
-	}
-	console.log("opened %s ok", fname);
-
-	JXFHeader header;
-	int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
-	console.log("read %d ok of %d", bytes_read, sizeof(header));
-
-	// need to BE->LE this:
-	header.container_id = SWAP32(header.container_id);
-	header.form_id = SWAP32(header.form_id);
-	header.version_id = SWAP32(header.version_id);
-	header.matrix_id = SWAP32(header.matrix_id);
-
-
-	header.filesize = SWAP32(header.filesize);
-
-	if (header.container_id != 'FORM' 
-		|| header.form_id != 'JIT!'
-		|| header.version_id != 'FVER'
-		|| header.matrix_id != 'MTRX'
-	) {
-		console.error("bad chunk");
-		goto out;
-	}
-	
-
-	console.log("filesize %d", header.filesize);
-	
 
 	
-	out:
-	fclose(filp);
+	// // try loading a jxf:
+	// // "projector_calibration/"
+	// //console.log("%s", cwd());
+
+	// const char * fname = "projector_calibration/chesspoints_all.jxf";
+    // FILE* filp = fopen(fname, "rb" );
+    // if (!filp) { 
+	// 	console.error("Error: could not open file %s", fname);  
+	// }
+	// console.log("opened %s ok", fname);
+
+	// JXFHeader header;
+	// int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
+	// console.log("read %d ok of %d", bytes_read, sizeof(header));
+
+	// // need to BE->LE this:
+	// header.container_id = SWAP32(header.container_id);
+	// header.form_id = SWAP32(header.form_id);
+	// header.version_id = SWAP32(header.version_id);
+	// header.matrix_id = SWAP32(header.matrix_id);
+
+
+	// header.filesize = SWAP32(header.filesize);
+
+	// if (header.container_id != 'FORM' 
+	// 	|| header.form_id != 'JIT!'
+	// 	|| header.version_id != 'FVER'
+	// 	|| header.matrix_id != 'MTRX'
+	// ) {
+	// 	console.error("bad chunk");
+	// 	goto out;
+	// }
+	
+
+	// console.log("filesize %d", header.filesize);
+	
+
+	
+	// out:
+	// fclose(filp);
 }
 
 
@@ -2225,6 +2237,8 @@ extern "C" {
 		console.log("sim state %p should be size %d", state, sizeof(State));
 		//state_initialize();
 		console.log("onload state initialized");
+
+		audiostate = audiostatemap.create("audio/audiostate.bin", true);
 
 		onReset();
 
@@ -2270,6 +2284,7 @@ extern "C" {
 		enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
+		enablers[USE_OBJECT_SHADER] = 0;//1;
 
 		threads_begin();
 		
@@ -2320,6 +2335,8 @@ extern "C" {
     	
     	// export/free state
     	statemap.destroy(true);
+		audiostatemap.destroy(true);
+
 		console.log("let go of map");
 	
 		console.log("onunload done.");

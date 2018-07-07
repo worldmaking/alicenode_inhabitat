@@ -33,7 +33,14 @@
         "atomic": "cpp",
         "system_error": "cpp",
         "tuple": "cpp",
-        "__string": "cpp"
+        "__string": "cpp",
+        "cfenv": "cpp",
+        "__config": "cpp",
+        "__nullptr": "cpp",
+        "cstddef": "cpp",
+        "exception": "cpp",
+        "stdexcept": "cpp",
+        "typeinfo": "cpp"
     },
     "editor.wrappingIndent": "indent",
     "editor.wordWrap": "on"

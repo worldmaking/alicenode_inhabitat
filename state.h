@@ -4,73 +4,114 @@
 #ifndef ALICE_H
 // for the use of Clang-Index:
 #include <stddef.h>
+#include <stdint.h>
 namespace glm {
 
-	struct vec2 { float x, y; vec2(float, float); };
-	struct vec3 { float x, y, z; vec3(float, float, float); };
-	struct vec4 { float x, y, z, w; vec4(float, float, float, float); };
-	struct quat { float x, y, z, w; quat(float, float, float, float); };
+	struct vec2 { float x, y; vec2(float, float); vec2(float); vec2(); };
+	struct vec3 { float x, y, z; vec3(float, float, float); vec3(float); vec3(); };
+	struct vec4 { float x, y, z, w; vec4(float, float, float, float); vec4(); };
+	struct quat { float x, y, z, w; quat(float, float, float, float); quat(); };
 
 	struct ivec2 { int x, y; ivec2(int, int); };
 	struct ivec3 { int x, y, z; ivec3(int, int, int); };
 	struct ivec4 { int x, y, z, w; ivec4(int, int, int, int); };
 
-	struct glm::mat4 { float m[16]; };
+	struct mat3 { float m[9]; };
+	struct mat4 { float m[16]; };
 
-	template<int MAX_OBJECTS = 1024, int RESOLUTION = 5>
-	struct Hashspace3D {
-			struct Object {
-				int32_t id;		///< which object ID this is
-				int32_t next, prev;
-				uint32_t hash;	///< which voxel ID it belongs to (or invalidHash())
-				glm::vec3 pos;
-			};
-			
-			struct Voxel {
-				/// the linked list of objects in this voxel
-				int32_t first;
-			};
-			
-			struct Shell {
-				uint32_t start;
-				uint32_t end;
-			};
-		Object mObjects[MAX_OBJECTS];
-		Voxel mVoxels[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
-		Shell mShells[(1<<RESOLUTION) * (1<<RESOLUTION)]; // indices into mVoxelsByDistance
-		uint32_t mVoxelsByDistance[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
-		
-		uint32_t mShift, mShift2, mDim, mDim2, mDim3, mDimHalf, mWrap, mWrap3;
-		
-		glm::mat4 world2voxels;
-		glm::mat4 voxels2world;
-		float world2voxels_scale;
-	};
+}
 
-	template<int N=128, typename T=int32_t>
-	struct Lifo {
-		T list[N];
-		int64_t count;
-	};
-		template<int SPACE_DIM, typename T=int32_t, T invalid=T(-1)>
-	struct CellSpace {
-		T cells[SPACE_DIM * SPACE_DIM];
+template<int MAX_OBJECTS = 1024, int RESOLUTION = 5>
+struct Hashspace3D {
+		struct Object {
+			int32_t id;		///< which object ID this is
+			int32_t next, prev;
+			uint32_t hash;	///< which voxel ID it belongs to (or invalidHash())
+			glm::vec3 pos;
+		};
+		
+		struct Voxel {
+			/// the linked list of objects in this voxel
+			int32_t first;
+		};
+		
+		struct Shell {
+			uint32_t start;
+			uint32_t end;
+		};
+	Object mObjects[MAX_OBJECTS];
+	Voxel mVoxels[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
+	Shell mShells[(1<<RESOLUTION) * (1<<RESOLUTION)]; // indices into mVoxelsByDistance
+	uint32_t mVoxelsByDistance[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
+	
+	uint32_t mShift, mShift2, mDim, mDim2, mDim3, mDimHalf, mWrap, mWrap3;
+	
+	glm::mat4 world2voxels;
+	glm::mat4 voxels2world;
+	float world2voxels_scale;
+};
+
+
+// RESOLUTION 5 means 2^5 = 32 voxels in each axis.
+template<int MAX_OBJECTS = 1024, int RESOLUTION = 5>
+struct Hashspace2D {
+	
+	struct Object {
+		int32_t id;		///< which object ID this is
+		int32_t next, prev;
+		uint32_t hash;	///< which voxel ID it belongs to (or invalidHash())
+		glm::vec2 pos;
 	};
 	
-	template<int DIM=32, typename T=float>
-	struct Field3DPod { 
-		T data0[DIM*DIM*DIM];
-		T data1[DIM*DIM*DIM];
-		int isSwapped = 0;
+	struct Voxel {
+		/// the linked list of objects in this voxel
+		int32_t first;
 	};
+	
+	struct Shell {
+		uint32_t start;
+		uint32_t end;
+	};
+	
+	Object mObjects[MAX_OBJECTS];
+	Voxel mVoxels[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
+	Shell mShells[(1<<RESOLUTION) * (1<<RESOLUTION)]; // indices into mVoxelsByDistance
+	uint32_t mVoxelsByDistance[(1<<RESOLUTION) * (1<<RESOLUTION) * (1<<RESOLUTION)];
+	
+	uint32_t mShift, mShift2, mDim, mDim2, mDimHalf, mWrap, mWrap2;
+	
+	glm::mat3 world2voxels;
+	glm::mat3 voxels2world;
+	float world2voxels_scale;
+	
+	Hashspace2D& reset(glm::vec2 world_min, glm::vec2 world_max);
 
-	template<int DIM=32, typename T=float>
-	struct Field2DPod {
-		T data0[DIM*DIM];
-		T data1[DIM*DIM];
-		int isSwapped = 0;
-	};
-}
+};
+
+
+template<int N=128, typename T=int32_t>
+struct Lifo {
+	T list[N];
+	int64_t count;
+};
+	template<int SPACE_DIM, typename T=int32_t, T invalid=T(-1)>
+struct CellSpace {
+	T cells[SPACE_DIM * SPACE_DIM];
+};
+
+template<int DIM=32, typename T=float>
+struct Field3DPod { 
+	T data0[DIM*DIM*DIM];
+	T data1[DIM*DIM*DIM];
+	int isSwapped = 0;
+};
+
+template<int DIM=32, typename T=float>
+struct Field2DPod {
+	T data0[DIM*DIM];
+	T data1[DIM*DIM];
+	int isSwapped = 0;
+};
 #endif
 
 #define NUM_PREDATORS 124
@@ -131,14 +172,14 @@ struct Creature {
 	// properties:
 	glm::vec3 location;
 	float scale = 1.;
-	glm::quat orientation;
+	glm::quat orientation = glm::quat();
 	glm::vec3 color;
 	float phase = 0.;
-	glm::vec4 params;
+	glm::vec4 params = glm::vec4();
 	
 	// non-render:
 	glm::vec3 velocity;
-	glm::quat rot_vel;
+	glm::quat rot_vel = glm::quat();
 	glm::vec3 accel;
 
 	// species-specific:
@@ -318,120 +359,8 @@ struct State {
 	void fields_update(float dt);
 	void sim_update(float dt);
 
-	void creature_reset(int i) {
-		Creature& a = creatures[i];
-		a.idx = i;
-		a.type = rnd::integer(4) + 1;
-		a.state = Creature::STATE_ALIVE;
-		a.health = rnd::uni();
-
-		a.location = glm::linearRand(world_min,world_max);
-		a.scale = rnd::uni(0.5f) + 0.75f;
-		a.orientation = quat_random();
-		a.color = glm::ballRand(1.f)*0.5f+0.5f;
-		a.phase = rnd::uni();
-		a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
-
-		a.velocity = glm::vec3(0);
-		a.rot_vel = glm::quat();
-		a.accel = glm::vec3(0);
-
-		switch(a.type) {
-			case Creature::TYPE_ANT:
-				break;
-			case Creature::TYPE_BUG:
-				break;
-			case Creature::TYPE_BOID:
-				break;
-			case Creature::TYPE_PREDATOR_HEAD:
-				break;
-		}
-	}
-
-	void creatures_update(float dt) {
-
-		int birthcount = 0;
-		int deathcount = 0;
-		int recyclecount = 0;
-
-		
-		// spawn new?
-		//console.log("creature pool count %d", creature_pool.count);
-		if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {
-			auto i = creature_pool.pop();
-			birthcount++;
-			//console.log("spawn %d", i);
-			creature_reset(i);
-		}
-
-		// visit each creature:
-		for (int i=0; i<NUM_CREATURES; i++) {
-			Creature& a = creatures[i];
-			if (a.state == Creature::STATE_ALIVE) {
-				if (a.health < 0) {
-					//console.log("death of %d", i);
-					deathcount++;
-					// remove from hashspace:
-					hashspace.remove(i);
-					// set new state:
-					a.state = Creature::STATE_DECAYING;
-					
-					continue;
-				}
-
-				// simulate as alive
-				//... 
-
-				// birth chance?
-				if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
-					auto j = creature_pool.pop();
-					birthcount++;
-					//console.log("spawn %d", i);
-					creature_reset(j);
-					Creature& child = creatures[j];
-					child.location = a.location;
-					child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
-				}
-
-
-				// TODO: make this species-dependent?
-				a.health -= dt * alive_lifespan_decay;// * (1.+rnd::bi()*0.1);
-
-			} else if (a.state == Creature::STATE_DECAYING) {
-				
-				glm::vec3 norm = transform(world2field, a.location);
-				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
-				
-				// decay complete?
-				if (a.health < -1) {
-					//console.log("recycle of %d", i);
-					recyclecount++;
-					a.state = Creature::STATE_BARDO;
-					dead_space.unset(norm2);
-					creature_pool.push(i);
-					continue;
-				}
-
-				// simulate as dead:
-				
-				// rate of decay:
-				float decay = dt * dead_lifespan_decay;// * (1.+rnd::bi()*0.1);
-				a.health -= decay;
-
-				// blend to dull grey:
-				float grey = (a.color.x + a.color.y + a.color.z)*0.25f;
-				a.color += dt * (glm::vec3(grey) - a.color);
-
-				// deposit blood:
-				al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, decay * blood_color);
-
-				// retain corpse in deadspace:
-				// (TODO: Is this needed, or could a hashspace query do what we need?)
-				dead_space.set_safe(i, norm2);
-			}
-		}
-		//console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
-	}
+	void creature_reset(int i);
+	void creatures_update(float dt);
 };
 
 #endif

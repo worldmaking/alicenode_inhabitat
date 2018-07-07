@@ -843,6 +843,121 @@ void State::sim_update(float dt) {
 	}
 }
 
+void State::creature_reset(int i) {
+		Creature& a = creatures[i];
+		a.idx = i;
+		a.type = rnd::integer(4) + 1;
+		a.state = Creature::STATE_ALIVE;
+		a.health = rnd::uni();
+
+		a.location = glm::linearRand(world_min,world_max);
+		a.scale = rnd::uni(0.5f) + 0.75f;
+		a.orientation = quat_random();
+		a.color = glm::ballRand(1.f)*0.5f+0.5f;
+		a.phase = rnd::uni();
+		a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
+
+		a.velocity = glm::vec3(0);
+		a.rot_vel = glm::quat();
+		a.accel = glm::vec3(0);
+
+		switch(a.type) {
+			case Creature::TYPE_ANT:
+				break;
+			case Creature::TYPE_BUG:
+				break;
+			case Creature::TYPE_BOID:
+				break;
+			case Creature::TYPE_PREDATOR_HEAD:
+				break;
+		}
+	}
+
+void State::creatures_update(float dt) {
+
+	int birthcount = 0;
+	int deathcount = 0;
+	int recyclecount = 0;
+
+	
+	// spawn new?
+	//console.log("creature pool count %d", creature_pool.count);
+	if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {
+		auto i = creature_pool.pop();
+		birthcount++;
+		//console.log("spawn %d", i);
+		creature_reset(i);
+	}
+
+	// visit each creature:
+	for (int i=0; i<NUM_CREATURES; i++) {
+		Creature& a = creatures[i];
+		if (a.state == Creature::STATE_ALIVE) {
+			if (a.health < 0) {
+				//console.log("death of %d", i);
+				deathcount++;
+				// remove from hashspace:
+				hashspace.remove(i);
+				// set new state:
+				a.state = Creature::STATE_DECAYING;
+				
+				continue;
+			}
+
+			// simulate as alive
+			//... 
+
+			// birth chance?
+			if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
+				auto j = creature_pool.pop();
+				birthcount++;
+				//console.log("spawn %d", i);
+				creature_reset(j);
+				Creature& child = creatures[j];
+				child.location = a.location;
+				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
+			}
+
+
+			// TODO: make this species-dependent?
+			a.health -= dt * alive_lifespan_decay;// * (1.+rnd::bi()*0.1);
+
+		} else if (a.state == Creature::STATE_DECAYING) {
+			
+			glm::vec3 norm = transform(world2field, a.location);
+			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+			
+			// decay complete?
+			if (a.health < -1) {
+				//console.log("recycle of %d", i);
+				recyclecount++;
+				a.state = Creature::STATE_BARDO;
+				dead_space.unset(norm2);
+				creature_pool.push(i);
+				continue;
+			}
+
+			// simulate as dead:
+			
+			// rate of decay:
+			float decay = dt * dead_lifespan_decay;// * (1.+rnd::bi()*0.1);
+			a.health -= decay;
+
+			// blend to dull grey:
+			float grey = (a.color.x + a.color.y + a.color.z)*0.25f;
+			a.color += dt * (glm::vec3(grey) - a.color);
+
+			// deposit blood:
+			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, decay * blood_color);
+
+			// retain corpse in deadspace:
+			// (TODO: Is this needed, or could a hashspace query do what we need?)
+			dead_space.set_safe(i, norm2);
+		}
+	}
+	//console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
+}
+
 void onUnloadGPU() {
 	// free resources:
 	landShader.dest_closing();

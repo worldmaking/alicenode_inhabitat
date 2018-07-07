@@ -293,7 +293,7 @@ struct State {
 
 	float emission_decay = 0.98f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
-	float emission_scale = 0.5;
+	float emission_scale = 0.9;
 
 	glm::vec3 chemical_decay = glm::vec3(0.999f);
 	glm::vec3 chemical_diffuse = glm::vec3(0.001);

@@ -19,9 +19,10 @@ bloom, colour correction, antialiasing
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform sampler2D gTexCoord;
 uniform sampler3D uDistanceTex;
 //uniform sampler3D uLandTex;
-uniform sampler3D uDensityTex;
+uniform sampler3D uEmissionTex;
 uniform sampler3D uFluidTex;
 
 uniform float uFarClip;
@@ -38,7 +39,8 @@ out vec4 FragColor;
 #define PI 3.14159265359
 
 vec3 sky(vec3 dir) {
-	vec3 n = dir*0.5+0.5;
+	vec3 n0 = dir*0.5+0.5;
+	vec3 n = n0;
 	float a = time * 0.3;
 	// detail
 	n.r = sin(2.*PI* n.r*n.g + a)*0.5+0.5;
@@ -46,7 +48,12 @@ vec3 sky(vec3 dir) {
 	// simplify
 	n.g = mix(n.g, n.r, 0.5);
 	// lighten
-	return mix(n, vec3(0.), 0.5);
+	n = mix(n, vec3(0.), 0.5);
+
+	// below y=0 should be black
+	
+
+	return n * (n0.y - 0.2);
 }
 
 float fScene(vec3 p) {
@@ -71,12 +78,13 @@ void main() {
 	vec4 basecolor = texture(gColor, texCoord);
 	vec3 normal = texture(gNormal, texCoord).xyz;
 	vec3 position = texture(gPosition, texCoord).xyz;
+	vec3 objtexcoord = texture(gTexCoord, texCoord).xyz;
 
 	// TODO: fluid scale / transform?
 	vec3 fluidtexcoord = (uFluidMatrix * vec4(position, 1.)).xyz;
 	//vec3 fluidtexcoord = position; //
 	vec3 fluid = texture(uFluidTex, fluidtexcoord).xyz;
-	vec3 density = texture(uDensityTex, fluidtexcoord).xyz;
+	vec3 density = texture(uEmissionTex, fluidtexcoord).xyz;
 	//float land = texture(uLandTex, fluidtexcoord).x;
 
 	float dist = texture(uDistanceTex, fluidtexcoord).x;
@@ -86,6 +94,8 @@ void main() {
 	float depth = length(view_position); 
 	float normalized_depth = depth/uFarClip;
 	vec3 rd = normalize(ray_direction);
+	vec3 ro = (uFluidMatrix * vec4(ray_origin, 1.)).xyz;
+	vec3 ro1 = fluidtexcoord;
 
 
 	vec3 color;
@@ -134,11 +144,11 @@ void main() {
 
 	// get environmental light from emissive sources
 	// by lookup in the normal direction
-	float nearby = .25;
+	float nearby = 2.;
 	vec3 texcoord_for_normal = (uFluidMatrix * vec4(position + normal*nearby, 1.)).xyz;
-	vec3 envcolor = texture(uDensityTex, texcoord_for_normal).rgb;
+	vec3 envcolor = texture(uEmissionTex, texcoord_for_normal).rgb;
 	vec3 texcoord_for_ref = (uFluidMatrix * vec4(position + ref*nearby, 1.)).xyz;
-	vec3 envcolor_ref = texture(uDensityTex, texcoord_for_ref).rgb;
+	vec3 envcolor_ref = texture(uEmissionTex, texcoord_for_ref).rgb;
 
 	//float metallic = acute;
 	float metallic = acute;
@@ -172,7 +182,12 @@ void main() {
 
 	// base viz:
 	color.rgb = basecolor.xyz;
+	//color.rg = vec2(color.b);
 
+	// emissive:
+	//color.rgb = envcolor;
+	//color.rgb = envcolor_ref;
+	color.rgb += envcolor_ref * 0.25;
 	
 
 	// uv grid viz:
@@ -189,6 +204,7 @@ void main() {
 
 	// pos viz:
 	//color.rgb = position.xyz;
+	//color.rgb = (position.xyz - 40.)/40.;
 	//color.rgb = mod(position.xyz * vec3(1.), 1.);
 	
 	// viewspace:
@@ -226,9 +242,60 @@ void main() {
 
 	//color.rgb = vec3(vec2(mod(dist * 16., 1.)), mod(position.x, 1.));
 
-	color += normal*0.25;
+	//color += normal*0.125;
+
+	// TODO: how about fog by cone tracing through uEmissionTex?
 	
+	
+
+
 	//color.rgb = mix(color.rgb, fogcolor, fogmix);
+
+	//color.rgb = ro;
+
+	/*
+	#define FOG_STEPS 8
+	//float perstep = 1./float(FOG_STEPS);
+
+	// what is n such that a*(n^FOG_STEPS)  == 1?
+	// n = (1/a)^(1/FOG_STEPS)?
+	
+	// should be non-zero:
+	float t = 0.125 / float(FOG_STEPS);
+	// the step multipler that gets t to 1 after FOG_STEPS steps
+	float n = pow(1./t, 1./float(FOG_STEPS));
+	//float n = pow(1./t, 1./float(FOG_STEPS));
+
+	// t1 is 1 when looking across the entire field dim
+	float t1 = length(ro1 - ro);
+	// TODO: actually we want to quit when we reach far_clip, which could be lower than the world_dim
+	// how to get rid of banding??
+	vec3 fcolor = vec3(0);
+	for (int i=0; i<FOG_STEPS; i++) {
+		float t2 = t * n;
+		float overshoot = max(0.,t2-t1);
+		float dt = (t2 - t) - overshoot;
+		vec3 pt = ro + t*rd;
+		vec3 c = textureLod(uEmissionTex, pt, 0.).rgb;
+		float luma = dot(c,c);
+		c = mix(c, fogcolor, t);
+		//color = mix(color, vec3(luma), luma);
+		fcolor += c * dt;
+		//color = mix(color, c, min(1., dt * luma * 20.));
+		//color = mix(color, vec3(luma), luma);
+		//t += dt;	// this ought to grow as we go
+		t = t2;
+		if (t2 >= t1) {
+			// something clever here for banding
+			break;
+		}
+	}
+
+	color = mix(color + fcolor, fcolor, t1);
+	*/
+
+	//color = objtexcoord;
+
 	FragColor.rgb = color;	
 	//FragColor.rgb += vec3(texCoord, 0.);
 }

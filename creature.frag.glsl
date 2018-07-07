@@ -1,13 +1,16 @@
 #version 330 core
 uniform mat4 uViewProjectionMatrix;
 
-in vec3 ray_direction, ray_origin;
 in vec3 world_position;
 in float world_scale;
 in vec4 world_orientation;
-in float phase;
-in vec3 velocity;
+in vec3 ray_direction, ray_origin, eyepos;
 in vec3 vertexpos;
+in float phase;
+in vec3 basecolor;
+in vec4 params;
+in vec3 flow;
+flat in int id;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -15,6 +18,7 @@ layout (location = 2) out vec3 FragPosition;
 layout (location = 3) out vec3 FragTexCoord;
 
 #define PI 3.14159265359
+
 #define TWOPI 6.283185307
 
 vec3 sky(vec3 dir) {
@@ -506,14 +510,16 @@ void main() {
         p = ro+rd*t;
         count += STEP_SIZE;
     }
-    FragColor = vec4(rd, 1.);
-	FragPosition.xyz = vertexpos;
+	//FragPosition.xyz = vertexpos;
 	
-	//return;
+	// also write to depth buffer, for detailed occlusion:
+	FragPosition.xyz = (world_position + quat_rotate(world_orientation, p));
+	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
+	
     
     if (d < precis) {
 		float cheap_self_occlusion = 1.-count; //pow(count, 0.75);
-		FragColor.rgb = vec3(cheap_self_occlusion);
+		FragColor.rgb = basecolor * cheap_self_occlusion;
 		FragNormal.xyz = quat_rotate(world_orientation, normal4_tex(p, .01));
 
 		vec3 pn = normalize(p);
@@ -532,7 +538,5 @@ void main() {
 		discard;
 	}
 	
-	// also write to depth buffer, so that landscape occludes other creatures:
-	FragPosition.xyz = (world_position + quat_rotate(world_orientation, p));
-	gl_FragDepth = computeDepth(FragPosition.xyz, uViewProjectionMatrix);
+	
 }

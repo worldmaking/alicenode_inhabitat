@@ -1,6 +1,6 @@
 #version 330 core
-uniform mat4 uViewProjectionMatrix, uViewMatrix;
-uniform vec3 uEyePos;
+uniform mat4 uViewProjectionMatrix, uViewMatrix, uFluidMatrix;
+uniform sampler3D uFluidTex;
 
 // vertex in object space:
 layout (location = 0) in vec3 aPos;
@@ -9,17 +9,22 @@ layout (location = 2) in vec3 iLocation;
 layout (location = 3) in vec4 iOrientation;
 layout (location = 4) in float iScale;
 layout (location = 5) in float iPhase;
-layout (location = 6) in vec3 iVelocity;
+layout (location = 6) in vec3 iColor;
+layout (location = 7) in vec4 iParams;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
 out float world_scale;
 out vec4 world_orientation;
-out float phase;
-out vec3 vertexpos;
 // starting ray for this vertex, in object space.
-out vec3 ray_direction, ray_origin;
-out vec3 velocity;
+out vec3 ray_direction, ray_origin, eyepos;
+out vec3 vertexpos;
+// other parameters:
+out float phase;
+out vec3 basecolor;
+out vec4 params;
+out vec3 flow;
+flat out int id;
 
 //	q must be a normalized quaternion
 vec3 quat_rotate(vec4 q, vec3 v) {
@@ -61,20 +66,22 @@ void main() {
 	world_scale = iScale;
 	world_orientation = iOrientation;
 	phase = iPhase;
-	velocity = iVelocity+0.5;
+	basecolor = iColor;
+	params = iParams;
+	id = gl_InstanceID;
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;
-
 	vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
-
 	// calculate gl_Position the usual way
-	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.); 
+	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
+
+	vec3 tc = (uFluidMatrix * vec4(vertexpos, 1.)).xyz;
+	flow = texture(uFluidTex, tc).xyz;
+
 	// derive eye location in world space from current view matrix:
 	// (could pass this in as a uniform instead...)
-
-	vec3 eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
-
+	eyepos = -(uViewMatrix[3].xyz)*mat3(uViewMatrix);
 
 	// we want the raymarching to operate in object-local space:
 	ray_origin = scaledpos;

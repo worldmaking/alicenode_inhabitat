@@ -153,8 +153,9 @@ struct DebugDot {
 
 struct AudioState {
 	struct Frame {
-		glm::vec3 pos;
 		float state;
+		float health;
+		glm::vec2 norm2;
 		glm::vec4 params;
 	};
 

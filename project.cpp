@@ -638,6 +638,7 @@ void State::sim_update(float dt) {
 	// simulate creature pass:
 	for (int i=0; i<NUM_CREATURES; i++) {
 		auto &o = creatures[i];
+		AudioState::Frame& audioframe = audiostate->frames[i % NUM_AUDIO_FRAMES];
 
 		if (o.state == Creature::STATE_ALIVE) {
 			
@@ -775,7 +776,15 @@ void State::sim_update(float dt) {
 			// add to land, add to emission:
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
+
+			audioframe.state = o.type;
+			audioframe.health = o.phase;
+			audioframe.norm2 = norm2;
+			audioframe.params = glm::vec4(o.health, o.color);
 			
+		} else {
+
+			audioframe.state = 0;
 		}
 	}
 
@@ -2327,7 +2336,7 @@ extern "C" {
     	// export/free state
     	statemap.destroy(true);
 		audiostatemap.destroy(true);
-		
+
 		console.log("let go of map");
 	
 		console.log("onunload done.");

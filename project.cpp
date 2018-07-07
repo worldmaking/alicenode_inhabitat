@@ -2238,7 +2238,7 @@ extern "C" {
 		//state_initialize();
 		console.log("onload state initialized");
 
-		audiostate = audiostatemap.create("audiostate.bin", true);
+		audiostate = audiostatemap.create("audio/audiostate.bin", true);
 
 		onReset();
 

@@ -1,6 +1,6 @@
 #ifndef STATE_H
 #define STATE_H
-
+//test newcode
 #ifndef ALICE_H
 // for the use of Clang-Index:
 #include <stddef.h>

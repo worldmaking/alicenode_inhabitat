@@ -754,6 +754,13 @@ vec3 fScene_tex_z(vec3 p) {
 	float y = 0.5;
 	float jointSpeed = 1.;
 
+	//Starfish
+	vec3 sf_a = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / 2.), 0.5, w*w);
+	vec3 sf_b = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI ), 0.5, w*w);
+	vec3 sf_c = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI * 3 ./ 2.), 0.5, w*w);
+	vec3 sf_d = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI * 2.), 0.5, w*w);
+	sf_final = smin_tex(sf_a, sf_b, 0.3);
+
 	//sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
 	vec3 a = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -6.), 0.5, w*w);
 	//a = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.25, 0.125, 0.1);

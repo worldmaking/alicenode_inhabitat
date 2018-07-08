@@ -30,6 +30,7 @@ uniform vec2 uDim;
 uniform mat4 uViewMatrix;
 uniform mat4 uFluidMatrix;
 uniform float time;
+uniform float uFade;
 
 in vec2 texCoord;
 in vec3 ray_direction, ray_origin, eye_position;
@@ -234,9 +235,6 @@ void main() {
 
 	//color.rg = vec2(land / 32.);
 
-	float gamma = 1.4;
-	//color = pow(color, vec3(gamma));
-
 	//color.rgb = vec3(texCoord, 0.);
 	//color.rgb = rd;
 
@@ -296,6 +294,10 @@ void main() {
 
 	//color = objtexcoord;
 
-	FragColor.rgb = color;	
 	//FragColor.rgb += vec3(texCoord, 0.);
+
+	float gamma = 0.9;
+	color = pow(color, vec3(gamma));
+
+	FragColor.rgb = mix(color, vec3(0.), uFade);
 }

@@ -123,10 +123,8 @@ struct Field2DPod {
 #define NUM_CREATURE_PARTS NUM_CREATURES
 
 #define NUM_PARTICLES 1024*256
-#define NUM_DEBUGDOTS 2*5*4
-//2*5*4
 
-#define NUM_TELEPORT_POINTS 10
+#define NUM_TELEPORT_POINTS 4
 
 #define NUM_AUDIO_FRAMES 1024
 
@@ -134,12 +132,16 @@ struct Field2DPod {
 #define FIELD_TEXELS FIELD_DIM*FIELD_DIM
 #define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
 
+
 #define LAND_DIM 200
 #define LAND_TEXELS LAND_DIM*LAND_DIM
 #define LAND_VOXELS LAND_DIM*LAND_DIM*LAND_DIM
 
 #define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
+
+#define NUM_DEBUGDOTS LAND_TEXELS
+//2*5*4
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
@@ -306,6 +308,8 @@ struct State {
 	Field3DPod<FIELD_DIM, glm::vec3> fluid_velocities;
 	Field3DPod<FIELD_DIM, float> fluid_gradient;
 
+	glm::vec3 teleport_points[NUM_TELEPORT_POINTS];
+
 	// transforms:
 	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
 	glm::vec3 world_max = glm::vec3(80.f, 80.f, 80.f);
@@ -340,12 +344,13 @@ struct State {
 	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
 	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
 
+	float vrFade = 0.f;
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;
 
-	float alive_lifespan_decay = 0.125;
-	float dead_lifespan_decay = 0.25;
+	float alive_lifespan_decay = 0.06125;
+	float dead_lifespan_decay = 0.125;
 
 	// main thread:
 	void animate(float dt);

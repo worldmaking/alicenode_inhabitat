@@ -1332,6 +1332,8 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::v
 		deferShader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
 		deferShader.uniform("uTexScale", viewport_scale);
 		deferShader.uniform("uTexOffset", viewport_offset);
+
+		deferShader.uniform("uFade", state->vrFade);
 		
 		quadMesh.draw();
 
@@ -1431,6 +1433,7 @@ void State::animate(float dt) {
 void onFrame(uint32_t width, uint32_t height) {
 	profiler.reset();
 
+
 	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
 	float dt = alice.fps.dt;
@@ -1438,16 +1441,20 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
+	//state->vrFade = sin(t) * 0.5 + 0.5;
 
-	if (0) {	
+	if (1) {	
 		// LEAP & TELEPORTING
 
-		// for now, just create two teleport points:0
-		state->debugdots[0].location = transform(state->world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
-		state->debugdots[1].location = transform(state->world2minimap, glm::vec3(4., 1., 13.)); //land_coord
-		state->debugdots[2].location = transform(state->world2minimap, glm::vec3(60., 2., 13.)); //land_coord
-		state->debugdots[2].location = transform(state->world2minimap, glm::vec3(34.5, 17., 33.)); //top of mountain
-		
+		state->teleport_points[0] = glm::vec3(20., 1., 37.);
+		state->teleport_points[1] = glm::vec3(4., 1., 13.);
+		state->teleport_points[2] = glm::vec3(60., 2., 13.);
+		state->teleport_points[3] = glm::vec3(34.5, 17., 33.);
+
+		for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
+			state->debugdots[i].location = transform(state->world2minimap, state->teleport_points[i]);
+		}
+
 		// later, figure out how to place teleport points in viable locations
 		/*
 		int div = sqrt(NUM_DEBUGDOTS);
@@ -1498,13 +1505,14 @@ void onFrame(uint32_t width, uint32_t height) {
 			//console.log("%f %f %f", hand.palmPos.x, hand.palmPos.y, hand.palmPos.z);
 		}
 		*/
-		if (true && alice.leap->isConnected) {
+		if (alice.leap->isConnected) {
 			//console.log("leap connected!");
 			// copy bones into debugdots
 			glm::mat4 trans = viewMatInverse * state->leap2view;
 
 			int num_ray_dots = 64;
 			int num_hand_dots = 5*4;
+
 
 			for (int h=0; h<2; h++) {
 		
@@ -1528,36 +1536,36 @@ void onFrame(uint32_t width, uint32_t height) {
 						glm::scale(glm::vec3(state->minimapScale)) *
 						glm::translate(-midPoint);
 				
-				if (hand.pinch == 1) {
-					vrLocation = glm::vec3(20., 1., 37.);
-					//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
-					if (hand.palmPos == state->debugdots[1].location) {
-						vrLocation = glm::vec3(20., 1., 37.);
-						}
-				} 
+				// if (hand.pinch == 1) {
+				// 	vrLocation = glm::vec3(20., 1., 37.);
+				// 	//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
+				// 	if (hand.palmPos == state->debugdots[1].location) {
+				// 		vrLocation = glm::vec3(20., 1., 37.);
+				// 	}
+				// } 
 
-				/*
-				if (h == 0) {
-					if (hand.normal.y >= 0.4f) {
+				// 
+				// if (h == 0) {
+				// 	if (hand.normal.y >= 0.4f) {
 
-					glm::vec3 mapPos = transform(trans, hand.palmPos);
-					//console.log("hand normal");
-					glm::vec3 midPoint = (world_min + world_max)/2.f;
-					midPoint.y = 0;
+				// 	glm::vec3 mapPos = transform(trans, hand.palmPos);
+				// 	//console.log("hand normal");
+				// 	glm::vec3 midPoint = (world_min + world_max)/2.f;
+				// 	midPoint.y = 0;
 
-					world2minimap = 
-						glm::translate(glm::vec3(mapPos)) * 
-						glm::scale(glm::vec3(minimapScale)) *
-						glm::translate(-midPoint) *
-						glm::mat4(1.0f);
-						console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
+				// 	world2minimap = 
+				// 		glm::translate(glm::vec3(mapPos)) * 
+				// 		glm::scale(glm::vec3(minimapScale)) *
+				// 		glm::translate(-midPoint) *
+				// 		glm::mat4(1.0f);
+				// 		console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
 
-					} else {
-						//console.log("No hand normal");
-						//world2minimap = glm::scale(glm::vec3(0.f));
-					}
+				// 	} else {
+				// 		//console.log("No hand normal");
+				// 		//world2minimap = glm::scale(glm::vec3(0.f));
+				// 	}
 
-				}*/
+				// }
 
 				//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 				float cf = fmod(hand.id / 6.f, 1.f);
@@ -1568,14 +1576,33 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				for (int f=0; f<5; f++) {
 					auto& finger = hand.fingers[f];
+
+
 					for (int b=0; b<4; b++) {
 						auto& bone = finger.bones[b];
-						
-						if (hand.isVisible) state->debugdots[d].location = transform(trans, bone.center);
+						auto boneloc = transform(trans, bone.center);
+						if (hand.isVisible) state->debugdots[d].location = boneloc;
 						state->debugdots[d].color = col;
+
+						if (b == 3) {
+							// finger tip:
+
+							for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
+								auto maploc = transform(state->world2minimap, state->teleport_points[i]);
+								float lengthToDot = glm::length(boneloc - maploc);
+								if (lengthToDot < 0.02f) {
+									// TELEPORT!
+									vrLocation = state->teleport_points[i];
+								}
+							}
+
+						}
 
 						d++;
 					}
+
+					
+					
 				}
 
 				//get hand position and direction and cast ray forward until it hits land
@@ -1595,7 +1622,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				b = transform(trans, b);
 
 
-				handDir = glm::normalize(b - a);
+				handDir = safe_normalize(b - a);
 				//handDir = safe_normalize(glm::mix(handDir, glm::vec3(0,1,0), 0.25));
 				handPos = a;
 
@@ -1604,35 +1631,36 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				glm::vec3 p = a;
 
-				/*
-				for (int i=0; i<num_ray_dots; i++) {
-					glm::vec3 loc = state->debugdots[d].location;
-					//loc = p;
-					if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
-					p = loc;
+				
+				// for (int i=0; i<num_ray_dots; i++) {
+				// 	glm::vec3 loc = state->debugdots[d].location;
+				// 	//loc = p;
+				// 	if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
+				// 	p = loc;
 
-					//handDir = safe_normalize(transform(warp, handDir));
-					handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
+				// 	//handDir = safe_normalize(transform(warp, handDir));
+				// 	handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
 
-					auto norm = transform(world2field, p);
-					float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
+				// 	auto norm = transform(world2field, p);
+				// 	float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
 
-					// distance in world coordinates:
-					//float dist_w = field2world_scale * dist;
+				// 	// distance in world coordinates:
+				// 	//float dist_w = field2world_scale * dist;
 
-					p = p + 0.01f * handDir;
+				// 	p = p + 0.01f * handDir;
 
-					float c = 0.01;
-					c = c / (c + dist);
-					state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
-					if (dist <= 0) break;
+				// 	float c = 0.01;
+				// 	c = c / (c + dist);
+				// 	state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
+				// 	if (dist <= 0) break;
 
-					d++;
-				}
-				*/
+				// 	d++;
+				// }
+
+
 			}
 		}
-		profiler.log("leap", alice.fps.dt);
+		//profiler.log("leap", alice.fps.dt);
 	}
 
 	// navigation
@@ -2152,7 +2180,7 @@ void State::reset() {
 
 	//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 		//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
-	leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
+	leap2view = glm::mat4(1.f); //glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
 
 	/// initialize at zero so that the minimap is invisible
 	world2minimap = glm::scale(glm::vec3(0.f));
@@ -2406,7 +2434,7 @@ extern "C" {
 
 		audiostate = audiostatemap.create("audio/audiostate.bin", true);
 
-		//onReset();
+		onReset();
 
 		// set up projectors:
 		{
@@ -2445,11 +2473,11 @@ extern "C" {
 
 		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
-		enablers[SHOW_MINIMAP] = 0;//1;
+		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
-		enablers[SHOW_DEBUGDOTS] = 0;//1;
+		enablers[SHOW_DEBUGDOTS] = 1;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 
 		threads_begin();
@@ -2457,7 +2485,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
-		//alice.hmd->connect();
+		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;

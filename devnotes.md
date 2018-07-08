@@ -4,6 +4,10 @@ Bring in the inhabitat species behaviours!!
 
 # Korea notes
 
+Freenect/Kinect disparities:
+- Kinect SDK has a useful coordinate mapper that lets the chessboard calibration work, getting XYZ from colour coordinate. Unfortunately freenect2 doesn't have an equivalent routine. So need to calibrate via Kinect SDK but use Freenect data.
+- The data otherwise looks similar, except that the sign of XY is negated. 
+
 Switch over from Object to Creature
 
 Need to decide on a reasonable world and gallery scale. 

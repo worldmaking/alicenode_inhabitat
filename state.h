@@ -220,7 +220,7 @@ struct AudioState {
 
 struct State {
 
-	float dummy = 10;
+	//float dummy = 10;
 	float test = 34;
 	
 	// for simulation:

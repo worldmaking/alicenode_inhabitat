@@ -1,7 +1,8 @@
 *.DS_Store
 *.code-workspace
-
+.DS_Store
 state.bin
+audio/audiostate.bin
 
 #worktrees
 +*

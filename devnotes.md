@@ -1,18 +1,104 @@
-# multiple windows
+# TODO list
 
-alice should have a window manager, that has a list of windows
+Bring in the inhabitat species behaviours!!
 
-glfw can share contexts, which is good, but VAO and FBO objects can't be shared; they would need to be created on each context.
+# Korea notes
 
-all of this could be avoided if we can create a mosaic desktop via Nvidia perhaps?
+Switch over from Object to Creature
+
+Need to decide on a reasonable world and gallery scale. 
+
+creatures shouldn't wander off to lands below the min height; they should turn away
+- also, edge-of-world should mean death
+
+fluid boundaries: shouldn't be toroidal, but shouldn't either drift much beyond the islands! 
+
+creatures are kind of sliding due to collision avoidance, but instead they should turn & move
+
+render process currently:
+- upload to gpu
+- for each proj   
+      - draw to gbuffer
+      - draw gbuffer
+- for each vr eye
+      - draw to gbuffer
+      - draw gbuffer
+- hmd submit
+- draw the four fbos to the window
+
+drawscene:
+- depends on width, height, projector
+- binds: kinectrgb?, null, null, noise, distance, fungus, land, fluid 
+      
+drawgbuffer:
+- depends on destfbo, gbuffer, projector, viewport-into-fbo
+- binds: gbuf1, gbuf2, gbuf3, null, distance, fungus, emission, fluid
+
+
+gbuffer redesign. 
+- currently:
+      - ivec4 albedo (though alpha isn't currently used)
+      - vec3 normal
+      - vec3 position
+- we may also need:
+      - emission (intensity or color? if only intensity, pack into albedo.a?)
+      - texcoords (for creatures and other material detail)
+      - luma multiplier (e.g. the self-occlusion of creatures)
+      - material properties, e.g. type, shininess, patterning parameters, etc.
+- maybe the albedo can be float32 too? 
+- can also consider separating luma & chroma
+- see http://aras-p.info/texts/CompactNormalStorage.html#method04spheremap for a way to pack normals into vec2
+
+
+Since VR needs 90fps while the projections only need 30fps, why not interleave their FBO updates?
+
+The object.frag shader was way too expensive. To do multiple species need to use the same code with different parameters. And maybe skip hair for now.
+
+
+While hashspace query seems to work, it also seems to be expensive, and potentially biased. 
+I wonder if we can treat it differently, by collating a list of 'near links' in one pass, then iterating over these links to enact their effects?
+Have a look at CoS, which I think did something similar
+
+
+
+# calibration notes
+
+
+First, 
+Rotation & frustum is now calibrating :-)
+
+
+Second,
+Ground plane is getting derived ok I think. 
+It would be great to consider this in a coordinate system relative to the ground, rather than to the kinect. 
+Getting relative to ground will be super helpful in calibrating the two systems. Simply project a grid at the floor plane and XZ translate/rotate to line them up. 
+
+
+Third,
+Not verified yet whether K2 points correspond well with the Freenect2 points -- i.e. whether the calibration is portable. 
+ 
+If not, find a way to do the capturing in alicenode-freenect, save to disk, and load into the Max patcher for calibration.  The patcher needs a raw image and a warped cloud to go with it. Freenect's cloud is based on an 'undistorted' depth image, so it seems like it should be ok? 
+
+The Max SDK describes how to format a .jxf file:
+https://cycling74.com/sdk/MaxSDK-6.0.4/html/chapter_jit_jxf.html
+
+OR, write a jit.libfreenect2 based on the same alicenode code. 
+(probably easier than porting the patcher and opencv objects to C++!)
+
+Fourth,
+Seems logical that the kinect0.cloudTransform should actually work as the viewMat, not sure why it didn't. It does in fact turn real-world meters into virtual-world meters, from the perspective of the kinect sensor. 
 
 # better frame rates
 
 was unable to maintain 90fps for Rift on main thread
 
-TODO: find out what are the bottlenecksg
+TODO: find out what are the bottlenecks
 
-Q: if this is primarily limited by the main-thread sim:
+A: the biggest one was the object shader, no surprise. Need to find a cheaper routine that can generate all species from the same code path.
+
+Q: if this is primarily limited by the main-thread sim?
+A: actually it isn't, the animation is pretty cheap.
+
 
 To what extent can this be helped by interleaving sim & render, so that while the current frame is drawing, the next frame's data is being prepared:
 
@@ -21,14 +107,6 @@ To what extent can this be helped by interleaving sim & render, so that while th
 
 Q: can GPU upload happen on a different thread? There are some GL features that allow this (kind of like mmap)
 
-Q: since VR needs 90fps while the projections only need 30fps, can these be 
-
-
-# refactoring
-
-Annoying to put state-> everywhere; can avoid this by putting the sim methods into the State struct
-
-Problem is that there must still be some state that is 
 
 
 

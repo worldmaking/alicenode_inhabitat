@@ -14,12 +14,14 @@ layout (location = 6) in vec3 iColor;
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
 out float world_scale;
-out float phase;
 out vec4 world_orientation;
-out vec3 flow;
 // starting ray for this vertex, in object space.
 out vec3 ray_direction, ray_origin, eyepos;
+out vec3 vertexpos;
+// other parameters:
+out float phase;
 out vec3 basecolor;
+out vec3 flow;
 flat out int species;
 
 //	q must be a normalized quaternion
@@ -69,7 +71,7 @@ void main() {
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;
-	vec3 vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
+	vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
 	// calculate gl_Position the usual way
 	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 
 

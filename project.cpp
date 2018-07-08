@@ -853,7 +853,7 @@ void State::creature_reset(int i) {
 		a.location = glm::linearRand(world_min,world_max);
 		a.scale = rnd::uni(0.5f) + 0.75f;
 		a.orientation = quat_random();
-		a.color = glm::ballRand(1.f)*0.5f+0.5f;
+		a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
 		a.phase = rnd::uni();
 		a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
 
@@ -916,7 +916,7 @@ void State::creatures_update(float dt) {
 				Creature& child = creatures[j];
 				child.location = a.location;
 				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
-				child.color = a.color;
+				child.color = glm::mix(child.color, a.color, 0.9f);
 			}
 
 

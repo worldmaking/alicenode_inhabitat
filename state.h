@@ -123,10 +123,8 @@ struct Field2DPod {
 #define NUM_CREATURE_PARTS NUM_CREATURES
 
 #define NUM_PARTICLES 1024*256
-#define NUM_DEBUGDOTS 2*5*4
-//2*5*4
 
-#define NUM_TELEPORT_POINTS 10
+#define NUM_TELEPORT_POINTS 4
 
 #define NUM_AUDIO_FRAMES 1024
 
@@ -134,12 +132,16 @@ struct Field2DPod {
 #define FIELD_TEXELS FIELD_DIM*FIELD_DIM
 #define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
 
+
 #define LAND_DIM 200
 #define LAND_TEXELS LAND_DIM*LAND_DIM
 #define LAND_VOXELS LAND_DIM*LAND_DIM*LAND_DIM
 
 #define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
+
+#define NUM_DEBUGDOTS LAND_TEXELS
+//2*5*4
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
@@ -250,10 +252,17 @@ struct DebugDot {
 
 struct AudioState {
 	struct Frame {
-		float state;
-		float health;
-		glm::vec2 norm2;
-		glm::vec4 params;
+		// 0 = Dead, 1-4 = species type
+		float state;		
+		// < 0 means dead, typically 0..1 when alive
+		float health;		
+		// 0..1 in X and Z. X is positive to right, Z is positive to down (toward you)
+		glm::vec2 norm2;	
+		// limited to 0..1, but tend to be close to 0.4-0.6
+		// the first three params map to RGB in the debug view
+		// semantics depend on species, but not all may be used; 
+		// work with first channel with highest priority
+		glm::vec4 params;	
 	};
 
 	Frame frames[NUM_AUDIO_FRAMES];
@@ -306,6 +315,8 @@ struct State {
 	Field3DPod<FIELD_DIM, glm::vec3> fluid_velocities;
 	Field3DPod<FIELD_DIM, float> fluid_gradient;
 
+	glm::vec3 teleport_points[NUM_TELEPORT_POINTS];
+
 	// transforms:
 	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
 	glm::vec3 world_max = glm::vec3(80.f, 80.f, 80.f);
@@ -340,11 +351,15 @@ struct State {
 	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
 	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
 
+	float vrFade = 0.f;
+	float creature_speed = 2.f; // in object-size per second
+	float creature_song_copy_factor = 0.05f;
+	float creature_song_mutate_rate = 0.01f;
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;
 
-	float alive_lifespan_decay = 0.125;
+	float alive_lifespan_decay = 0.01;
 	float dead_lifespan_decay = 0.25;
 
 	// main thread:

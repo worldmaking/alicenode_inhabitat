@@ -165,12 +165,13 @@ glm::vec3 make_orthogonal_to(glm::vec3 const v, glm::vec3 const normal) {
 // assumes `normal` is already normalized (length == 1)
 glm::quat align_up_to(glm::quat const q, glm::vec3 const normal) {
 	const float eps = 0.00001f;
+	const float similar = 1.f-eps;
 	// get q's up vector:
 	glm::vec3 uy = quat_uy(q);
 	// get similarity with normal:
 	float dp = glm::dot(uy, normal);
 	// if `direction` is already similar to `dir`, leave as-is
-	if (fabsf(dp) < eps) return q; 
+	if (fabsf(dp) > similar) return q; 
 	// find an orthogonal axis to rotate around:
 	glm::vec3 axis = glm::cross(uy, normal);
 	// get the rotation needed around this axis:
@@ -179,10 +180,9 @@ glm::quat align_up_to(glm::quat const q, glm::vec3 const normal) {
 	return safe_normalize(diff * q);
 }
 
-// re-orient a quaternion `q` to the nearest orientation 
-// whose "forward" vector (-Z) aligns to a given `direction`
-glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
+glm::quat get_forward_rotatoin_to(glm::quat const q, glm::vec3 const direction) {
 	const float eps = 0.00001f;
+	const float similar = 1.f-eps;
 	float d = glm::length(direction);
 	// if `direction` is too small, any direction is as good as any other... no change needed
 	if (fabsf(d) < eps) return q; 
@@ -191,13 +191,35 @@ glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
 	glm::vec3 uf = quat_uf(q);
 	float dp = glm::dot(uf, desired); 
 	// if `direction` is already similar to `dir`, leave as-is
-	if (fabsf(dp) < eps) return q; 
+	if (fabsf(dp) > similar) return q; 
 	// get an orthogonal axis to rotate around:
 	glm::vec3 axis = glm::cross(uf, desired);
 	// get the rotation needed around this axis:
 	glm::quat diff = glm::angleAxis(acosf(dp), axis);
 	// rotate the original quat to align to the normal:
-	return safe_normalize(diff * q);	
+	return safe_normalize(diff);	
+}
+
+// re-orient a quaternion `q` to the nearest orientation 
+// whose "forward" vector (-Z) aligns to a given `direction`
+glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
+	const float eps = 0.00001f;
+	const float similar = 1.f-eps;
+	float d = glm::length(direction);
+	// if `direction` is too small, any direction is as good as any other... no change needed
+	if (fabsf(d) < eps) return q; 
+	// get similarity with direction:
+	glm::vec3 desired = safe_normalize(direction);
+	glm::vec3 uf = quat_uf(q);
+	float dp = glm::dot(uf, desired); 
+	// if `direction` is already similar to `dir`, leave as-is
+	if (fabsf(dp) > similar) return q; 
+	// get an orthogonal axis to rotate around:
+	glm::vec3 axis = glm::cross(uf, desired);
+	// get the rotation needed around this axis:
+	glm::quat diff = glm::angleAxis(acosf(dp), axis);
+	// rotate the original quat to align to the normal:
+	return get_forward_rotatoin_to(q, direction) * q;
 }
 
 struct Projector {
@@ -320,7 +342,7 @@ glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 0;
+int soloView = 2;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -698,40 +720,92 @@ void State::sim_update(float dt) {
 				float range = M_PI * steepness * M_PI;
 				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
 				float wander_factor = 0.5f;
-				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+				//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
 			}
 
+			// float daylight_factor = sin(daytime + 1.5 * a.pos.x) * 0.4 + 0.6; // 0.2 ... 1
+
+			// set my velocity, in meters per second:
+			float speed = creature_speed * o.scale 
+						* (1. + downhill*0.5f)
+						// * (1.f + 0.1f*rnd::bi()) 
+						// * glm::min(1.f, a.health * 10.f)
+						// * daylight_factor*3.f
+						;
+			o.velocity = speed * glm::normalize(uf);
+			//o.velocity = avoid + flow + o.accel*dt;
+			float lookahead_m = o.scale * 1.f; // how far in the future want to focus attention?
+			glm::vec3 ahead_pos = o.location + uf * lookahead_m;
+
 			// maximum number of agents a spatial query can return
-			const int NEIGHBOURS_MAX = 8;
+			const int NEIGHBOURS_MAX = 16;
 			// see who's around:
 			std::vector<int32_t> neighbours;
-			float agent_range_of_view = o.scale * 3.;
-			float field_of_view = 0.; // in -1..1
-			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(o.location.x, o.location.z), i, agent_range_of_view, 0.f, false);
+			float agent_range_of_view = o.scale * 4.f;
+			float agent_personal_space = o.scale * 1.f;
+			float field_of_view = -0.5f; // in -1..1
+			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(ahead_pos.x, ahead_pos.z), i, agent_range_of_view, 0.f, false);
 
+			o.color = glm::vec3(0, 1, 0);
+
+			glm::vec3 influence;
+			int influencecount = 0;
+			glm::vec3 center;
+			int centrecount = 0;
 			glm::vec3 avoid;
+			int avoidcount = 0;
+
+
 			for (auto j : neighbours) {
 				auto& n = creatures[j];
 
 				// get relative vector from a to n:
 				glm::vec3 rel = n.location - o.location;
 				float cdistance = glm::length(rel);
+				// skip if we are right on top of each other -- no point
+				if (cdistance < 0.0001f 
+					|| cdistance > agent_range_of_view) continue;
+				// normalize relative vector:
+				glm::vec3 nrel = rel/cdistance;
 			
 				// get distance between bodies (never be negative)
 				float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
-				
-				// if too close, avoid:
-				float agent_personal_space = o.scale * 1.;
-				if (distance < agent_personal_space) {
-					// add an avoidance force:
-					float mag = 1. - (distance / agent_personal_space);
-					float avoid_factor = -0.5;
-					avoid += rel * (mag * avoid_factor);
-				}
 
 				// skip if not in my field of view
-				float similarity = glm::dot(quat_uf(o.orientation), glm::normalize(rel));
+				float similarity = glm::dot(uf, nrel);
 				if (similarity < field_of_view) continue;
+
+				o.color = glm::vec3(0, 1, 1);
+
+				// copy song (params)
+				o.params = glm::mix(o.params, n.params, creature_song_copy_factor);
+
+				// copy velocity
+				influence += n.velocity;
+				influencecount++;
+				
+				// if too close, stop moving:
+				if (distance > 0.0000001f && distance < agent_personal_space) {
+					// add an avoidance force:
+					//float mag = 1. - (distance / agent_personal_space);
+					//float avoid_factor = -0.5;
+
+					// factor is 0 at agent_personal_space
+					// factor is massive when distance is near zero
+					float avoid_factor = ((agent_personal_space/distance) - 1.f);
+					avoid -= rel * avoid_factor;
+					avoidcount++;
+					//avoid += rel * (mag * avoid_factor);
+					//o.velocity *= glm::vec3(0.5f);
+					//o.velocity = limit(o.velocity, distance);
+					o.color = glm::vec3(1, 0, 0);
+				} else {
+					// not too near, so use centering force
+
+					// accumulate centres:
+					center += rel;
+					centrecount++;
+				}
 
 				/*
 				// accumulate avoidances:
@@ -747,6 +821,50 @@ void State::sim_update(float dt) {
 				*/
 			}
 
+			// adjust velocity according to neighbourhood
+			// actually velocity is just a function of speed & uf
+			// so need to adjust direction
+			
+
+			if (avoidcount > 0) {
+				auto desired_dir = glm::normalize(avoid);
+				//o.color = desired_dir*0.5f+0.5f;
+				auto dq = align_forward_to(o.orientation, desired_dir);
+
+				o.orientation = glm::slerp(o.orientation, dq, dt);
+			}
+
+			if (influencecount > 0) {
+				// average neighbour velocity
+				influence /= float(influencecount);
+
+				// split into speed & direction
+				float desired_speed = glm::length(influence);
+				
+				// get disparity
+				auto influence_diff = influence - o.velocity;
+				float diff_mag = glm::length(influence_diff);
+				if (diff_mag > 0.001f && desired_speed > 0.001f) {
+					// try to match speed:
+					speed = glm::min(speed, desired_speed);
+					// try to match orientation:
+
+				}
+			}
+
+			if (centrecount > 0) {
+				center /= float(centrecount);
+
+				// if centre is too close, rotate away from it?
+				// centre is relative to self, but not rotated
+				auto qtocenter = align_forward_to(o.orientation, center);
+				//o.orientation = safe_normalize(glm::slerp(o.orientation, qtocenter, -0.2f));
+			}
+
+			// let song evolve:
+			o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate), glm::vec4(creature_song_mutate_rate)), 1.f);
+			o.color = glm::vec3(o.params);
+
 			float gravity = 2.0f;
 			o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
 			if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
@@ -757,10 +875,6 @@ void State::sim_update(float dt) {
 				
 			}
 
-			// set my velocity, in meters per second:
-			float speed = 2.f * o.scale * (1. + downhill*0.5f);
-			o.velocity = speed * glm::normalize(uf + avoid);
-			//o.velocity = avoid + flow + o.accel*dt;
 			
 			// add my direction to the fluid current
 			//glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
@@ -778,9 +892,9 @@ void State::sim_update(float dt) {
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
 
 			audioframe.state = o.type;
-			audioframe.health = o.phase;
+			audioframe.health = o.health;
 			audioframe.norm2 = norm2;
-			audioframe.params = glm::vec4(o.health, o.color);
+			audioframe.params = o.params;
 			
 		} else {
 
@@ -887,6 +1001,8 @@ void State::creatures_update(float dt) {
 		birthcount++;
 		//console.log("spawn %d", i);
 		creature_reset(i);
+		Creature& a = creatures[i];
+		a.location = glm::linearRand(world_min, world_max);
 	}
 
 	// visit each creature:
@@ -1332,6 +1448,8 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::v
 		deferShader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
 		deferShader.uniform("uTexScale", viewport_scale);
 		deferShader.uniform("uTexOffset", viewport_offset);
+
+		deferShader.uniform("uFade", state->vrFade);
 		
 		quadMesh.draw();
 
@@ -1431,6 +1549,7 @@ void State::animate(float dt) {
 void onFrame(uint32_t width, uint32_t height) {
 	profiler.reset();
 
+
 	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
 	float dt = alice.fps.dt;
@@ -1438,16 +1557,20 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
+	//state->vrFade = sin(t) * 0.5 + 0.5;
 
-	if (0) {	
+	if (1) {	
 		// LEAP & TELEPORTING
 
-		// for now, just create two teleport points:0
-		state->debugdots[0].location = transform(state->world2minimap, glm::vec3(20., 1., 37.)); //beside mountain
-		state->debugdots[1].location = transform(state->world2minimap, glm::vec3(4., 1., 13.)); //land_coord
-		state->debugdots[2].location = transform(state->world2minimap, glm::vec3(60., 2., 13.)); //land_coord
-		state->debugdots[2].location = transform(state->world2minimap, glm::vec3(34.5, 17., 33.)); //top of mountain
-		
+		state->teleport_points[0] = glm::vec3(20., 1., 37.);
+		state->teleport_points[1] = glm::vec3(4., 1., 13.);
+		state->teleport_points[2] = glm::vec3(60., 2., 13.);
+		state->teleport_points[3] = glm::vec3(34.5, 17., 33.);
+
+		for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
+			state->debugdots[i].location = transform(state->world2minimap, state->teleport_points[i]);
+		}
+
 		// later, figure out how to place teleport points in viable locations
 		/*
 		int div = sqrt(NUM_DEBUGDOTS);
@@ -1498,13 +1621,14 @@ void onFrame(uint32_t width, uint32_t height) {
 			//console.log("%f %f %f", hand.palmPos.x, hand.palmPos.y, hand.palmPos.z);
 		}
 		*/
-		if (true && alice.leap->isConnected) {
+		if (alice.leap->isConnected) {
 			//console.log("leap connected!");
 			// copy bones into debugdots
 			glm::mat4 trans = viewMatInverse * state->leap2view;
 
 			int num_ray_dots = 64;
 			int num_hand_dots = 5*4;
+
 
 			for (int h=0; h<2; h++) {
 		
@@ -1528,36 +1652,36 @@ void onFrame(uint32_t width, uint32_t height) {
 						glm::scale(glm::vec3(state->minimapScale)) *
 						glm::translate(-midPoint);
 				
-				if (hand.pinch == 1) {
-					vrLocation = glm::vec3(20., 1., 37.);
-					//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
-					if (hand.palmPos == state->debugdots[1].location) {
-						vrLocation = glm::vec3(20., 1., 37.);
-						}
-				} 
+				// if (hand.pinch == 1) {
+				// 	vrLocation = glm::vec3(20., 1., 37.);
+				// 	//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
+				// 	if (hand.palmPos == state->debugdots[1].location) {
+				// 		vrLocation = glm::vec3(20., 1., 37.);
+				// 	}
+				// } 
 
-				/*
-				if (h == 0) {
-					if (hand.normal.y >= 0.4f) {
+				// 
+				// if (h == 0) {
+				// 	if (hand.normal.y >= 0.4f) {
 
-					glm::vec3 mapPos = transform(trans, hand.palmPos);
-					//console.log("hand normal");
-					glm::vec3 midPoint = (world_min + world_max)/2.f;
-					midPoint.y = 0;
+				// 	glm::vec3 mapPos = transform(trans, hand.palmPos);
+				// 	//console.log("hand normal");
+				// 	glm::vec3 midPoint = (world_min + world_max)/2.f;
+				// 	midPoint.y = 0;
 
-					world2minimap = 
-						glm::translate(glm::vec3(mapPos)) * 
-						glm::scale(glm::vec3(minimapScale)) *
-						glm::translate(-midPoint) *
-						glm::mat4(1.0f);
-						console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
+				// 	world2minimap = 
+				// 		glm::translate(glm::vec3(mapPos)) * 
+				// 		glm::scale(glm::vec3(minimapScale)) *
+				// 		glm::translate(-midPoint) *
+				// 		glm::mat4(1.0f);
+				// 		console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
 
-					} else {
-						//console.log("No hand normal");
-						//world2minimap = glm::scale(glm::vec3(0.f));
-					}
+				// 	} else {
+				// 		//console.log("No hand normal");
+				// 		//world2minimap = glm::scale(glm::vec3(0.f));
+				// 	}
 
-				}*/
+				// }
 
 				//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 				float cf = fmod(hand.id / 6.f, 1.f);
@@ -1568,14 +1692,33 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				for (int f=0; f<5; f++) {
 					auto& finger = hand.fingers[f];
+
+
 					for (int b=0; b<4; b++) {
 						auto& bone = finger.bones[b];
-						
-						if (hand.isVisible) state->debugdots[d].location = transform(trans, bone.center);
+						auto boneloc = transform(trans, bone.center);
+						if (hand.isVisible) state->debugdots[d].location = boneloc;
 						state->debugdots[d].color = col;
+
+						if (b == 3) {
+							// finger tip:
+
+							for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
+								auto maploc = transform(state->world2minimap, state->teleport_points[i]);
+								float lengthToDot = glm::length(boneloc - maploc);
+								if (lengthToDot < 0.02f) {
+									// TELEPORT!
+									vrLocation = state->teleport_points[i];
+								}
+							}
+
+						}
 
 						d++;
 					}
+
+					
+					
 				}
 
 				//get hand position and direction and cast ray forward until it hits land
@@ -1595,7 +1738,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				b = transform(trans, b);
 
 
-				handDir = glm::normalize(b - a);
+				handDir = safe_normalize(b - a);
 				//handDir = safe_normalize(glm::mix(handDir, glm::vec3(0,1,0), 0.25));
 				handPos = a;
 
@@ -1604,35 +1747,36 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				glm::vec3 p = a;
 
-				/*
-				for (int i=0; i<num_ray_dots; i++) {
-					glm::vec3 loc = state->debugdots[d].location;
-					//loc = p;
-					if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
-					p = loc;
+				
+				// for (int i=0; i<num_ray_dots; i++) {
+				// 	glm::vec3 loc = state->debugdots[d].location;
+				// 	//loc = p;
+				// 	if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
+				// 	p = loc;
 
-					//handDir = safe_normalize(transform(warp, handDir));
-					handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
+				// 	//handDir = safe_normalize(transform(warp, handDir));
+				// 	handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
 
-					auto norm = transform(world2field, p);
-					float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
+				// 	auto norm = transform(world2field, p);
+				// 	float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
 
-					// distance in world coordinates:
-					//float dist_w = field2world_scale * dist;
+				// 	// distance in world coordinates:
+				// 	//float dist_w = field2world_scale * dist;
 
-					p = p + 0.01f * handDir;
+				// 	p = p + 0.01f * handDir;
 
-					float c = 0.01;
-					c = c / (c + dist);
-					state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
-					if (dist <= 0) break;
+				// 	float c = 0.01;
+				// 	c = c / (c + dist);
+				// 	state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
+				// 	if (dist <= 0) break;
 
-					d++;
-				}
-				*/
+				// 	d++;
+				// }
+
+
 			}
 		}
-		profiler.log("leap", alice.fps.dt);
+		//profiler.log("leap", alice.fps.dt);
 	}
 
 	// navigation
@@ -2152,7 +2296,7 @@ void State::reset() {
 
 	//vive2world = glm::rotate(float(M_PI/2), glm::vec3(0,1,0)) * glm::translate(glm::vec3(-40.f, 0.f, -30.f));
 		//glm::rotate(M_PI/2., glm::vec3(0., 1., 0.));
-	leap2view = glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
+	leap2view = glm::mat4(1.f); //glm::rotate(float(M_PI * -0.26), glm::vec3(1, 0, 0));
 
 	/// initialize at zero so that the minimap is invisible
 	world2minimap = glm::scale(glm::vec3(0.f));
@@ -2406,7 +2550,7 @@ extern "C" {
 
 		audiostate = audiostatemap.create("audio/audiostate.bin", true);
 
-		//onReset();
+		onReset();
 
 		// set up projectors:
 		{
@@ -2443,13 +2587,13 @@ extern "C" {
 		
 		
 
-		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 0;
-		enablers[SHOW_MINIMAP] = 0;//1;
+		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
-		enablers[SHOW_DEBUGDOTS] = 0;//1;
+		enablers[SHOW_DEBUGDOTS] = 1;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 
 		threads_begin();
@@ -2457,7 +2601,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
-		//alice.hmd->connect();
+		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;

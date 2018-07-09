@@ -11,6 +11,7 @@ layout (location = 4) in float iScale;
 layout (location = 5) in float iPhase;
 layout (location = 6) in vec3 iColor;
 layout (location = 7) in vec4 iParams;
+layout (location = 8) in float iID;
 
 // object pose & scale, needs careful handling in SDF calculation
 out vec3 world_position;
@@ -68,7 +69,7 @@ void main() {
 	phase = iPhase;
 	basecolor = iColor;
 	params = iParams;
-	id = gl_InstanceID;
+	id = int(iID);// + phase);
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;

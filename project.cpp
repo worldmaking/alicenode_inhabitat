@@ -180,7 +180,7 @@ glm::quat align_up_to(glm::quat const q, glm::vec3 const normal) {
 	return safe_normalize(diff * q);
 }
 
-glm::quat get_forward_rotatoin_to(glm::quat const q, glm::vec3 const direction) {
+glm::quat get_forward_rotation_to(glm::quat const q, glm::vec3 const direction) {
 	const float eps = 0.00001f;
 	const float similar = 1.f-eps;
 	float d = glm::length(direction);
@@ -219,7 +219,7 @@ glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
 	// get the rotation needed around this axis:
 	glm::quat diff = glm::angleAxis(acosf(dp), axis);
 	// rotate the original quat to align to the normal:
-	return get_forward_rotatoin_to(q, direction) * q;
+	return get_forward_rotation_to(q, direction) * q;
 }
 
 struct Projector {
@@ -345,7 +345,7 @@ glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 2;
+int soloView = 1;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -719,6 +719,11 @@ void State::sim_update(float dt) {
 			float uphill = uf.y;  
 			float downhill = -uphill;
 
+			
+			// zero out by default:
+			// TODO: or decay?
+			o.rot_vel = glm::quat();
+
 			// wander means changing orientation around the creature's up axis
 			if (1) {
 				float range = M_PI * steepness * M_PI;
@@ -738,19 +743,22 @@ void State::sim_update(float dt) {
 						;
 			o.velocity = speed * glm::normalize(uf);
 			//o.velocity = avoid + flow + o.accel*dt;
-			float lookahead_m = o.scale * 1.f; // how far in the future want to focus attention?
+			// how far in the future want to focus attention?
+			// look ahead to where we will be in 1 sim frame
+			float lookahead_m = speed * dt; 
 			glm::vec3 ahead_pos = o.location + uf * lookahead_m;
 
 			// maximum number of agents a spatial query can return
 			const int NEIGHBOURS_MAX = 16;
 			// see who's around:
 			std::vector<int32_t> neighbours;
-			float agent_range_of_view = o.scale * 4.f;
+			float agent_range_of_view = o.scale + 2.f;
 			float agent_personal_space = o.scale * 1.f;
-			float field_of_view = -0.5f; // in -1..1
-			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(ahead_pos.x, ahead_pos.z), i, agent_range_of_view, 0.f, false);
+			float field_of_view = -1.f; // in -1..1
+			// TODO: figure out why the non-toroidal mode isn't working
+			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(ahead_pos.x, ahead_pos.z), i, agent_range_of_view, 0.f, true);
 
-			o.color = glm::vec3(0, 1, 0);
+			//o.color = glm::vec3(0, 1, 0);
 
 			glm::vec3 influence;
 			int influencecount = 0;
@@ -760,17 +768,21 @@ void State::sim_update(float dt) {
 			int avoidcount = 0;
 
 
-			for (auto j : neighbours) {
-				auto& n = creatures[j];
+			//for (auto j : neighbours) {
+			for (int j=0; j<nres; j++) {
+				auto& n = creatures[neighbours[j]];
+
 
 				// get relative vector from a to n:
-				glm::vec3 rel = n.location - o.location;
+				glm::vec3 rel = n.location - ahead_pos; //o.location;
 				float cdistance = glm::length(rel);
 				// skip if we are right on top of each other -- no point
-				if (cdistance < 0.0001f 
-					|| cdistance > agent_range_of_view) continue;
+				if (cdistance < 0.0001f || cdistance > agent_range_of_view) continue;
+
+				//o.color = glm::vec3(0, 0, 1);
+
 				// normalize relative vector:
-				glm::vec3 nrel = rel/cdistance;
+				glm::vec3 nrel = rel / cdistance;
 			
 				// get distance between bodies (never be negative)
 				float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
@@ -779,10 +791,9 @@ void State::sim_update(float dt) {
 				float similarity = glm::dot(uf, nrel);
 				if (similarity < field_of_view) continue;
 
-				o.color = glm::vec3(0, 1, 1);
-
 				// copy song (params)
-				o.params = glm::mix(o.params, n.params, creature_song_copy_factor);
+				o.params = glm::mix(o.params, n.params, creature_song_copy_factor*dt);
+
 
 				// copy velocity
 				influence += n.velocity;
@@ -797,12 +808,11 @@ void State::sim_update(float dt) {
 					// factor is 0 at agent_personal_space
 					// factor is massive when distance is near zero
 					float avoid_factor = ((agent_personal_space/distance) - 1.f);
-					avoid -= rel * avoid_factor;
+					avoid -= rel  * avoid_factor;
 					avoidcount++;
 					//avoid += rel * (mag * avoid_factor);
 					//o.velocity *= glm::vec3(0.5f);
 					//o.velocity = limit(o.velocity, distance);
-					o.color = glm::vec3(1, 0, 0);
 				} else {
 					// not too near, so use centering force
 
@@ -831,11 +841,60 @@ void State::sim_update(float dt) {
 			
 
 			if (avoidcount > 0) {
-				auto desired_dir = glm::normalize(avoid);
-				//o.color = desired_dir*0.5f+0.5f;
-				auto dq = align_forward_to(o.orientation, desired_dir);
+				auto desired_dir = safe_normalize(avoid);
+				desired_dir = quat_unrotate(o.orientation, desired_dir);
 
-				o.orientation = glm::slerp(o.orientation, dq, dt);
+				auto q = get_forward_rotation_to(o.orientation, avoid);
+				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.125f);
+				//o.rot_vel = glm::slerp(glm::quat(), q, -2.f);
+
+				// we want the shortest rotation around up that sets the uf toward avoid
+
+				// 
+
+				// auto desired_dir = avoid; //-(world_centre - o.location); //safe_normalize(avoid);
+				// desired_dir = quat_unrotate(o.orientation, desired_dir);
+				// desired_dir = safe_normalize(desired_dir);
+
+				// auto v1 = quat_uf(o.orientation);
+				// auto v2 = desired_dir;
+				// auto axis = glm::cross(v1, v2);
+				// //float w = sqrt(glm::dot(v1,v1)*glm::dot(v2,v2)) + glm::dot(v1, v2);
+				// float w = sqrt(glm::dot(v1,v1)*glm::dot(v2,v2)) + glm::dot(v1, v2);
+
+				// glm::quat arc = safe_normalize(glm::quat(w, axis.x, axis.y, axis.z));
+
+				// auto away = safe_normalize(arc * o.orientation);
+				// o.rot_vel = o.orientation * arc;
+				// //o.orientation = glm::slerp(o.orientation, away, 0.01f);
+				
+				//o.velocity = speed * glm::normalize(avoid);
+				
+				//o.color = glm::vec3(1, 0, 1);
+
+				// // rotate this into my space:
+				// desired_dir = quat_unrotate(o.orientation, desired_dir);
+
+				// // compare with uf:
+				// float similar = -desired_dir.z; //glm::dot(desired_dir, glm::vec3(0, 0, -1));
+				// float angle = -atan2(desired_dir.x, desired_dir.z);
+
+				// //if (fabsf(angle) > 0.001f) {
+				// 	// get desired rotation around our up vector:
+				// 	glm::quat diff = glm::angleAxis(angle, glm::vec3(0,1,0));
+
+				// 	//o.rot_vel = diff;
+				// 	//o.orientation = glm::slerp(o.orientation, diff * o.orientation, 0.1f);
+
+				// 	o.color = glm::vec3(1, 0, 0);
+				//}
+
+				//o.color = desired_dir*0.5f+0.5f;
+				//auto dq = align_forward_to(o.orientation, desired_dir);
+				//o.orientation = glm::slerp(o.orientation, dq, dt);
+
+				//o.rot_vel = get_forward_rotation_to(o.orientation, desired_dir);
+				
 			}
 
 			if (influencecount > 0) {
@@ -866,8 +925,8 @@ void State::sim_update(float dt) {
 			}
 
 			// let song evolve:
-			o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate), glm::vec4(creature_song_mutate_rate)), 1.f);
-			o.color = glm::vec3(o.params);
+			o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);
+			//o.color = glm::vec3(o.params);
 
 			float gravity = 2.0f;
 			o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
@@ -970,7 +1029,7 @@ void State::creature_reset(int i) {
 
 		a.location = glm::linearRand(world_min,world_max);
 		a.scale = rnd::uni(0.5f) + 0.75f;
-		a.orientation = quat_random();
+		a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
 		a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
 		a.phase = rnd::uni();
 		a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
@@ -1214,6 +1273,7 @@ void onReloadGPU() {
 	creatureVAO.attr(5, &CreaturePart::phase, true);
 	creatureVAO.attr(6, &CreaturePart::color, true);
 	creatureVAO.attr(7, &CreaturePart::params, true);
+	creatureVAO.attr(8, &CreaturePart::id, true);
 		
 	segmentVAO.bind();
 	cubeVBO.bind();
@@ -1505,7 +1565,7 @@ void State::animate(float dt) {
 			
 			// apply change of orientation here too
 			// slerping by dt is a close approximation to rotation in radians per second
-			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * o.rot_vel, dt));
+			o.orientation = safe_normalize(glm::slerp(o.orientation, o.rot_vel * o.orientation, dt * 1.f));
 
 			// re-align the creature to the surface normal:
 			//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
@@ -1521,6 +1581,7 @@ void State::animate(float dt) {
 		if (o.state != Creature::STATE_BARDO) {
 			// copy data into the creatureparts:
 			CreaturePart& part = creatureparts[rendercreaturecount];
+			part.id = i;
 			part.location = o.location;
 			part.scale = o.scale;
 			part.orientation = o.orientation;

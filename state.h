@@ -179,7 +179,6 @@ struct Creature {
 	float phase = 0.;
 	glm::vec4 params = glm::vec4();
 	
-	// non-render:
 	glm::vec3 velocity;
 	glm::quat rot_vel = glm::quat();
 	glm::vec3 accel;
@@ -230,12 +229,15 @@ struct Segment {
 };
 
 struct CreaturePart {
-	glm::vec3 location;
-	float scale;
+	glm::vec3 location; float scale;
+
 	glm::quat orientation;
-	glm::vec3 color;
-	float phase;
+
+	glm::vec3 color; float phase;
+
 	glm::vec4 params;
+
+	float id;
 };
 
 struct Particle {
@@ -282,7 +284,7 @@ struct State {
 	CreaturePart creatureparts[NUM_CREATURE_PARTS];
 	DebugDot debugdots[NUM_DEBUGDOTS];
 
-	Hashspace2D<NUM_CREATURES, 6> hashspace;
+	Hashspace2D<NUM_CREATURES, 8> hashspace;
 
 	// the emission field is currently being used to store emissive light (as a form of smell)
 	Field3DPod<FIELD_DIM, glm::vec3> emission_field;
@@ -353,8 +355,10 @@ struct State {
 
 	float vrFade = 0.f;
 	float creature_speed = 2.f; // in object-size per second
-	float creature_song_copy_factor = 0.05f;
-	float creature_song_mutate_rate = 0.01f;
+
+	// per-second:
+	float creature_song_copy_factor = 1.25f;
+	float creature_song_mutate_rate = 0.25f;
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;

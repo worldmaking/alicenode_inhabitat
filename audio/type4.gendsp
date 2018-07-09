@@ -5,11 +5,11 @@
 			"major" : 7,
 			"minor" : 3,
 			"revision" : 4,
-			"architecture" : "x86",
+			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 435.0, 159.0, 1160.0, 786.0 ],
+		"rect" : [ 42.0, 153.0, 1160.0, 786.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.9, 0.9, 0.9, 1.0 ],
 		"bglocked" : 0,
@@ -39,6 +39,81 @@
 		"style" : "",
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
+				"box" : 				{
+					"fontname" : "Lato",
+					"fontsize" : 12.0,
+					"id" : "obj-16",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 751.5, 479.0, 81.0, 23.0 ],
+					"style" : "",
+					"text" : "param b2 0.2"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Lato",
+					"fontsize" : 12.0,
+					"id" : "obj-23",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 661.5, 479.0, 81.0, 23.0 ],
+					"style" : "",
+					"text" : "param b1 0.2"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Lato",
+					"fontsize" : 12.0,
+					"id" : "obj-17",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 871.5, 452.0, 81.0, 23.0 ],
+					"style" : "",
+					"text" : "param a2 0.1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Lato",
+					"fontsize" : 12.0,
+					"id" : "obj-21",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 766.5, 452.0, 81.0, 23.0 ],
+					"style" : "",
+					"text" : "param a1 0.1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Lato",
+					"fontsize" : 12.0,
+					"id" : "obj-22",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 661.5, 452.0, 81.0, 23.0 ],
+					"style" : "",
+					"text" : "param a0 0.9"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-12",
 					"maxclass" : "newobj",
@@ -161,7 +236,7 @@
 			}
 , 			{
 				"box" : 				{
-					"code" : "History ephase, ophase, smoothed;\n\nBuffer grain_buffer(\"grain_buffer\");\ngrain_id = in1;\nhealth, p0, p1, p2, x, y, vx, vy = peek(grain_buffer, grain_id, 0, channels=8);\n\nspawn = abs(noise()) < 0.0007;\ntrigger = spawn && health > 0;\nstart = in2+1+abs(noise())*schedahead;\n\nbeetle_dur = 1/23 ; \nbeetle_frequency = 1000*abs(noise());;\nbeetle_filter = 0.9;\nbeetle_rpts = .95;\nbeetle_modulation = 20.2*abs(noise());;\n\nl0, l1, r0, r1 = 0, 0, 0, 0;\n\nif (trigger) {\n\tisr = 1/samplerate;\n\t\n\t/*\n\tp0 = abs(noise());\n\tp1 = abs(noise());\n\tp2 = abs(noise());\n\t*/\n\t\n\tamp = 0.9*abs(noise());\n\t\n\tperiod = .1*(1+p0); //beetle.period\n\tdur = period * beetle_dur; //period * beetle_dur * beetle.scale.z;\n\tlen = dur * samplerate;\n\t\n\tfreq = beetle_frequency/period; \n\toinc = freq * isr;\n\tophase = abs(noise()); //0.; \n\tenvinc = ((beetle_rpts + floor(p2 * beetle_rpts)) / dur) * isr;\n\tephase = 0.;\n\tfilter = beetle_filter; //clamp(beetle.energy * beetle_filter, 0., 1.);\n\tfilter2 = 1.-(filter*filter);\n\tsmoothed = 0.;\n\tomod = (p1+0.5)*beetle_modulation; //beetle.energy * beetle_modulation;\n\t\n\t// TODO set up pan\n\tl0 = x*y;\n\tr0 = (1-x)*y;\n\tl1 = x*(1-y);\n\tr1 = (1-x)*(1-y);\n\t\n\tfor (i=0; i<len; i+= 1) {\n\t\tephase = ephase + envinc; //i/(len-1);\n\t\tw0 = sample(win4, ephase, boundmode=\"wrap\");\n\t\t\n\t\tophase += oinc * (1. + -0.001*omod*ophase);\n\t\tosc = sample(rep4, ophase, boundmode=\"wrap\");\n\t\t\n\t\toe = amp*osc*w0*w0;\n\t\ts = oe + filter2*(smoothed - oe);\n\t\tsmoothed = s;\n\t\t\n\t\t// pan s\n\t\tpoke(ola4, s*l0, start+i, 0, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t\tpoke(ola4, s*r0, start+i, 1, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t\tpoke(ola4, s*l1, start+i, 2, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t\tpoke(ola4, s*r1, start+i, 3, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t}\n\n\t// schedule next grain to follow:\n\t//beetle.at = (-(period * samplerate));\n\t\n}",
+					"code" : "filter(input, a0, a1, a2, b1, b2) {\n\tHistory x2(0);\n\tHistory y2(0);\n\tHistory x1(0);\n\tHistory y1(0);\n\tmul_1 = x2 * a2;\n\tmul_2 = x1 * a1;\n\tmul_3 = input * a0;\n\tmul_4 = y1 * b1;\n\tmul_5 = y2 * b2;\n\tsub_6 = ((((mul_3 + mul_2)) + mul_1)) - ((mul_5 + mul_4));\n\tresult = sub_6;\n\tx2_next_7 = fixdenorm(x1);\n\ty2_next_8 = fixdenorm(y1);\n\tx1_next_9 = fixdenorm(input);\n\ty1_next_10 = fixdenorm(sub_6);\n\tx2 = x2_next_7;\n\ty1 = y1_next_10;\n\tx1 = x1_next_9;\n\ty2 = y2_next_8;\r\n\treturn result;\r\n}\r\n\r\nHistory ephase, ophase, smoothed;\n\nBuffer grain_buffer(\"grain_buffer\");\ngrain_id = in1;\nhealth, p0, p1, p2, x, y, vx, vy = peek(grain_buffer, grain_id, 0, channels=8);\n\nspawn = abs(noise()) < 0.0007;\ntrigger = spawn && health > 0;\nstart = in2+1+abs(noise())*schedahead;\n\nbeetle_dur = 1/13 ; \nbeetle_frequency = 200 * x;\nbeetle_filter = 1; //DON'T SET A PARAM TO THIS, UNLESS YOU RESTRICT IT TO WITHIN 0.-1.\nbeetle_rpts = 3;\nbeetle_modulation = 20.2*abs(p2);;\n\nl0, l1, r0, r1 = 0, 0, 0, 0;\n\nif (trigger) {\n\tisr = 1/samplerate;\n\t\n\t/*\n\tp0 = abs(noise());\n\tp1 = abs(noise());\n\tp2 = abs(noise());\n\t*/\n\t\n\tamp = p0;\n\t\n\tperiod = .09*(1+p0); //beetle.period\n\tdur = period * beetle_dur; //period * beetle_dur * beetle.scale.z;\n\tlen = dur * samplerate;\n\t\n\tfreq = beetle_frequency/period; \n\toinc = freq * isr;\n\tophase = abs(noise()); //0.; \n\tenvinc = ((beetle_rpts + floor(p2 * beetle_rpts)) / dur) * isr;\n\tephase = 0.;\n\tfilter = beetle_filter; //clamp(beetle.energy * beetle_filter, 0., 1.);\n\tfilter2 = 1.-(filter*filter);\n\tsmoothed = 0.;\n\tomod = (p1+0.5)*beetle_modulation; //beetle.energy * beetle_modulation;\n\t\n\t// TODO set up pan\n\tl0 = x*y;\n\tr0 = (1-x)*y;\n\tl1 = x*(1-y);\n\tr1 = (1-x)*(1-y);\n\t\n\tfor (i=0; i<len; i+= 1) {\n\t\tephase = ephase + envinc; //i/(len-1);\n\t\tw0 = sample(win4, ephase, boundmode=\"wrap\");\n\t\t\n\t\tophase += oinc * (1. + -0.001*omod*ophase);\n\t\tosc = sample(rep4, ophase, boundmode=\"wrap\");\n\t\t\n\t\toe = amp*osc*w0*w0;\n\t\ts = oe + filter2*(smoothed - oe);\r\n\t\t\r\n\t\ts = filter(s, a0, a1, a2, b1, b2);\r\n\n\t\tsmoothed = s;\r\n\r\n\t\t\n\t\t// pan s\n\t\tpoke(ola4, s*l0, start+i, 0, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t\tpoke(ola4, s*r0, start+i, 1, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t\tpoke(ola4, s*l1, start+i, 2, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t\tpoke(ola4, s*r1, start+i, 3, 1, overdubmode=\"accum\", boundmode=\"wrap\");\n\t}\n\n\t// schedule next grain to follow:\n\t//beetle.at = (-(period * samplerate));\n\t\n}",
 					"fontface" : 0,
 					"fontname" : "Arial",
 					"fontsize" : 12.0,
@@ -262,7 +337,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 635.0, 348.0, 139.0, 33.0 ],
+					"patching_rect" : [ 635.0, 348.0, 139.0, 34.0 ],
 					"presentation_linecount" : 2,
 					"presentation_rect" : [ 635.0, 348.0, 139.0, 33.0 ],
 					"style" : "",

@@ -252,10 +252,17 @@ struct DebugDot {
 
 struct AudioState {
 	struct Frame {
-		float state;
-		float health;
-		glm::vec2 norm2;
-		glm::vec4 params;
+		// 0 = Dead, 1-4 = species type
+		float state;		
+		// < 0 means dead, typically 0..1 when alive
+		float health;		
+		// 0..1 in X and Z. X is positive to right, Z is positive to down (toward you)
+		glm::vec2 norm2;	
+		// limited to 0..1, but tend to be close to 0.4-0.6
+		// the first three params map to RGB in the debug view
+		// semantics depend on species, but not all may be used; 
+		// work with first channel with highest priority
+		glm::vec4 params;	
 	};
 
 	Frame frames[NUM_AUDIO_FRAMES];
@@ -345,12 +352,15 @@ struct State {
 	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
 
 	float vrFade = 0.f;
+	float creature_speed = 2.f; // in object-size per second
+	float creature_song_copy_factor = 0.05f;
+	float creature_song_mutate_rate = 0.01f;
 
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;
 
-	float alive_lifespan_decay = 0.06125;
-	float dead_lifespan_decay = 0.125;
+	float alive_lifespan_decay = 0.01;
+	float dead_lifespan_decay = 0.25;
 
 	// main thread:
 	void animate(float dt);

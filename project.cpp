@@ -165,12 +165,13 @@ glm::vec3 make_orthogonal_to(glm::vec3 const v, glm::vec3 const normal) {
 // assumes `normal` is already normalized (length == 1)
 glm::quat align_up_to(glm::quat const q, glm::vec3 const normal) {
 	const float eps = 0.00001f;
+	const float similar = 1.f-eps;
 	// get q's up vector:
 	glm::vec3 uy = quat_uy(q);
 	// get similarity with normal:
 	float dp = glm::dot(uy, normal);
 	// if `direction` is already similar to `dir`, leave as-is
-	if (fabsf(dp) < eps) return q; 
+	if (fabsf(dp) > similar) return q; 
 	// find an orthogonal axis to rotate around:
 	glm::vec3 axis = glm::cross(uy, normal);
 	// get the rotation needed around this axis:
@@ -179,10 +180,9 @@ glm::quat align_up_to(glm::quat const q, glm::vec3 const normal) {
 	return safe_normalize(diff * q);
 }
 
-// re-orient a quaternion `q` to the nearest orientation 
-// whose "forward" vector (-Z) aligns to a given `direction`
-glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
+glm::quat get_forward_rotatoin_to(glm::quat const q, glm::vec3 const direction) {
 	const float eps = 0.00001f;
+	const float similar = 1.f-eps;
 	float d = glm::length(direction);
 	// if `direction` is too small, any direction is as good as any other... no change needed
 	if (fabsf(d) < eps) return q; 
@@ -191,13 +191,35 @@ glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
 	glm::vec3 uf = quat_uf(q);
 	float dp = glm::dot(uf, desired); 
 	// if `direction` is already similar to `dir`, leave as-is
-	if (fabsf(dp) < eps) return q; 
+	if (fabsf(dp) > similar) return q; 
 	// get an orthogonal axis to rotate around:
 	glm::vec3 axis = glm::cross(uf, desired);
 	// get the rotation needed around this axis:
 	glm::quat diff = glm::angleAxis(acosf(dp), axis);
 	// rotate the original quat to align to the normal:
-	return safe_normalize(diff * q);	
+	return safe_normalize(diff);	
+}
+
+// re-orient a quaternion `q` to the nearest orientation 
+// whose "forward" vector (-Z) aligns to a given `direction`
+glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
+	const float eps = 0.00001f;
+	const float similar = 1.f-eps;
+	float d = glm::length(direction);
+	// if `direction` is too small, any direction is as good as any other... no change needed
+	if (fabsf(d) < eps) return q; 
+	// get similarity with direction:
+	glm::vec3 desired = safe_normalize(direction);
+	glm::vec3 uf = quat_uf(q);
+	float dp = glm::dot(uf, desired); 
+	// if `direction` is already similar to `dir`, leave as-is
+	if (fabsf(dp) > similar) return q; 
+	// get an orthogonal axis to rotate around:
+	glm::vec3 axis = glm::cross(uf, desired);
+	// get the rotation needed around this axis:
+	glm::quat diff = glm::angleAxis(acosf(dp), axis);
+	// rotate the original quat to align to the normal:
+	return get_forward_rotatoin_to(q, direction) * q;
 }
 
 struct Projector {
@@ -320,7 +342,7 @@ glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 0;
+int soloView = 2;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -698,40 +720,92 @@ void State::sim_update(float dt) {
 				float range = M_PI * steepness * M_PI;
 				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
 				float wander_factor = 0.5f;
-				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+				//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
 			}
 
+			// float daylight_factor = sin(daytime + 1.5 * a.pos.x) * 0.4 + 0.6; // 0.2 ... 1
+
+			// set my velocity, in meters per second:
+			float speed = creature_speed * o.scale 
+						* (1. + downhill*0.5f)
+						// * (1.f + 0.1f*rnd::bi()) 
+						// * glm::min(1.f, a.health * 10.f)
+						// * daylight_factor*3.f
+						;
+			o.velocity = speed * glm::normalize(uf);
+			//o.velocity = avoid + flow + o.accel*dt;
+			float lookahead_m = o.scale * 1.f; // how far in the future want to focus attention?
+			glm::vec3 ahead_pos = o.location + uf * lookahead_m;
+
 			// maximum number of agents a spatial query can return
-			const int NEIGHBOURS_MAX = 8;
+			const int NEIGHBOURS_MAX = 16;
 			// see who's around:
 			std::vector<int32_t> neighbours;
-			float agent_range_of_view = o.scale * 3.;
-			float field_of_view = 0.; // in -1..1
-			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(o.location.x, o.location.z), i, agent_range_of_view, 0.f, false);
+			float agent_range_of_view = o.scale * 4.f;
+			float agent_personal_space = o.scale * 1.f;
+			float field_of_view = -0.5f; // in -1..1
+			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(ahead_pos.x, ahead_pos.z), i, agent_range_of_view, 0.f, false);
 
+			o.color = glm::vec3(0, 1, 0);
+
+			glm::vec3 influence;
+			int influencecount = 0;
+			glm::vec3 center;
+			int centrecount = 0;
 			glm::vec3 avoid;
+			int avoidcount = 0;
+
+
 			for (auto j : neighbours) {
 				auto& n = creatures[j];
 
 				// get relative vector from a to n:
 				glm::vec3 rel = n.location - o.location;
 				float cdistance = glm::length(rel);
+				// skip if we are right on top of each other -- no point
+				if (cdistance < 0.0001f 
+					|| cdistance > agent_range_of_view) continue;
+				// normalize relative vector:
+				glm::vec3 nrel = rel/cdistance;
 			
 				// get distance between bodies (never be negative)
 				float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
-				
-				// if too close, avoid:
-				float agent_personal_space = o.scale * 1.;
-				if (distance < agent_personal_space) {
-					// add an avoidance force:
-					float mag = 1. - (distance / agent_personal_space);
-					float avoid_factor = -0.5;
-					avoid += rel * (mag * avoid_factor);
-				}
 
 				// skip if not in my field of view
-				float similarity = glm::dot(quat_uf(o.orientation), glm::normalize(rel));
+				float similarity = glm::dot(uf, nrel);
 				if (similarity < field_of_view) continue;
+
+				o.color = glm::vec3(0, 1, 1);
+
+				// copy song (params)
+				o.params = glm::mix(o.params, n.params, creature_song_copy_factor);
+
+				// copy velocity
+				influence += n.velocity;
+				influencecount++;
+				
+				// if too close, stop moving:
+				if (distance > 0.0000001f && distance < agent_personal_space) {
+					// add an avoidance force:
+					//float mag = 1. - (distance / agent_personal_space);
+					//float avoid_factor = -0.5;
+
+					// factor is 0 at agent_personal_space
+					// factor is massive when distance is near zero
+					float avoid_factor = ((agent_personal_space/distance) - 1.f);
+					avoid -= rel * avoid_factor;
+					avoidcount++;
+					//avoid += rel * (mag * avoid_factor);
+					//o.velocity *= glm::vec3(0.5f);
+					//o.velocity = limit(o.velocity, distance);
+					o.color = glm::vec3(1, 0, 0);
+				} else {
+					// not too near, so use centering force
+
+					// accumulate centres:
+					center += rel;
+					centrecount++;
+				}
 
 				/*
 				// accumulate avoidances:
@@ -747,6 +821,50 @@ void State::sim_update(float dt) {
 				*/
 			}
 
+			// adjust velocity according to neighbourhood
+			// actually velocity is just a function of speed & uf
+			// so need to adjust direction
+			
+
+			if (avoidcount > 0) {
+				auto desired_dir = glm::normalize(avoid);
+				//o.color = desired_dir*0.5f+0.5f;
+				auto dq = align_forward_to(o.orientation, desired_dir);
+
+				o.orientation = glm::slerp(o.orientation, dq, dt);
+			}
+
+			if (influencecount > 0) {
+				// average neighbour velocity
+				influence /= float(influencecount);
+
+				// split into speed & direction
+				float desired_speed = glm::length(influence);
+				
+				// get disparity
+				auto influence_diff = influence - o.velocity;
+				float diff_mag = glm::length(influence_diff);
+				if (diff_mag > 0.001f && desired_speed > 0.001f) {
+					// try to match speed:
+					speed = glm::min(speed, desired_speed);
+					// try to match orientation:
+
+				}
+			}
+
+			if (centrecount > 0) {
+				center /= float(centrecount);
+
+				// if centre is too close, rotate away from it?
+				// centre is relative to self, but not rotated
+				auto qtocenter = align_forward_to(o.orientation, center);
+				//o.orientation = safe_normalize(glm::slerp(o.orientation, qtocenter, -0.2f));
+			}
+
+			// let song evolve:
+			o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate), glm::vec4(creature_song_mutate_rate)), 1.f);
+			o.color = glm::vec3(o.params);
+
 			float gravity = 2.0f;
 			o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
 			if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
@@ -757,10 +875,6 @@ void State::sim_update(float dt) {
 				
 			}
 
-			// set my velocity, in meters per second:
-			float speed = 2.f * o.scale * (1. + downhill*0.5f);
-			o.velocity = speed * glm::normalize(uf + avoid);
-			//o.velocity = avoid + flow + o.accel*dt;
 			
 			// add my direction to the fluid current
 			//glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
@@ -778,9 +892,9 @@ void State::sim_update(float dt) {
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
 
 			audioframe.state = o.type;
-			audioframe.health = o.phase;
+			audioframe.health = o.health;
 			audioframe.norm2 = norm2;
-			audioframe.params = glm::vec4(o.health, o.color);
+			audioframe.params = o.params;
 			
 		} else {
 
@@ -887,6 +1001,8 @@ void State::creatures_update(float dt) {
 		birthcount++;
 		//console.log("spawn %d", i);
 		creature_reset(i);
+		Creature& a = creatures[i];
+		a.location = glm::linearRand(world_min, world_max);
 	}
 
 	// visit each creature:
@@ -2471,7 +2587,7 @@ extern "C" {
 		
 		
 
-		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;

@@ -1562,7 +1562,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	if (1) {	
 		// LEAP & TELEPORTING
-
+		
 		//state->teleport_points[0] = glm::vec3(20., 1., 37.);
 		//state->teleport_points[1] = glm::vec3(4., 1., 13.);
 		//state->teleport_points[2] = glm::vec3(60., 2., 13.);

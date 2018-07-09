@@ -331,6 +331,9 @@ glm::vec3 headPos; // in world space
 // the location of the VR person in the world
 glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
 
+glm::vec3 nextVrLocation;
+int fadeState = 0;
+
 //// DEBUG STUFF ////
 int debugMode = 0;
 int camMode = 1; 
@@ -1557,22 +1560,31 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
-	
 	if (1) {	
 		// LEAP & TELEPORTING
+		
+		//state->teleport_points[0] = glm::vec3(20., 1., 37.);
+		//state->teleport_points[1] = glm::vec3(4., 1., 13.);
+		//state->teleport_points[2] = glm::vec3(60., 2., 13.);
+		//state->teleport_points[3] = glm::vec3(34.5, 17., 33.);
 
-		state->teleport_points[0] = glm::vec3(20., 1., 37.);
-		state->teleport_points[1] = glm::vec3(4., 1., 13.);
-		state->teleport_points[2] = glm::vec3(60., 2., 13.);
-		state->teleport_points[3] = glm::vec3(34.5, 17., 33.);
-
-		for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
-			state->debugdots[i].location = transform(state->world2minimap, state->teleport_points[i]);
-			state->debugdots[i].color = glm::vec3(1,0,0);
+		//Teleport Fade
+		if (fadeState == -1) {
+			state->vrFade += dt * 2.f;
+			if (state->vrFade >= 1) {
+				state->vrFade = 1;
+				vrLocation = nextVrLocation;
+				fadeState = 1;
+			}
+		} else if (fadeState == 1) {
+			state->vrFade -= dt * 2.f;
+			if (state->vrFade <= 0) {
+				fadeState = 0;
+				state->vrFade = 0;
+			}
 		}
 
 		// later, figure out how to place teleport points in viable locations
-		/*
 		int div = sqrt(NUM_DEBUGDOTS);
 		for (int i=0; i<NUM_DEBUGDOTS; i++) {
 
@@ -1595,27 +1607,24 @@ void onFrame(uint32_t width, uint32_t height) {
 			flatness = powf(flatness, 2.f);				
 
 			// get land surface coordinate:
-			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
+			glm::vec3 land_coord = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
 			
-			
-			if (flatness == 1) {
+			if (flatness >= 0.8) {
 				// place on land
-				o.location = transform(world2minimap,land_coord);
 				//state->debugdots[1].location = transform(world2minimap, glm::vec3(20., 1., 37.)); //land_coord
-				//state->debugdots[2].location = transform(world2minimap, glm::vec3(4., 1., 13.)); //land_coord
+				//state->teleport_points[0] = state->debugdots[0].location;
+				//state->teleport_points[0] = transform(state->world2minimap,land_coord);
+				//state->teleport_points[i] = o.location;
+				o.location = transform(state->world2minimap,land_coord);
 				o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
-			}
-
-			//glm::vec3 handCoor = transform(world2minimap, hand.palmPos);
-		
-			
-			//console.log("O: %f %f %f", o.location.x, o.location.y, o.location.z);
-			//console.log("%f %f %f", state->objects[1].location.x, state->objects[1].location.y, state->objects[1].location.z);
-			///console.log("%f %f %f", handCoor.x, handCoor.y, handCoor.z);
-
-				//auto& oo = state->debugdots[3];
+			}	
 		}
-		*/
+
+		for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
+			state->debugdots[i].location = transform(state->world2minimap, state->teleport_points[i]);
+			state->debugdots[i].color = glm::vec3(0,1,0);
+		}
+		
 		if (alice.leap->isConnected) {
 			//console.log("leap connected!");
 			// copy bones into debugdots
@@ -1647,14 +1656,6 @@ void onFrame(uint32_t width, uint32_t height) {
 						glm::scale(glm::vec3(state->minimapScale)) *
 						glm::translate(-midPoint);
 				
-				
-				// if (hand.pinch == 1) {
-				// 	vrLocation = glm::vec3(20., 1., 37.);
-				// 	//vrLocation = state->objects[1].location + glm::vec3(0., 0.5, 0.);
-				// 	if (hand.palmPos == state->debugdots[1].location) {
-				// 		vrLocation = glm::vec3(20., 1., 37.);
-				// 	}
-				// } 
 
 				// 
 				// if (h == 0) {
@@ -1704,38 +1705,14 @@ void onFrame(uint32_t width, uint32_t height) {
 								float lengthToDot = glm::length(boneloc - maploc);
 								if (lengthToDot < 0.02f) {
 									// TELEPORT!
-									teleporting = true;
+									nextVrLocation = state->teleport_points[i];
+									fadeState = -1;
 									//state->vrFade = sin(t) * 0.5 + 0.5;
-									//vrLocation = state->teleport_points[i];
 								}
-
-								int count = 1;
-								double time_counter = 0;
-								clock_t this_time = clock();
-								clock_t last_time = this_time;
-								
-								while (teleporting) {
-								//state->vrFade = sin(t) * 0.5 + 0.5;
-								this_time = clock();
-								time_counter += (double)(this_time - last_time);
-								last_time = this_time;
-									if(time_counter > (double)(2 * CLOCKS_PER_SEC))
-									{
-										vrLocation = state->teleport_points[i];
-										time_counter -= (double)(2 * CLOCKS_PER_SEC);
-										count++;
-										teleporting = false;
-									}
-								}
-
-								
 							}
-
 						}
-
 						d++;
 					}
-
 				}
 
 				//get hand position and direction and cast ray forward until it hits land

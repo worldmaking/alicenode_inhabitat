@@ -342,6 +342,7 @@ MetroThread simThread(25);
 MetroThread fieldThread(25);
 MetroThread fluidThread(10);
 bool isRunning = 1;
+bool teleporting = false;
 
 State * state;
 Mmap<State> statemap;
@@ -1433,7 +1434,6 @@ void State::animate(float dt) {
 void onFrame(uint32_t width, uint32_t height) {
 	profiler.reset();
 
-
 	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
 	float dt = alice.fps.dt;
@@ -1441,8 +1441,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
-	//state->vrFade = sin(t) * 0.5 + 0.5;
-
+	
 	if (1) {	
 		// LEAP & TELEPORTING
 
@@ -1453,6 +1452,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 		for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
 			state->debugdots[i].location = transform(state->world2minimap, state->teleport_points[i]);
+			state->debugdots[i].color = glm::vec3(1,0,0);
 		}
 
 		// later, figure out how to place teleport points in viable locations
@@ -1498,11 +1498,6 @@ void onFrame(uint32_t width, uint32_t height) {
 			///console.log("%f %f %f", handCoor.x, handCoor.y, handCoor.z);
 
 				//auto& oo = state->debugdots[3];
-
-				
-
-			//console.log("%f %f %f", o.location.x, o.location.y, o.location.z);
-			//console.log("%f %f %f", hand.palmPos.x, hand.palmPos.y, hand.palmPos.z);
 		}
 		*/
 		if (alice.leap->isConnected) {
@@ -1535,6 +1530,7 @@ void onFrame(uint32_t width, uint32_t height) {
 						glm::translate(glm::vec3(mapPos)) * 
 						glm::scale(glm::vec3(state->minimapScale)) *
 						glm::translate(-midPoint);
+				
 				
 				// if (hand.pinch == 1) {
 				// 	vrLocation = glm::vec3(20., 1., 37.);
@@ -1592,8 +1588,31 @@ void onFrame(uint32_t width, uint32_t height) {
 								float lengthToDot = glm::length(boneloc - maploc);
 								if (lengthToDot < 0.02f) {
 									// TELEPORT!
-									vrLocation = state->teleport_points[i];
+									teleporting = true;
+									//state->vrFade = sin(t) * 0.5 + 0.5;
+									//vrLocation = state->teleport_points[i];
 								}
+
+								int count = 1;
+								double time_counter = 0;
+								clock_t this_time = clock();
+								clock_t last_time = this_time;
+								
+								while (teleporting) {
+								//state->vrFade = sin(t) * 0.5 + 0.5;
+								this_time = clock();
+								time_counter += (double)(this_time - last_time);
+								last_time = this_time;
+									if(time_counter > (double)(2 * CLOCKS_PER_SEC))
+									{
+										vrLocation = state->teleport_points[i];
+										time_counter -= (double)(2 * CLOCKS_PER_SEC);
+										count++;
+										teleporting = false;
+									}
+								}
+
+								
 							}
 
 						}
@@ -1601,8 +1620,6 @@ void onFrame(uint32_t width, uint32_t height) {
 						d++;
 					}
 
-					
-					
 				}
 
 				//get hand position and direction and cast ray forward until it hits land

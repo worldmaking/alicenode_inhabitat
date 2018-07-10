@@ -3,7 +3,6 @@
 
 Bring in the inhabitat species behaviours!!
 
-# Korea notes
 
 Freenect/Kinect disparities:
 - Kinect SDK has a useful coordinate mapper that lets the chessboard calibration work, getting XYZ from colour coordinate. Unfortunately freenect2 doesn't have an equivalent routine. So need to calibrate via Kinect SDK but use Freenect data.
@@ -12,6 +11,11 @@ Freenect/Kinect disparities:
 Switch over from Object to Creature
 
 Need to decide on a reasonable world and gallery scale. 
+- gallery space is maybe about 6m x 6m
+- an ant in gallery space is maybe 1-2cm 
+- in VR, an ant could be 50cm-100cm 
+- that means the relative scale is 1:50
+- so the VR space is 50 x 6 = 300m 
 
 creatures shouldn't wander off to lands below the min height; they should turn away
 - also, edge-of-world should mean death

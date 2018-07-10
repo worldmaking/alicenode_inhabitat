@@ -514,6 +514,71 @@ vec3 sdCapsule2_tex_z(vec3 p, float l, float ra, float rb) {
 	return vec3(uv, d);
 }
 
+float hairify(vec3 p, float basegeom) {
+	vec3 norm = (p);
+	float height = 0.12;// * d.y;
+	float heightvar = 0.05;// * d.y;
+	float density = 0.05 * (p.y + 0.2);
+	float thickness = 0.5;// * d.y;
+
+	const mat2 rot1 = mat2(0.99500416527,0.0998334166,-0.0998334166,0.99500416527);
+	const mat2 rot2 = mat2(0.98006657784,0.19866933079,-0.19866933079,0.98006657784);
+	const mat2 rot3 = mat2(0.95533648912,0.29552020666,-0.29552020666,0.95533648912);
+	const mat2 rot4 = mat2(0.921060994,0.3894183423,-0.3894183423,0.921060994);
+	const mat2 rot5 = mat2(0.87758256189,0.4794255386,-0.4794255386,0.87758256189);
+	const mat2 rot6 = mat2(0.82533561491,0.56464247339,-0.56464247339,0.82533561491);
+	const mat2 rot7 = mat2(0.76484218728,0.64421768723,-0.64421768723,0.76484218728);
+	const mat2 rot8 = mat2(0.69670670934,0.7173560909,-0.7173560909,0.69670670934);
+	const mat2 rot9 = mat2(0.62160996827,0.78332690962,-0.78332690962,0.62160996827);
+	const mat2 rot10 = mat2(0.54030230586,0.8414709848,-0.8414709848,0.54030230586);
+
+	vec3 normP = normalize(p);
+	float angleP = acos(normP.y);
+
+	p = pRotXZ(p, angleP);
+	//p = pRotXZ(p, angleP);
+	p.y = basegeom; 
+	//p = baseGeometry.zzz;
+	//float hvar = texture(iChannel0, p.xz*0.075).x;
+	float h = height + heightvar;//hvar*heightvar;
+	
+	vec2 t = phase * vec2(5.0, 4.3);
+	vec2 windNoise = sin(p.xz*2.5 + flow.xz);//sin(p.xz*2.5 + t);
+	//vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
+	vec2 windNoise2 = sin(vec2(phase*1.5, phase + PI) + p.xz*1.0) * 0.5 + vec2(2.0, 1.0);
+	vec2 wind = (windNoise*0.45 + windNoise2*0.3) * (p.y);
+
+	p.xz += wind;// + flow.xz;
+	
+	//TODO: Replace wind with flow
+
+	vec3 p1 = opRep(p, vec3(density));
+	p1 = vec3(p1.x, p.y - h, p1.z);
+	float g1 = sdCone(p1, vec3(1.0, thickness, h));
+	
+	p.xz *= rot5;
+	//p.xz *= the normal of baseGeometry.z ? TODO figure out how to wrap grass normals around creature normals
+	vec3 p2 = opRep(p, vec3(density)*0.85);
+	p2 = vec3(p2.x, p.y - h, p2.z);
+	float g2 = sdCone(p2, vec3(1.0, thickness, h));
+	
+	p.xz *= rot10;
+	vec3 p3 = opRep(p, vec3(density)*0.7);
+	p3 = vec3(p3.x, p.y - h, p3.z);
+	float g3 = sdCone(p3, vec3(1.0, thickness, h));
+	
+	p.xz *= rot3;
+	vec3 p4 = opRep(p, vec3(density)*0.9);
+	p4 = vec3(p4.x, p.y - h, p4.z);
+	float g4 = sdCone(p4, vec3(1.0, thickness, h));
+	
+	float g = min(min(g1, g2), min(g3, g4));
+
+	float gg = smin(g, basegeom, 0.01);
+	//return vec3(min(g, baseGeometry.x), id, h);
+	return gg;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // NOTE scale := f(p/s)*s
 
@@ -881,7 +946,168 @@ vec3 fScene_tex_z_nick(vec3 p) {
 	
 }
 
+vec3 fScene_tex_z_nick_cashew(vec3 p, bool hairy) {
+	float scl = world_scale;
+	p /= scl;
+	
+	// basic symmetry:
+	p.x = abs(p.x);
+
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase));
+	vec3 a = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -6.), 0.5, w*w);
+	vec3 b = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -2.5), 0.25, 0.15, 0.125);
+	vec3 c = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), PI / -7.), 0.3, 0.1, 0.2);
+	vec3 e = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0.2, 0)), PI / -8.), 0.4, w*w*0.8);
+
+	//Creature 1: original blobby creature, uses vectors a, b, c, e
+	vec3 d = smin_tex(a, b, 0.4);
+	d = smin_tex(d, c, 0.3);
+	d = smin_tex(d, e, 0.4);
+	vec3 baseGeometry = d;
+    
+	if (hairy) {
+		return vec3(baseGeometry.xy, hairify(p, baseGeometry.z) * scl);
+	} else {
+		return vec3(baseGeometry.xy, baseGeometry.z * scl);
+	}
+}
  
+vec3 fScene_tex_z_nick_bulbworm(vec3 p) {
+	float scl = world_scale;
+	p /= scl;
+
+	// basic symmetry:
+	p.x = abs(p.x);
+	p.y = abs(p.y);
+
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase));
+	float wX = 0.125*abs(2.+0.5*sin(14.*p.x - 8.8 * phase));
+	float wY = 0.125*abs(2.+0.5*sin(14.*p.y - 8.8 * phase)); 
+	//Creature 2: Worm-Like, bulbous head
+	vec3 roundHeadX = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.65)), 3*PI/2), 0.3, wX*0.8);
+	vec3 roundHeadY = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.65)), 3*PI/2), 3*PI/2), 0.3, wY*0.8);
+	vec3 roundHeadX_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.6)), 3*PI/2), 0.2, wX*0.55);
+	vec3 roundHeadY_2 = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.55)), 3*PI/2), 3*PI/2), 0.2, wY*0.6);
+	vec3 longBody = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), TWOPI), 0.8, w*w*0.8 + 0.3);
+
+	vec3 bulbWorm = smin_tex(roundHeadX, roundHeadY, 0.5);
+	bulbWorm = smin_tex(bulbWorm, roundHeadX_2, 0.5);
+	bulbWorm = smin_tex(bulbWorm, roundHeadY_2, 0.5);
+	bulbWorm = smin_tex(bulbWorm, longBody, 0.2);
+
+	return vec3(bulbWorm.xy, bulbWorm.z * scl);
+}
+
+vec3 fScene_tex_z_nick_squidlike(vec3 p) {
+	float scl = world_scale;
+	p /= scl;
+
+	// basic symmetry:
+	p.x = abs(p.x);
+	p.y = abs(p.y);
+
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase));
+	float wX = 0.125*abs(2.+0.5*sin(14.*p.x - 8.8 * phase));
+	float wY = 0.125*abs(2.+0.5*sin(14.*p.y - 8.8 * phase));  //TODO: Play with undulation value.
+	
+	//Creature 3: Squid/Octopus-Like
+	//limbs:	TopBottom = limb closest to the top or bottom
+	//			LeftRight = limb closest to the left or right
+	//	This creature is identical in 4 xy quadrants (abs.xy)
+	float sinPhase = sin(phase*4.5) * 0.125 + 0.125;
+	float sinPhase2 = sin(phase*4.5) * 0.0625 + 0.1875;
+	float sinPhase3 = sin(phase*4.5) * 0.0625 + 0.0625;
+
+	vec3 body1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 0.3, wX*0.3);
+	vec3 body2 = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 3*PI/2), 0.3, wY*0.3);
+	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (5 * PI / 3) * -sinPhase2), 0.75, w*0.5);
+	vec3 limbLeftRight = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase2), (11 * PI / 6) * -sinPhase3), 0.75, w*0.5);
+
+	vec3 squidLike = smin_tex(limbTopBottom, limbLeftRight, 0.05);
+	vec3 squidBod = smin_tex(body1, body2, 0.7);
+	squidLike = smin_tex(squidLike, squidBod, 0.1);
+
+	vec3 baseGeometry = squidLike;
+    
+	return vec3(baseGeometry.xy, baseGeometry.z * scl);
+}
+
+vec3 fScene_tex_z_nick_walkTest(vec3 p, bool hairy) {
+	float scl = world_scale;
+	p /= scl;
+
+	// basic symmetry:
+	p.x = abs(p.x);
+
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase));
+	
+	
+	float jointSpeed = 1.;
+
+	vec3 test = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.5, 0.4)), 7 * PI / 4), 0.5, w*0.8);
+	vec3 test2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.5, 0.4)), TWOPI), 0.4, w*0.8);
+	
+	//Creature 4: Waterbear? see https://en.wikipedia.org/wiki/Tardigrade
+	vec3 legs = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., -0.2, 0.4)), phase*-jointSpeed*PI), 0.45, 0.1);
+	vec3 legs2 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.125, -0.2, 0.2)), phase*-jointSpeed*PI - 1.33), 0.45, 0.1);
+	vec3 legs3 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.25, -0.2, 0.)), phase*-jointSpeed*PI - 2.66), 0.45, 0.1);
+	vec3 legs4 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.375, -0.2, -0.2)), phase*-jointSpeed*PI - 4), 0.45, 0.1);
+	vec3 legsHead = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.4, 0.7)), 3*PI/2), 0.25, w*0.8);
+	//TODO: Scale joint speed with the "forward" velocity of this creature
+	legs = min_tex(legs, legs2);
+	legs = min_tex(legs, legs3);
+	legs = min_tex(legs, legs4);
+	vec3 walkTest = smin_tex(test, test2, 0.5);
+	walkTest = smin_tex(walkTest, legs, 0.5);
+	walkTest = min_tex(walkTest, legsHead);
+
+
+	vec3 baseGeometry = walkTest;
+
+	if (true) {
+		walkTest.z = hairify(p, walkTest.z);
+	}
+    
+	return vec3(baseGeometry.xy, baseGeometry.z * scl);
+}
+
+vec3 fScene_tex_z_wingtest(vec3 p, bool hairy) {
+	float scl = world_scale;
+	p /= scl;
+	
+	p.x = abs(p.x);
+
+	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase));
+
+	//Creature 5: Horeshoe Crab
+	vec3 wing1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), TWOPI), 1.0, w*w*0.6);
+	vec3 wing1_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.2, 0.2)), TWOPI), 0.3, w*w*0.7);
+	vec3 wing2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), TWOPI), 0.3, w*w*0.7);
+	vec3 wing3 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.4, 0., 0.)), TWOPI), 0.3, w*w*0.7);
+	vec3 wing4 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.6, 0., -0.2)), TWOPI), 0.3, w*w*0.7);
+	vec3 wing2_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.1, -0.2, 0.2)), TWOPI), 0.3, w*w*0.7);
+	vec3 wing3_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.3, -0.2, 0.)), TWOPI), 0.3, w*w*0.7);
+	vec3 wing4_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.5, -0.1, -0.2)), TWOPI), 0.3, w*w*0.7);
+	
+	vec3 wingFinal;
+	//wingFinal = smin_tex(wing1, wing2, 0.2);
+	wingFinal = smin_tex(wing1_2, wing2, 0.2);
+	wingFinal = smin_tex(wingFinal, wing2_2, 0.2);
+	wingFinal = smin_tex(wingFinal, wing3, 0.2);
+	wingFinal = smin_tex(wingFinal, wing3_2, 0.2);
+	wingFinal = smin_tex(wingFinal, wing4, 0.2);
+	wingFinal = smin_tex(wingFinal, wing4_2, 0.2);
+	wingFinal = min_tex(wingFinal, wing1);
+	
+	vec3 baseGeometry = wingFinal;
+
+	if (hairy) {
+		baseGeometry.z = hairify(p, baseGeometry.z);
+	}
+
+	return vec3(baseGeometry.xy, baseGeometry.z * scl);
+}
+
 float fScene_other(vec3 p) {
 	float osc = (0.3+abs(sin(phase*7.)));
 	float s = fSphere(p, world_scale*osc);
@@ -1018,20 +1244,24 @@ vec3 fScene_tex_z_graham(vec3 p0) {
 	return vec3(p.yz*0.25+0.75, d * scl);
 }
 
-
 vec3 fScene_tex_z(vec3 p) {
 
-	/*
-	int species = 2;//id % 6;
+	
+	int species = id % 11;
 	switch(species) {
 		case 1: return fScene_tex_z_graham(p);
 		case 2: return fScene_tex_z_quadpod(p);
 		case 3: return fScene_tex_z_old(p);
 		case 4: return fScene_tex_z_cashew(p);
 		case 5: return fScene_tex_oldsegment(p);
+		case 6: return fScene_tex_z_nick_cashew(p, false);
+		case 7: return fScene_tex_z_nick_bulbworm(p);
+		case 8: return fScene_tex_z_nick_squidlike(p);
+		case 9: return fScene_tex_z_nick_walkTest(p, false);
+		case 10: return fScene_tex_z_wingtest(p, false);
 		default: return fScene_tex_z_ant(p); 
-	}*/
-	return fScene_tex_z_old(p);
+	}
+	//return fScene_tex_z_old(p);
 }
 
 // compute normal from a SDF gradient by sampling 4 tetrahedral points around a location `p`

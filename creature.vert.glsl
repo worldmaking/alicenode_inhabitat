@@ -69,7 +69,7 @@ void main() {
 	phase = iPhase;
 	basecolor = iColor;
 	params = iParams;
-	id = int(iID);// + phase);
+	id = int(iID);
 
 	// converting vertex into world space:
 	vec3 scaledpos = aPos * world_scale;

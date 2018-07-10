@@ -339,13 +339,15 @@ int debugMode = 0;
 int camMode = 1; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
+float camera_speed_default = 40.f;
+float camera_turn_default = 3.f;
 bool camFast = false;
 glm::vec3 camVel, camTurn;
 glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 1;
+int soloView = 4;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -1841,7 +1843,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		// follow a creature mode:
 		auto& o = state->creatures[objectSel % NUM_CREATURES];
 		
-		auto boom = glm::vec3(0., o.scale*.5f, o.scale*1.f);
+		auto boom = glm::vec3(0., 1.6f, 2.f);
 		
 		glm::vec3 loc = o.location + quat_rotate(projectors[2].orientation, boom);
 		loc = glm::mix(projectors[2].location, loc, 0.1f);
@@ -2038,45 +2040,61 @@ void onFrame(uint32_t width, uint32_t height) {
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
-			int slices = 8;
+			int slices = 1;
 			float slicewidth = 1.f/slices;
 			float sliceoffset = (alice.fps.count % slices) / float(slices);
 				
-			switch (camMode % 2){
+			switch (camMode % 3){
 				case 0: {
 					// WASD mode:
-					float camera_turnangle = 1.f;
-					float camera_speed_default = 4.f;
-					float camera_speed_fast = camera_speed_default * 3.f;
-					float camera_speed;
-					if(camFast) camera_speed = camera_speed_fast;
-					else camera_speed = camera_speed_default;
+					
+					float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
+					float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
 
 					// move camera:
-					cameraLoc += quat_rotate(cameraOri, camVel) * (camera_speed * dt);
+					glm::vec3 newloc = cameraLoc + quat_rotate(cameraOri, camVel) * (camera_speed * dt);
 					// wrap to world:
-					cameraLoc = wrap(cameraLoc, state->world_min, state->world_max);
+					newloc = wrap(newloc, state->world_min, state->world_max);
+					cameraLoc = glm::mix(cameraLoc, newloc, 0.25f);
 
 					// stick to floor:
 					glm::vec3 norm = transform(state->world2field, cameraLoc);
 					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
 					cameraLoc = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
+					cameraLoc.y += 1.6f;
 			
 					// rotate camera:
-					cameraOri = safe_normalize(cameraOri * glm::angleAxis(camera_turnangle * dt, camTurn));
+					glm::quat newori = safe_normalize(cameraOri * glm::angleAxis(camera_turnangle * dt, camTurn));
+					
 					// now orient to floor:
 					glm::vec3 up = glm::vec3(landpt);
 					up = glm::mix(up, glm::vec3(0,1,0), 0.5);
-					cameraOri = align_up_to(cameraOri, glm::normalize(up));
+					newori = align_up_to(newori, glm::normalize(up));
+
+
+					cameraOri = glm::slerp(cameraOri, newori, 0.25f);
 
 					// now create view matrix:
-					glm::vec3 boom = glm::vec3(0., 1.7, 1.7);
-					//glm::vec3 boom = glm::vec3(0.);
-					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
+					//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
 					//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
 					//console.log("Cam Mode 0 Active");
 				
 				} break;
+				case 1: {
+					// follow:
+					auto& o = state->creatures[objectSel % NUM_CREATURES];
+					
+					glm::vec3 loc = o.location;
+/*
+					// keep this above ground:
+					glm::vec3 norm = transform(state->world2field, o.location);
+					auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+					glm::vec3 loc = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w), norm.z));
+					loc.y += 1.6f;*/
+
+					cameraLoc = glm::mix(cameraLoc, loc, 0.1f);
+					cameraOri = glm::slerp(cameraOri, o.orientation, 0.1f);
+				}
 				default: {
 					// orbit around
 					float a = M_PI * t / 30.;
@@ -2090,18 +2108,20 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
 					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*4.f;
 
-					cameraLoc = glm::mix(cameraLoc, newloc, 0.1f);
-					cameraOri = glm::slerp(cameraOri, newori, 0.01f);
+					cameraLoc = glm::mix(cameraLoc, newloc, 0.05f);
+					cameraOri = glm::slerp(cameraOri, newori, 0.05f);
 
-					auto camq = glm::angleAxis(float (M_PI * -1.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) *  cameraOri;
+					//auto camq = glm::angleAxis(float (M_PI * -1.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) *  cameraOri;
 
-					viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
+					//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
 					//projMat = glm::perspective(glm::radians(75.0f), aspect, projectors[2].near_clip, 80.f);
 					//console.log("Default Cam mode Active");
 				}
 			}
 			
-			auto camq = glm::angleAxis(float (M_PI * -2.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) * cameraOri;
+			auto camq = cameraOri; // glm::angleAxis(float (M_PI * -2.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) * cameraOri;
+			
+			camq = glm::angleAxis(sliceoffset * float(M_PI * 2.f), glm::vec3(0,1,0)) * camq;
 
 			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
 
@@ -2110,7 +2130,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			float f1 = ((sliceoffset+slicewidth) * 2.f - 1.f) * f;
 
 			if (1) {
-				float ff = 3.2f;
+				float ff = aspect * 2.f;
 				f0 = -slicewidth * f * ff;
 				f1 = slicewidth * f * ff;
 			}
@@ -2636,7 +2656,7 @@ extern "C" {
 			projectors[2].frustum_min = glm::vec2(-1.f) * aspectfactor;
 			projectors[2].frustum_max = glm::vec2(1.f) * aspectfactor;
 			projectors[2].near_clip = 0.05;
-			projectors[2].far_clip = 40.f;
+			projectors[2].far_clip = (state->world_max.z - state->world_min.z);
 		}
 
 		landTex.generateMipMap = true;
@@ -2644,7 +2664,7 @@ extern "C" {
 		
 		
 
-		enablers[SHOW_LANDMESH] = 0;
+		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;

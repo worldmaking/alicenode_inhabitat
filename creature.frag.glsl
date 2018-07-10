@@ -1073,107 +1073,11 @@ vec3 fScene_tex_z_nick_walkTest(vec3 p, bool hairy) {
 
 vec3 fScene_tex_z_wingtest(vec3 p, bool hairy) {
 	float scl = world_scale;
-
-	int species = 4;
-
 	p /= scl;
-	vec3 copyP = p;
-
-	//p = p.yxz;
-	// basic symmetry:
+	
 	p.x = abs(p.x);
 
-	//p.z = quant(p.z, 0.05);
-
-	// blobbies
-	
-	vec3 A = vec3(0., 0., -0.5);
-	vec3 B = vec3(0., 0., 0.5);
 	float w = 0.125*abs(2.+0.5*sin(14.*p.z - 8.8 * phase));
-	float wX = 0.125*abs(2.+0.5*sin(14.*p.x - 8.8 * phase));
-	float wY = 0.125*abs(2.+0.5*sin(14.*p.y - 8.8 * phase));  //TODO: Play with undulation value.
-	//float w = 0.4;
-	float z = 0.25;
-	float y = 0.5;
-	float jointSpeed = 1.;
-
-	//Starfish
-	vec3 sf_a = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / 2.), 0.5, w*w);
-	vec3 sf_b = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI ), 0.5, w*w);
-	vec3 sf_c = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI * 3./ 2.), 0.5, w*w);
-	vec3 sf_d = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI * 2.), 0.5, w*w);
-	vec3 sf_final = smin_tex(sf_a, sf_b, 0.3);
-
-	//sdCapsule1_tex(p, vec3(0., 0., -0.25), vec3(0., y, z), w*w);
-	vec3 a = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -6.), 0.5, w*w);
-	//a = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, -0.25)), PI / -6.), 0.25, 0.125, 0.1);
-	vec3 b = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(0, 0, 0.2)), PI / -2.5), 0.25, 0.15, 0.125);
-	//vec3 b2 = sdCapsule2_tex_z(pRotYZ(pTranslate(p, vec3(0, 0, 0.35)), PI / -2.), 0.25, 0.02, 0.025);
-	vec3 c = sdCapsule2_tex_z(pRotXZ(pTranslate(p, vec3(-0.2, 0., 0.2)), PI / -7.), 0.3, 0.1, 0.2);
-	vec3 e = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0, 0.2, 0)), PI / -8.), 0.4, w*w*0.8);
-
-	//Creature 1: original blobby creature, uses vectors a, b, c, e
-	vec3 d = smin_tex(a, b, 0.4);
-	//d = smin_tex(d, a, 0.05);
-	d = smin_tex(d, c, 0.3);
-	d = smin_tex(d, e, 0.4);
-	//d = a;
-	//d = sub_tex(e, d);
-
-	//wide backed creature [NOT USED]
-	vec3 test = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.5, 0.4)), 7 * PI / 4), 0.5, w*0.8);
-	vec3 test2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.5, 0.4)), TWOPI), 0.4, w*0.8);
-	vec3 wings = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.2, 0.)), phase*0.5*(3. * PI) / 2.), 0.75, 0.2);
-	vec3 testFinal = smin_tex(test, wings, 0.4);
-
-	//Creature 2: Worm-Like, bulbous head
-	vec3 roundHeadX = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.65)), 3*PI/2), 0.3, wX*0.8);
-	vec3 roundHeadY = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.65)), 3*PI/2), 3*PI/2), 0.3, wY*0.8);
-	vec3 roundHeadX_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.6)), 3*PI/2), 0.2, wX*0.55);
-	vec3 roundHeadY_2 = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.55)), 3*PI/2), 3*PI/2), 0.2, wY*0.6);
-	vec3 longBody = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), TWOPI), 0.8, w*w*0.8 + 0.3);
-
-	vec3 bulbWorm = smin_tex(roundHeadX, roundHeadY, 0.5);
-	bulbWorm = smin_tex(bulbWorm, roundHeadX_2, 0.5);
-	bulbWorm = smin_tex(bulbWorm, roundHeadY_2, 0.5);
-	bulbWorm = smin_tex(bulbWorm, longBody, 0.2);
-
-
-
-
-	//Creature 3: Squid/Octopus-Like
-	//limbs:	TopBottom = limb closest to the top or bottom
-	//			LeftRight = limb closest to the left or right
-	//	This creature is identical in 4 xy quadrants (abs.xy)
-	float sinPhase = sin(phase*4.5) * 0.125 + 0.125;
-	float sinPhase2 = sin(phase*4.5) * 0.0625 + 0.1875;
-	float sinPhase3 = sin(phase*4.5) * 0.0625 + 0.0625;
-
-	vec3 body1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 0.3, wX*0.3);
-	vec3 body2 = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), 3*PI/2), 3*PI/2), 0.3, wY*0.3);
-	vec3 limbTopBottom = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase), (5 * PI / 3) * -sinPhase2), 0.75, w*0.5);
-	vec3 limbLeftRight = sdCapsule1_tex_z(pRotYZ(pRotXZ(pTranslate(p, vec3(0., 0., 0.)), (3*PI/2) * -sinPhase2), (11 * PI / 6) * -sinPhase3), 0.75, w*0.5);
-
-	vec3 squidLike = smin_tex(limbTopBottom, limbLeftRight, 0.05);
-	vec3 squidBod = smin_tex(body1, body2, 0.7);
-	squidLike = smin_tex(squidLike, squidBod, 0.1);
-
-
-	//Creature 4: Waterbear? see https://en.wikipedia.org/wiki/Tardigrade
-	vec3 legs = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(0., -0.2, 0.4)), phase*-jointSpeed*PI), 0.45, 0.1);
-	vec3 legs2 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.125, -0.2, 0.2)), phase*-jointSpeed*PI - 1.33), 0.45, 0.1);
-	vec3 legs3 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.25, -0.2, 0.)), phase*-jointSpeed*PI - 2.66), 0.45, 0.1);
-	vec3 legs4 = sdCapsule1_tex_z(pRotYZ(pTranslate(p, vec3(-0.375, -0.2, -0.2)), phase*-jointSpeed*PI - 4), 0.45, 0.1);
-	vec3 legsHead = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., -0.4, 0.7)), 3*PI/2), 0.25, w*0.8);
-	//TODO: Scale joint speed with the "forward" velocity of this creature
-	legs = min_tex(legs, legs2);
-	legs = min_tex(legs, legs3);
-	legs = min_tex(legs, legs4);
-	vec3 walkTest = smin_tex(test, test2, 0.5);
-	walkTest = smin_tex(walkTest, legs, 0.5);
-	walkTest = min_tex(walkTest, legsHead);
-
-	//testFinal = walkTest;
 
 	//Creature 5: Horeshoe Crab
 	vec3 wing1 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(0., 0., 0.2)), TWOPI), 1.0, w*w*0.6);
@@ -1185,7 +1089,6 @@ vec3 fScene_tex_z_wingtest(vec3 p, bool hairy) {
 	vec3 wing3_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.3, -0.2, 0.)), TWOPI), 0.3, w*w*0.7);
 	vec3 wing4_2 = sdCapsule1_tex_z(pRotXZ(pTranslate(p, vec3(-0.5, -0.1, -0.2)), TWOPI), 0.3, w*w*0.7);
 	
-
 	vec3 wingFinal;
 	//wingFinal = smin_tex(wing1, wing2, 0.2);
 	wingFinal = smin_tex(wing1_2, wing2, 0.2);
@@ -1195,28 +1098,6 @@ vec3 fScene_tex_z_wingtest(vec3 p, bool hairy) {
 	wingFinal = smin_tex(wingFinal, wing4, 0.2);
 	wingFinal = smin_tex(wingFinal, wing4_2, 0.2);
 	wingFinal = min_tex(wingFinal, wing1);
-	
-
-	vec3 f = smin_tex(a, c, 0.4);
-	f = smin_tex(f, e, 0.2);
-
-	vec3 j = smin_tex(b, c, 0.3);
-	j = smin_tex(j, f, 0.4);
-
-	//float mouth = sdEllipsoid1(p.yzx, vec3(0.25, 0.5, 0.05));
-
-	//return d * world_scale;
-	//return scl * ssub(d, mouth, 0.125);
-
-
-	float gridripple = 0.01 * dot(sin(p.xyz * PI * 8.), cos(p.zxy * PI * 32.));
-
-	//d.z += gridripple;
-	//d.z -= tiledeform;
-
-	//return vec3(d.xy, d.z * scl);
-	vec3 baseGeo;
-	
 	
 	vec3 baseGeometry = wingFinal;
 
@@ -1362,7 +1243,6 @@ vec3 fScene_tex_z_graham(vec3 p0) {
 	float d = d3;
 	return vec3(p.yz*0.25+0.75, d * scl);
 }
-
 
 vec3 fScene_tex_z(vec3 p) {
 

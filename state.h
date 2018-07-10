@@ -254,17 +254,21 @@ struct DebugDot {
 
 struct AudioState {
 	struct Frame {
-		// 0 = Dead, 1-4 = species type
-		float state;		
+		// 0 = Dead, 0.1-0.4 = species type
+		float state;	
+		// which channel to play, 0.1-0.5
+		float speaker; 		
 		// < 0 means dead, typically 0..1 when alive
-		float health;		
-		// 0..1 in X and Z. X is positive to right, Z is positive to down (toward you)
-		glm::vec2 norm2;	
+		float health;	
+		// age of creature in seconds, 0..
+		float age;
+		// size of creature in meters (VR world)
+		float size;
 		// limited to 0..1, but tend to be close to 0.4-0.6
 		// the first three params map to RGB in the debug view
 		// semantics depend on species, but not all may be used; 
 		// work with first channel with highest priority
-		glm::vec4 params;	
+		glm::vec3 params;	
 	};
 
 	Frame frames[NUM_AUDIO_FRAMES];

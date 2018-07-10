@@ -9,7 +9,7 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 99.0, 93.0, 1085.0, 881.0 ],
+		"rect" : [ 639.0, 85.0, 591.0, 881.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.9, 0.9, 0.9, 1.0 ],
 		"bglocked" : 0,
@@ -39,6 +39,43 @@
 		"style" : "",
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-27",
+					"maxclass" : "newobj",
+					"numinlets" : 3,
+					"numoutlets" : 0,
+					"patching_rect" : [ 943.0, 322.0, 66.0, 22.0 ],
+					"style" : "",
+					"text" : "poke ola 4"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-26",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 791.5, 162.0, 37.0, 22.0 ],
+					"style" : "",
+					"text" : "out 5"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-25",
+					"linecount" : 17,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 635.0, 487.0, 393.0, 241.0 ],
+					"style" : "",
+					"text" : "\tstruct Frame {\n\t\t// 0 = Dead, 0.1-0.4 = species type\n\t\tfloat state;\t\n\t\t// which channel to play, 0.0-0.4 for 0, 1, 2, 3, 4\n\t\tfloat speaker; \t\t\n\t\t// < 0 means dead, typically 0..1 when alive\n\t\tfloat health;\t\n\t\t// age of creature in seconds, 0..\n\t\tfloat age;\n\t\t// size of creature in meters (VR world)\n\t\tfloat size;\n\t\t// limited to 0..1, but tend to be close to 0.4-0.6\n\t\t// the first three params map to RGB in the debug view\n\t\t// semantics depend on species, but not all may be used; \n\t\t// work with first channel with highest priority\n\t\tglm::vec3 params;\t\n\t};\n"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"fontname" : "Lato",
 					"fontsize" : 12.0,
@@ -149,7 +186,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 951.0, 292.0, 204.0, 48.0 ],
+					"patching_rect" : [ 956.0, 241.0, 204.0, 48.0 ],
 					"presentation_linecount" : 3,
 					"presentation_rect" : [ 951.0, 292.0, 204.0, 47.0 ],
 					"style" : "",
@@ -267,7 +304,7 @@
 			}
 , 			{
 				"box" : 				{
-					"code" : "filter(input, a0, a1, a2, b1, b2) {\n\tHistory x2(0);\n\tHistory y2(0);\n\tHistory x1(0);\n\tHistory y1(0);\n\tmul_1 = x2 * a2;\n\tmul_2 = x1 * a1;\n\tmul_3 = input * a0;\n\tmul_4 = y1 * b1;\n\tmul_5 = y2 * b2;\n\tsub_6 = ((((mul_3 + mul_2)) + mul_1)) - ((mul_5 + mul_4));\n\tresult = sub_6;\n\tx2_next_7 = fixdenorm(x1);\n\ty2_next_8 = fixdenorm(y1);\n\tx1_next_9 = fixdenorm(input);\n\ty1_next_10 = fixdenorm(sub_6);\n\tx2 = x2_next_7;\n\ty1 = y1_next_10;\n\tx1 = x1_next_9;\n\ty2 = y2_next_8;\r\n\treturn result;\r\n}\r\n\r\nHistory ephase, ophase, smoothed;\r\n\r\nBuffer grain_buffer(\"grain_buffer\");\ngrain_id = in1; //counter(1, 0, dim(grain_buffer));\nhealth, p0, p1, p2, x, y, vx, vy = peek(grain_buffer, grain_id, 0, channels=8);\n\r\nspawn = abs(noise()) < 0.001;\r\ntrigger = spawn && health > 0;\r\nstart = in2+1+abs(noise())*schedahead;\r\n\r\nbeetle_dur = 1/4; \r\nbeetle_frequency = 1490;\r\nbeetle_filter = 0.8; // DON'T SET A PARAM TO THIS, UNLESS YOU RESTRICT IT TO WITHIN 0.-1\r\nbeetle_rpts = 5+abs(y);\r\nbeetle_modulation = 0.3;\r\n\r\nl0, l1, r0, r1 = 0, 0, 0, 0;\r\n\r\nif (trigger) {\r\n\tisr = 1/samplerate;\r\n\t\r\n\t/*\r\n\tp0 = abs(noise());\r\n\tp1 = abs(noise());\r\n\tp2 = abs(noise());\r\n\t*/\r\n\t\r\n\tamp = p1;\r\n\t\r\n\tperiod = .5*(1+p0); //beetle.period\r\n\tdur = period * beetle_dur; //period * beetle_dur * beetle.scale.z;\r\n\tlen = dur * samplerate / abs(x - 3) ;\r\n\t\r\n\tfreq = beetle_frequency/period; \r\n\toinc = freq * isr;\r\n\tophase = abs(noise()); //0.; \r\n\tenvinc = ((beetle_rpts + floor(p2 * beetle_rpts)) / dur) * isr;\n\tephase = 0.;\n\tfilter = beetle_filter; //clamp(beetle.energy * beetle_filter, 0., 1.);\r\n\tfilter2 = 1.-(filter*filter);\n\tsmoothed = 0.;\n\tomod = (p1+0.5)*beetle_modulation; //beetle.energy * beetle_modulation;\r\n\t\r\n\t// TODO set up pan\r\n\tl0 = x*y;\r\n\tr0 = (1-x)*y;\r\n\tl1 = x*(1-y);\r\n\tr1 = (1-x)*(1-y);\r\n\t\r\n\tfor (i=0; i<len; i+= 1) {\r\n\t\tephase = ephase + envinc; //i/(len-1);\r\n\t\tw0 = sample(win, ephase, boundmode=\"wrap\");\r\n\t\t\r\n\t\tophase += oinc * (1. + -0.001*omod*ophase);\r\n\t\tosc = sample(rep, ophase, boundmode=\"wrap\");\r\n\t\t\r\n\t\toe = amp*osc*w0*w0;\r\n\t\ts = oe + filter2*(smoothed - oe);\r\n\t\tsmoothed = s;\r\n\t\t\r\n\t\ts = filter(s, a0, a1, a2, b1, b2);\r\n\t\t\r\n\t\t// pan s\r\n\t\tpoke(ola, s*l0, start+i, 0, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t\tpoke(ola, s*r0, start+i, 1, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t\tpoke(ola, s*l1, start+i, 2, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t\tpoke(ola, s*r1, start+i, 3, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t}\r\n\r\n\t// schedule next grain to follow:\n\t//beetle.at = (-(period * samplerate));\r\n\t\r\n}",
+					"code" : "filter(input, a0, a1, a2, b1, b2) {\n\tHistory x2(0);\n\tHistory y2(0);\n\tHistory x1(0);\n\tHistory y1(0);\n\tmul_1 = x2 * a2;\n\tmul_2 = x1 * a1;\n\tmul_3 = input * a0;\n\tmul_4 = y1 * b1;\n\tmul_5 = y2 * b2;\n\tsub_6 = ((((mul_3 + mul_2)) + mul_1)) - ((mul_5 + mul_4));\n\tresult = sub_6;\n\tx2_next_7 = fixdenorm(x1);\n\ty2_next_8 = fixdenorm(y1);\n\tx1_next_9 = fixdenorm(input);\n\ty1_next_10 = fixdenorm(sub_6);\n\tx2 = x2_next_7;\n\ty1 = y1_next_10;\n\tx1 = x1_next_9;\n\ty2 = y2_next_8;\r\n\treturn result;\r\n}\r\n\r\nHistory ephase, ophase, smoothed;\r\n\r\nBuffer grain_buffer(\"grain_buffer\");\ngrain_id = in1; //counter(1, 0, dim(grain_buffer));\r\nstate, speaker, health, age, size, p0, p1, p2 = peek(grain_buffer, grain_id, 0, channels=8);\n//health, p0, p1, p2, x, y, vx, vy = peek(grain_buffer, grain_id, 0, channels=8);\n\r\nspawn = abs(noise()) < 0.004;\r\ntrigger = spawn && absdiff(state, 0.1) < 0.01;\r\nstart = in2+1+abs(noise())*schedahead;\r\n\r\nbeetle_dur = 1/4; \r\nbeetle_frequency = 4090;\r\nbeetle_filter = 0.8; // DON'T SET A PARAM TO THIS, UNLESS YOU RESTRICT IT TO WITHIN 0.-1\r\nbeetle_rpts = 5+abs(p0);\r\nbeetle_modulation = 0.3;\r\n\r\nl0, l1, r0, r1 = 0, 0, 0, 0;\r\n\r\nif (trigger) {\r\n\tisr = 1/samplerate;\r\n\t\r\n\t/*\r\n\tp0 = abs(noise());\r\n\tp1 = abs(noise());\r\n\tp2 = abs(noise());\r\n\t*/\r\n\t\r\n\tamp = p1;\r\n\t\r\n\tperiod = .5*(1+p0); //beetle.period\r\n\tdur = period * beetle_dur; //period * beetle_dur * beetle.scale.z;\r\n\tlen = dur * samplerate;\r\n\t\r\n\tfreq = beetle_frequency/period; \r\n\toinc = freq * isr;\r\n\tophase = abs(noise()); //0.; \r\n\tenvinc = ((beetle_rpts + floor(p2 * beetle_rpts)) / dur) * isr;\n\tephase = 0.;\n\tfilter = beetle_filter; //clamp(beetle.energy * beetle_filter, 0., 1.);\r\n\tfilter2 = 1.-(filter*filter);\n\tsmoothed = 0.;\n\tomod = (p1+0.5)*beetle_modulation; //beetle.energy * beetle_modulation;\r\n\t\r\n\t// TODO set up pan\r\n\tch0 = absdiff(speaker, 0.0) < 0.01;\r\n\tch1 = absdiff(speaker, 0.1) < 0.01;\r\n\tch2 = absdiff(speaker, 0.2) < 0.01;\r\n\tch3 = absdiff(speaker, 0.3) < 0.01;\r\n\tch4 = absdiff(speaker, 0.4) < 0.01;\r\n\t\r\n\tfor (i=0; i<len; i+= 1) {\r\n\t\tephase = ephase + envinc; //i/(len-1);\r\n\t\tw0 = sample(win, ephase, boundmode=\"wrap\");\r\n\t\t\r\n\t\tophase += oinc * (1. + -0.001*omod*ophase);\r\n\t\tosc = sample(rep, ophase, boundmode=\"wrap\");\r\n\t\t\r\n\t\toe = amp*osc*w0*w0;\r\n\t\ts = oe + filter2*(smoothed - oe);\r\n\t\tsmoothed = s;\r\n\t\t\r\n\t\ts = filter(s, a0, a1, a2, b1, b2);\r\n\t\t\r\n\t\t// pan s\r\n\t\tpoke(ola, s*ch0, start+i, 0, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t\tpoke(ola, s*ch1, start+i, 1, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t\tpoke(ola, s*ch2, start+i, 2, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t\tpoke(ola, s*ch3, start+i, 3, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t\tpoke(ola, s*ch4, start+i, 4, 1, overdubmode=\"accum\", boundmode=\"wrap\");\r\n\t}\r\n\r\n\t// schedule next grain to follow:\n\t//beetle.at = (-(period * samplerate));\r\n\t\r\n}",
 					"fontface" : 0,
 					"fontname" : "Arial",
 					"fontsize" : 12.0,
@@ -339,12 +376,11 @@
 					"id" : "obj-28",
 					"maxclass" : "newobj",
 					"numinlets" : 2,
-					"numoutlets" : 5,
-					"outlettype" : [ "", "", "", "", "" ],
-					"patching_rect" : [ 635.0, 125.0, 225.0, 22.0 ],
-					"presentation_rect" : [ 635.0, 125.0, 225.0, 22.0 ],
+					"numoutlets" : 6,
+					"outlettype" : [ "", "", "", "", "", "" ],
+					"patching_rect" : [ 635.0, 125.0, 214.0, 22.0 ],
 					"style" : "",
-					"text" : "peek ola 4"
+					"text" : "peek ola 5"
 				}
 
 			}
@@ -463,26 +499,41 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-2", 1 ],
-					"order" : 0,
+					"order" : 1,
+					"source" : [ "obj-28", 5 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-26", 0 ],
 					"source" : [ "obj-28", 4 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-27", 1 ],
+					"order" : 0,
+					"source" : [ "obj-28", 5 ]
 				}
 
 			}
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-29", 1 ],
-					"midpoints" : [ 850.5, 274.5, 668.0, 274.5 ],
-					"order" : 3,
-					"source" : [ "obj-28", 4 ]
+					"midpoints" : [ 839.5, 274.5, 668.0, 274.5 ],
+					"order" : 4,
+					"source" : [ "obj-28", 5 ]
 				}
 
 			}
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-30", 1 ],
-					"midpoints" : [ 850.5, 280.5, 745.0, 280.5 ],
-					"order" : 2,
-					"source" : [ "obj-28", 4 ]
+					"midpoints" : [ 839.5, 280.5, 745.0, 280.5 ],
+					"order" : 3,
+					"source" : [ "obj-28", 5 ]
 				}
 
 			}
@@ -496,8 +547,8 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-6", 1 ],
-					"order" : 1,
-					"source" : [ "obj-28", 4 ]
+					"order" : 2,
+					"source" : [ "obj-28", 5 ]
 				}
 
 			}
@@ -511,6 +562,14 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-2", 0 ],
+					"order" : 1,
+					"source" : [ "obj-32", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-27", 0 ],
 					"order" : 0,
 					"source" : [ "obj-32", 0 ]
 				}
@@ -519,7 +578,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-29", 0 ],
-					"order" : 3,
+					"order" : 4,
 					"source" : [ "obj-32", 0 ]
 				}
 
@@ -527,7 +586,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-30", 0 ],
-					"order" : 2,
+					"order" : 3,
 					"source" : [ "obj-32", 0 ]
 				}
 
@@ -535,7 +594,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-6", 0 ],
-					"order" : 1,
+					"order" : 2,
 					"source" : [ "obj-32", 0 ]
 				}
 

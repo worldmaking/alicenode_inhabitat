@@ -954,10 +954,12 @@ void State::sim_update(float dt) {
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
 
-			audioframe.state = o.type;
+			audioframe.state = float(o.type) * 0.1f;
+			audioframe.speaker = rnd::integer(5) * 0.1f;
 			audioframe.health = o.health;
-			audioframe.norm2 = norm2;
-			audioframe.params = o.params;
+			audioframe.age = o.phase;
+			audioframe.size = o.scale;
+			audioframe.params = glm::vec3(o.params);
 			
 		} else {
 

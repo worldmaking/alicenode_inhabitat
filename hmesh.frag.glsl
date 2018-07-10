@@ -25,7 +25,7 @@ void main() {
 
  	
 	vec4 noise = texture(uNoiseTex, texCoord);
-	vec2 texCoord1 = texCoord + (noise.xy - 0.5) * 0.001;
+	vec2 texCoord1 = texCoord + (noise.xy - 0.5) * 0.003;
 	vec4 fields = texture(uFungusTex, texCoord);
 	vec4 fields1 = texture(uFungusTex, texCoord1);
 
@@ -39,7 +39,7 @@ void main() {
 	float fungus = fields1.a;
 
 
-	vec3 color = normalize(vec3(texCoord, 0.5)) * 0.25;
+	vec3 color = normalize(vec3(texCoord, 0.5)) * 0.5;
 	
 	// TODO: color += rock colour
 

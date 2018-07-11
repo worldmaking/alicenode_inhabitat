@@ -337,14 +337,14 @@ int fadeState = 0;
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 1; 
+int camMode = 0; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 float camera_speed_default = 40.f;
 float camera_turn_default = 3.f;
-bool camFast = false;
+bool camFast = true;
 glm::vec3 camVel, camTurn;
-glm::vec3 cameraLoc;
+glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
@@ -553,68 +553,6 @@ void State::sim_update(float dt) {
 	if (!alice.isSimulating) return;
 
 
-	// deal with Kinect data:
-	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
-	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
-
-	if (1) {
-		// anchor sets centre of rotation of the cloud (relative to camera view)
-		glm::vec3 anchor = glm::vec3(0,0,-1);
-
-	
-		kinect0.cloudTransform = 
-			glm::translate(world_centre) *
-			glm::scale(glm::vec3(kinect2world_scale)) *
-			
-			glm::translate(anchor) * // anchor
-			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
-			glm::translate(-anchor) * // anchor
-
-			glm::translate(glm::vec3(-1.5,0,0)) * // camera location in real world
-			glm::rotate(float(M_PI/2.), glm::vec3(0,0,1)) * // camera orient in real world
-			glm::mat4();
-
-		kinect1.cloudTransform = 
-			glm::translate(world_centre) *
-			glm::scale(glm::vec3(kinect2world_scale)) * 
-
-			glm::translate(anchor) * // anchor
-			glm::rotate(float(M_PI/-2.), glm::vec3(1,0,0)) * 
-			glm::translate(-anchor) * // anchor
-
-			glm::translate(glm::vec3(1.5,0,0)) * // camera location in real world
-			glm::rotate(float(M_PI/2.), glm::vec3(0,0,1)) * // camera orient in real world
-			glm::mat4();
-
-		{
-			const CloudFrame& cloudFrame1 = kinect1.cloudFrame();
-			const glm::vec3 * cloud_points1 = cloudFrame1.xyz;
-			const glm::vec2 * uv_points1 = cloudFrame1.uv;
-			const glm::vec3 * rgb_points1 = cloudFrame1.rgb;
-
-			const CloudFrame& cloudFrame0 = kinect0.cloudFrame();
-			const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
-			const glm::vec2 * uv_points0 = cloudFrame0.uv;
-			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
-
-			//console.log("%d %d", NUM_DEBUGDOTS, max_cloud_points);
-			
-			for (int i=0; i<NUM_DEBUGDOTS; i++) {
-				DebugDot& o = debugdots[i];
-				
-				int ki = (i/2);// % max_cloud_points;
-				if (i % 2 == 0 && kinect0.capturing) {
-					o.location = cloud_points0[ki];
-					//o.color = rgb_points0[ki];
-				} else if (kinect1.capturing) {
-					o.location = cloud_points1[ki];
-					//o.color = rgb_points1[ki];
-				}
-				
-			}
-		}
-	}
-
 	// get the most recent complete frame:
 	flip = !flip;
 	const CloudDevice& cd = alice.cloudDeviceManager.devices[0];
@@ -624,6 +562,55 @@ void State::sim_update(float dt) {
 	const glm::vec3 * rgb_points = cloudFrame.rgb;
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
 	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
+
+	// deal with Kinect data:
+	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
+	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+
+	if (1) {
+		{
+			const CloudFrame& cloudFrame1 = kinect1.cloudFrame();
+			const glm::vec3 * cloud_points1 = cloudFrame1.xyz;
+			const glm::vec2 * uv_points1 = cloudFrame1.uv;
+			const glm::vec3 * rgb_points1 = cloudFrame1.rgb;
+			const uint16_t * depth1 = cloudFrame1.depth;
+
+			const CloudFrame& cloudFrame0 = kinect0.cloudFrame();
+			const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
+			const glm::vec2 * uv_points0 = cloudFrame0.uv;
+			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
+			const uint16_t * depth0 = cloudFrame0.depth;
+
+			glm::vec2 kaspectnorm = 1.f/glm::vec2(float(cColorHeight)/float(cColorWidth), 1.f);
+
+			int drawn = 0;
+			
+			for (int i=0, ki=0; i<NUM_DEBUGDOTS; i++) {
+				DebugDot& o = debugdots[i];
+				
+				if (kinect0.capturing && i < max_cloud_points) {
+					auto uv = (uv_points0[ki] - 0.5f) * kaspectnorm;
+					if (depth0[ki] > 0 && glm::length(uv) < 0.5f) {
+						o.location = cloud_points0[ki];
+						o.color = glm::vec3(0.8, 0.5, 0.3);
+						drawn++;
+					}
+					ki = (ki+1) % max_cloud_points;
+				} else if (kinect1.capturing && i >= max_cloud_points) {
+					auto uv = (uv_points1[ki] - 0.5f) * kaspectnorm;
+					if (depth1[ki] > 0 && glm::length(uv) < 0.5f) {
+						o.location = cloud_points1[ki];
+						o.color = glm::vec3(0.5, 0.8, 0.3);
+						drawn++;
+					}
+					ki = (ki+1) % max_cloud_points;
+				}
+			}
+			//console.log("%d %d / %d", cDepthHeight*cDepthWidth, max_cloud_points, drawn);
+
+
+		}
+	}
 
 
 	if (1) {
@@ -1812,21 +1799,62 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	// navigation
 	{
-		// follow a creature mode:
-		auto& o = state->creatures[objectSel % NUM_CREATURES];
+		glm::vec3& navloc = projectors[2].location;
+		glm::quat& navquat = projectors[2].orientation;
 		
-		auto boom = glm::vec3(0., 1.6f, 2.f);
+		switch (camMode % 2){
+			case 0: {
+				// WASD mode:
+				
+				float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
+				float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
+
+				// move camera:
+				glm::vec3 newloc = navloc + quat_rotate(navquat, camVel) * (camera_speed * dt);
+				// wrap to world:
+				navloc = glm::mix(navloc, newloc, 0.25f);
+				newloc = wrap(newloc, state->world_min, state->world_max);
+
+				// stick to floor:
+				glm::vec3 norm = transform(state->world2field, navloc);
+				glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+				navloc = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
+				navloc.y += 1.6f;
 		
-		glm::vec3 loc = o.location + quat_rotate(projectors[2].orientation, boom);
-		loc = glm::mix(projectors[2].location, loc, 0.1f);
+				// rotate camera:
+				glm::quat newori = safe_normalize(navquat * glm::angleAxis(camera_turnangle * dt, camTurn));
+				
+				// now orient to floor:
+				glm::vec3 up = glm::vec3(landpt);
+				up = glm::mix(up, glm::vec3(0,1,0), 0.5);
+				newori = align_up_to(newori, glm::normalize(up));
 
-		// keep this above ground:
-		glm::vec3 norm = transform(state->world2field, loc);
-		auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-		projectors[2].location = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w+0.01f), norm.z));
 
-		projectors[2].location = glm::mix(projectors[2].location, loc, 0.1f);
-		projectors[2].orientation = glm::slerp(projectors[2].orientation, o.orientation, 0.1f);
+				navquat = glm::slerp(navquat, newori, 0.25f);
+
+				// now create view matrix:
+				//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
+				//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
+				//console.log("Cam Mode 0 Active");
+			} break;
+			default: {
+				// follow a creature mode:
+				auto& o = state->creatures[objectSel % NUM_CREATURES];
+				
+				auto boom = glm::vec3(0., 1.6f, 2.f);
+				
+				glm::vec3 loc = o.location + quat_rotate(navquat, boom);
+				loc = glm::mix(navloc, loc, 0.1f);
+
+				// keep this above ground:
+				glm::vec3 norm = transform(state->world2field, loc);
+				auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+				navloc = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w+0.01f), norm.z));
+
+				navloc = glm::mix(navloc, loc, 0.1f);
+				navquat = glm::slerp(navquat, o.orientation, 0.1f);
+			}
+		}
 	}
 
 	// animation
@@ -2020,7 +2048,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			// 0..1
 			float sliceoffset = slice / float(slices);
 				
-			switch (camMode % 3){
+			switch (camMode % 2){
 				case 0: {
 					// WASD mode:
 					
@@ -2054,30 +2082,6 @@ void onFrame(uint32_t width, uint32_t height) {
 					//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
 					//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
 					//console.log("Cam Mode 0 Active");
-				
-				} break;
-				case 1: {
-					// navigation
-	
-					// follow a creature mode:
-					auto& o = state->creatures[objectSel % NUM_CREATURES];
-					
-					auto boom = glm::vec3(0., .3f, 3.f);
-					
-					glm::vec3 loc = o.location + quat_rotate(cameraOri, boom);
-					loc = glm::mix(cameraLoc, loc, 0.1f);
-
-					// keep this above ground:
-					glm::vec3 norm = transform(state->world2field, loc);
-					auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-					auto loc1 = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w+0.01f), norm.z));
-
-					loc.y = glm::max(loc.y, loc1.y);
-
-					cameraLoc = glm::mix(cameraLoc, loc, 0.5f);
-					cameraOri = glm::slerp(cameraOri, o.orientation, 0.1f);
-
-
 				
 				} break;
 				default: {
@@ -2276,9 +2280,10 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			}
 		} break;
 
+		case GLFW_KEY_RIGHT_SHIFT:
 		case GLFW_KEY_LEFT_SHIFT: {
-			if (downup) camFast = true;
-			else camFast = false;
+			if (downup) camFast = false;
+			else camFast = true;
 			break;
 		}
 
@@ -2547,6 +2552,9 @@ void State::reset() {
 
 			// get land surface coordinate:
 			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
+
+			// TEMP;
+			land_coord.y = 0;
 			
 			// place on land
 			o.location = land_coord;
@@ -2724,8 +2732,84 @@ extern "C" {
 			// 1. apply cloud rotate (i.e. undo the kinect's rotation relative to ground)
 			// 2. apply cloud translate (i.e. undo kinect's position relative to ground)
 			// 3. apply projector loc (i.e. move ground center to desired location)
+			// 4. scale to world
 
-			kinect0.cloudTransform = glm::translate(real_loc) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
+			kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(real_loc) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
+
+			//kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
+		}
+
+		{
+			console.log("READING JSON!!!");
+			json calibjson;
+			
+			{
+				// read a JSON file
+				std::ifstream calibstr("projector_calibration2/realcalib.json");
+				calibstr >> calibjson;
+				calibstr.close();
+			}
+			console.log("DIGGING INTO JSON!!!");
+
+			glm::vec3 pos, cloud_translate;
+			glm::quat orient, cloud_rotate;
+			glm::vec4 frustum;
+
+			if (calibjson.count("position")) {
+				auto j = calibjson["position"];
+				pos = glm::vec3(j.at(0), j.at(1), j.at(2));
+			}
+			if (calibjson.count("quat")) {
+				auto j = calibjson["quat"];
+				// jitter displays as x y z w
+				// glm declares as w x y z
+				orient = glm::quat(j.at(3), j.at(0), j.at(1), j.at(2));
+			}
+			if (calibjson.count("frustum")) {
+				auto j = calibjson["frustum"];
+				frustum = glm::vec4(j.at(0), j.at(1), j.at(2), j.at(3));
+			}
+
+			if (calibjson.count("cloud_translate")) {
+				auto j = calibjson["cloud_translate"];
+				cloud_translate = glm::vec3(j.at(0), j.at(1), j.at(2));
+			}
+			if (calibjson.count("cloud_rotate")) {
+				auto j = calibjson["cloud_rotate"];
+				// jitter displays as x y z w
+				// glm declares as w x y z
+				cloud_rotate = glm::quat(j.at(3), j.at(0), j.at(1), j.at(2));
+			}
+
+
+			console.log("pos %f %f %f", pos.x, pos.y, pos.z);
+			console.log("quat %f %f %f %f", orient.x, orient.y, orient.z, orient.w);
+			console.log("frustum %f %f %f %f", frustum.x, frustum.y, frustum.z, frustum.w);
+			console.log("cloud_translate %f %f %f", cloud_translate.x, cloud_translate.y, cloud_translate.z);
+			console.log("cloud_rotate %f %f %f %f", cloud_rotate.x, cloud_rotate.y, cloud_rotate.z, cloud_rotate.w);
+
+			
+			// TODO: determine the projector ground location in real-space
+			auto real_loc = glm::vec3(1., 0., 1.);
+
+			projectors[1].orientation = orient;
+			projectors[1].location = (pos + real_loc) * state->kinect2world_scale;
+			projectors[1].far_clip = 6.f * state->kinect2world_scale;
+
+			float nearclip = 0.1f * state->kinect2world_scale;
+			projectors[1].frustum_min = glm::vec2(frustum.x, frustum.z) * nearclip;
+			projectors[1].frustum_max = glm::vec2(frustum.y, frustum.w) * nearclip;
+			projectors[1].near_clip = nearclip;
+
+			// sequence is:
+			// 1. apply cloud rotate (i.e. undo the kinect's rotation relative to ground)
+			// 2. apply cloud translate (i.e. undo kinect's position relative to ground)
+			// 3. apply projector loc (i.e. move ground center to desired location)
+			// 4. scale to world
+
+			kinect1.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(real_loc) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
+
+			//kinect1.cloudTransform = glm::mat4(1.f);
 		}
 
 		landTex.generateMipMap = true;
@@ -2747,7 +2831,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;

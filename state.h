@@ -140,7 +140,8 @@ struct Field2DPod {
 #define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
 
-#define NUM_DEBUGDOTS LAND_TEXELS
+// defined to be at least enough to visualize two kinects:
+#define NUM_DEBUGDOTS (512*424*2)
 //2*5*4
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);

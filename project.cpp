@@ -12,6 +12,7 @@
 #include "al/al_time.h"
 #include "al/al_hashspace.h"
 #include "al/al_jxf.h"
+#include "al/al_json.h"
 #include "alice.h"
 #include "state.h"
 
@@ -600,15 +601,14 @@ void State::sim_update(float dt) {
 			
 			for (int i=0; i<NUM_DEBUGDOTS; i++) {
 				DebugDot& o = debugdots[i];
-
 				
 				int ki = (i/2);// % max_cloud_points;
-				if (i % 2 == 0) {
+				if (i % 2 == 0 && kinect0.capturing) {
 					o.location = cloud_points0[ki];
-					o.color = rgb_points0[ki];
-				} else {
+					//o.color = rgb_points0[ki];
+				} else if (kinect1.capturing) {
 					o.location = cloud_points1[ki];
-					o.color = rgb_points1[ki];
+					//o.color = rgb_points1[ki];
 				}
 				
 			}
@@ -1450,13 +1450,17 @@ void draw_scene(int width, int height, Projector& projector) {
 	}
 
 	if (enablers[SHOW_DEBUGDOTS]) {
+
+		auto dot = state->debugdots[NUM_DEBUGDOTS/3];
+		//console.log("%f %f %f", dot.location.x, dot.location.y, dot.location.z);
+
 		debugShader.use(); 
 		debugShader.uniform("uViewMatrix", viewMat);
 		debugShader.uniform("uViewMatrixInverse", viewMatInverse);
 		debugShader.uniform("uProjectionMatrix", projMat);
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
-		debugShader.uniform("uPointSize", state->particleSize * 2.);
+		debugShader.uniform("uPointSize", state->particleSize * 20.);
 		debugShader.uniform("uColorTex", 0);
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -1651,40 +1655,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 
 		// later, figure out how to place teleport points in viable locations
-		int div = sqrt(NUM_DEBUGDOTS);
-		for (int i=0; i<NUM_DEBUGDOTS; i++) {
-
-			auto& o = state->debugdots[i];
-			float x = (i / div) / float(div);
-			float z = (i % div) / float(div);
-
-			// normalized coordinate (0..1)
-			glm::vec3 norm = glm::vec3(x, 0, z); //transform(world2field, o.location);
-			//glm::vec3 norm = transform(world2minimap, o.location);
-
-			// get land data at this point:
-			// xyz is normal, w is height
-			glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim.x, land_dim.z), state->land, glm::vec2(norm.x, norm.z));
-
-			// if flatness == 1, land is horizontal. 
-			// if flatness == 0, land is vertical.
-			float flatness = fabsf(landpt.y); // simplified dot product of landnorm with (0,1,0)
-			// make it more extreme
-			flatness = powf(flatness, 2.f);				
-
-			// get land surface coordinate:
-			glm::vec3 land_coord = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)); 
-			
-			if (flatness >= 0.8) {
-				// place on land
-				//state->debugdots[1].location = transform(world2minimap, glm::vec3(20., 1., 37.)); //land_coord
-				//state->teleport_points[0] = state->debugdots[0].location;
-				//state->teleport_points[0] = transform(state->world2minimap,land_coord);
-				//state->teleport_points[i] = o.location;
-				o.location = transform(state->world2minimap,land_coord);
-				o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
-			}	
-		}
+		
 
 		for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
 			state->debugdots[i].location = transform(state->world2minimap, state->teleport_points[i]);
@@ -2579,7 +2550,6 @@ void State::reset() {
 			
 			// place on land
 			o.location = land_coord;
-
 			o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
 		}
 	}
@@ -2653,6 +2623,8 @@ extern "C" {
 
 		onReset();
 
+		
+
 		// set up projectors:
 		{
 			projectors[0].orientation = glm::angleAxis(float(-M_PI/2.), glm::vec3(1,0,0));
@@ -2683,12 +2655,85 @@ extern "C" {
 			projectors[2].far_clip = (state->world_max.z - state->world_min.z);
 		}
 
+		// read calibration:
+		CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
+		CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+		{
+			console.log("READING JSON!!!");
+			json calibjson;
+			
+			{
+				// read a JSON file
+				std::ifstream calibstr("projector_calibration/realcalib.json");
+				calibstr >> calibjson;
+				calibstr.close();
+			}
+			console.log("DIGGING INTO JSON!!!");
+
+			glm::vec3 pos, cloud_translate;
+			glm::quat orient, cloud_rotate;
+			glm::vec4 frustum;
+
+			if (calibjson.count("position")) {
+				auto j = calibjson["position"];
+				pos = glm::vec3(j.at(0), j.at(1), j.at(2));
+			}
+			if (calibjson.count("quat")) {
+				auto j = calibjson["quat"];
+				// jitter displays as x y z w
+				// glm declares as w x y z
+				orient = glm::quat(j.at(3), j.at(0), j.at(1), j.at(2));
+			}
+			if (calibjson.count("frustum")) {
+				auto j = calibjson["frustum"];
+				frustum = glm::vec4(j.at(0), j.at(1), j.at(2), j.at(3));
+			}
+
+			if (calibjson.count("cloud_translate")) {
+				auto j = calibjson["cloud_translate"];
+				cloud_translate = glm::vec3(j.at(0), j.at(1), j.at(2));
+			}
+			if (calibjson.count("cloud_rotate")) {
+				auto j = calibjson["cloud_rotate"];
+				// jitter displays as x y z w
+				// glm declares as w x y z
+				cloud_rotate = glm::quat(j.at(3), j.at(0), j.at(1), j.at(2));
+			}
+
+
+			console.log("pos %f %f %f", pos.x, pos.y, pos.z);
+			console.log("quat %f %f %f %f", orient.x, orient.y, orient.z, orient.w);
+			console.log("frustum %f %f %f %f", frustum.x, frustum.y, frustum.z, frustum.w);
+			console.log("cloud_translate %f %f %f", cloud_translate.x, cloud_translate.y, cloud_translate.z);
+			console.log("cloud_rotate %f %f %f %f", cloud_rotate.x, cloud_rotate.y, cloud_rotate.z, cloud_rotate.w);
+
+			
+			// TODO: determine the projector ground location in real-space
+			auto real_loc = glm::vec3(4., 0., 4.);
+
+			projectors[0].orientation = orient;
+			projectors[0].location = (pos + real_loc) * state->kinect2world_scale;
+			projectors[0].far_clip = 6.f * state->kinect2world_scale;
+
+			float nearclip = 0.1f * state->kinect2world_scale;
+			projectors[0].frustum_min = glm::vec2(frustum.x, frustum.z) * nearclip;
+			projectors[0].frustum_max = glm::vec2(frustum.y, frustum.w) * nearclip;
+			projectors[0].near_clip = nearclip;
+
+			// sequence is:
+			// 1. apply cloud rotate (i.e. undo the kinect's rotation relative to ground)
+			// 2. apply cloud translate (i.e. undo kinect's position relative to ground)
+			// 3. apply projector loc (i.e. move ground center to desired location)
+
+			kinect0.cloudTransform = glm::translate(real_loc) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
+		}
+
 		landTex.generateMipMap = true;
 		emissionTex.generateMipMap = true;
 		
 		
 
-		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;

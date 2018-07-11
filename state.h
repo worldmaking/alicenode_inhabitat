@@ -140,7 +140,7 @@ struct Field2DPod {
 #define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
 
-#define NUM_DEBUGDOTS LAND_DIM
+#define NUM_DEBUGDOTS LAND_TEXELS
 //2*5*4
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
@@ -335,7 +335,7 @@ struct State {
 	glm::mat4 leap2view;
 	glm::mat4 world2minimap;
 	float minimapScale = 0.005f;
-	float kinect2world_scale = 10.f;
+	float kinect2world_scale = 50.f;
 
 	// parameters:
 

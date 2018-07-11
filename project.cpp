@@ -601,7 +601,6 @@ void State::sim_update(float dt) {
 			
 			for (int i=0; i<NUM_DEBUGDOTS; i++) {
 				DebugDot& o = debugdots[i];
-
 				
 				int ki = (i/2);// % max_cloud_points;
 				if (i % 2 == 0 && kinect0.capturing) {
@@ -2657,6 +2656,8 @@ extern "C" {
 		}
 
 		// read calibration:
+		CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
+		CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 		{
 			console.log("READING JSON!!!");
 			json calibjson;
@@ -2708,16 +2709,23 @@ extern "C" {
 
 			
 			// TODO: determine the projector ground location in real-space
-			auto projector_loc = glm::vec3(4., 0., 4.);
+			auto real_loc = glm::vec3(4., 0., 4.);
 
 			projectors[0].orientation = orient;
-			projectors[0].location = (pos + projector_loc) * state->kinect2world_scale;
+			projectors[0].location = (pos + real_loc) * state->kinect2world_scale;
 			projectors[0].far_clip = 6.f * state->kinect2world_scale;
 
 			float nearclip = 0.1f * state->kinect2world_scale;
 			projectors[0].frustum_min = glm::vec2(frustum.x, frustum.z) * nearclip;
 			projectors[0].frustum_max = glm::vec2(frustum.y, frustum.w) * nearclip;
 			projectors[0].near_clip = nearclip;
+
+			// sequence is:
+			// 1. apply cloud rotate (i.e. undo the kinect's rotation relative to ground)
+			// 2. apply cloud translate (i.e. undo kinect's position relative to ground)
+			// 3. apply projector loc (i.e. move ground center to desired location)
+
+			kinect0.cloudTransform = glm::translate(real_loc) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
 		}
 
 		landTex.generateMipMap = true;

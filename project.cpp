@@ -347,7 +347,7 @@ glm::vec3 cameraLoc;
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 4;
+int soloView = 0;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -1301,6 +1301,7 @@ void onReloadGPU() {
 
 	landTex.wrap = GL_CLAMP_TO_EDGE;
 	distanceTex.wrap = GL_CLAMP_TO_EDGE;
+	fungusTex.wrap = GL_CLAMP_TO_EDGE;
 
 	{
 		glGenTextures(1, &colorTex);
@@ -2040,9 +2041,13 @@ void onFrame(uint32_t width, uint32_t height) {
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
-			int slices = 1;
+			int slices = gBufferVR.dim.x;//((int(t) % 3) + 3);
+			int slice = (alice.fps.count % slices);
+			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
 			float slicewidth = 1.f/slices;
-			float sliceoffset = (alice.fps.count % slices) / float(slices);
+			float sliceangle = M_PI * 2./slices; 
+			// 0..1
+			float sliceoffset = slice / float(slices);
 				
 			switch (camMode % 3){
 				case 0: {
@@ -2081,20 +2086,29 @@ void onFrame(uint32_t width, uint32_t height) {
 				
 				} break;
 				case 1: {
-					// follow:
+					// navigation
+	
+					// follow a creature mode:
 					auto& o = state->creatures[objectSel % NUM_CREATURES];
 					
-					glm::vec3 loc = o.location;
-/*
-					// keep this above ground:
-					glm::vec3 norm = transform(state->world2field, o.location);
-					auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-					glm::vec3 loc = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w), norm.z));
-					loc.y += 1.6f;*/
+					auto boom = glm::vec3(0., .3f, 3.f);
+					
+					glm::vec3 loc = o.location + quat_rotate(cameraOri, boom);
+					loc = glm::mix(cameraLoc, loc, 0.1f);
 
-					cameraLoc = glm::mix(cameraLoc, loc, 0.1f);
+					// keep this above ground:
+					glm::vec3 norm = transform(state->world2field, loc);
+					auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+					auto loc1 = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w+0.01f), norm.z));
+
+					loc.y = glm::max(loc.y, loc1.y);
+
+					cameraLoc = glm::mix(cameraLoc, loc, 0.5f);
 					cameraOri = glm::slerp(cameraOri, o.orientation, 0.1f);
-				}
+
+
+				
+				} break;
 				default: {
 					// orbit around
 					float a = M_PI * t / 30.;
@@ -2121,20 +2135,30 @@ void onFrame(uint32_t width, uint32_t height) {
 			
 			auto camq = cameraOri; // glm::angleAxis(float (M_PI * -2.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) * cameraOri;
 			
-			camq = glm::angleAxis(sliceoffset * float(M_PI * 2.f), glm::vec3(0,1,0)) * camq;
+			// want to put the forward direction in the middle
+			// sliceoffset goes 0..1
 
-			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
+			auto sliceRot = glm::angleAxis((centredslice/float(slices))* float(M_PI * -1.f), quat_uy(cameraOri));
 
-			float f = projectors[2].near_clip ;
-			float f0 = (sliceoffset * 2.f - 1.f) * f;
-			float f1 = ((sliceoffset+slicewidth) * 2.f - 1.f) * f;
+			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(sliceRot * cameraOri));
 
-			if (1) {
-				float ff = aspect * 2.f;
-				f0 = -slicewidth * f * ff;
-				f1 = slicewidth * f * ff;
-			}
-			projMat = glm::frustum(f0, f1, -f, f, projectors[2].near_clip, projectors[2].far_clip);
+			
+			float aspect = gBufferVR.dim.x / float(gBufferVR.dim.y);
+
+			// slice frustum x depends on sliceangle:
+			float fw = projectors[2].near_clip * tanf(sliceangle * 0.5f);
+
+			float f = projectors[2].near_clip * 1.f;
+
+
+			// slices ish:
+			// 2 = 20.
+			// 3 = 1.7ish
+			// 4 = 1.0
+			// 6 = 0.55
+			// 8 = 0.4
+			
+			projMat = glm::frustum(-fw, fw, -f, f, projectors[2].near_clip, projectors[2].far_clip);
 
 			viewProjMat = projMat * viewMat;
 			projMatInverse = glm::inverse(projMat);
@@ -2150,9 +2174,9 @@ void onFrame(uint32_t width, uint32_t height) {
 				gBufferVR.begin();
 
 					viewport.pos = glm::ivec2(gBufferVR.dim.x * viewport_offset.x, gBufferVR.dim.y * viewport_offset.y);
-					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x + 1, gBufferVR.dim.y * viewport_scale.y);
+					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x, gBufferVR.dim.y * viewport_scale.y);
 
-					//console.log("eye %d vp %d %d %d %d", eye, viewport.pos.x, viewport.pos.y, viewport.dim.x, viewport.dim.y);
+					//console.log("eye %d vp %d %d %d %d", slice, viewport.pos.x, viewport.pos.y, viewport.dim.x, viewport.dim.y);
 
 					glScissor(
 						viewport.pos.x, 

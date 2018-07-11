@@ -9,11 +9,11 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 34.0, 79.0, 1294.0, 933.0 ],
+		"rect" : [ 34.0, 79.0, 1612.0, 933.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"bglocked" : 0,
-		"openinpresentation" : 0,
+		"openinpresentation" : 1,
 		"default_fontsize" : 12.0,
 		"default_fontface" : 0,
 		"default_fontname" : "Arial",
@@ -40,6 +40,19 @@
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
 				"box" : 				{
+					"id" : "obj-7",
+					"linecount" : 2,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 496.0, 182.0, 154.0, 33.0 ],
+					"style" : "",
+					"text" : "to do: get which island the vr person is on:"
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"id" : "obj-201",
 					"maxclass" : "comment",
 					"numinlets" : 1,
@@ -60,7 +73,7 @@
 					"numoutlets" : 0,
 					"patching_rect" : [ 591.5, 657.0, 150.0, 20.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 452.699951, 579.5, 150.0, 20.0 ],
+					"presentation_rect" : [ 452.699951, 763.5, 150.0, 20.0 ],
 					"style" : "",
 					"text" : "Post-Fader"
 				}
@@ -288,7 +301,7 @@
 					"parameter_enable" : 0,
 					"patching_rect" : [ 138.5, 633.0, 100.0, 22.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 452.699951, 707.0, 100.0, 22.0 ],
+					"presentation_rect" : [ 452.699951, 582.0, 100.0, 22.0 ],
 					"style" : ""
 				}
 
@@ -302,7 +315,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 585.199951, 651.0, 300.0, 100.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 452.699951, 599.5, 150.0, 100.0 ],
+					"presentation_rect" : [ 452.699951, 783.5, 150.0, 100.0 ],
 					"style" : ""
 				}
 
@@ -1722,7 +1735,7 @@
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 403.0, 160.0, 244.0, 22.0 ],
 									"style" : "",
-									"text" : "0.018467 0. -0.018467 -1.420888 0.961789"
+									"text" : "0.016813 0. -0.016813 -1.420888 0.961789"
 								}
 
 							}
@@ -2010,7 +2023,7 @@
 									"patching_rect" : [ 50.0, 189.0, 305.0, 132.0 ],
 									"presentation" : 1,
 									"presentation_rect" : [ 0.0, 0.0, 305.0, 132.0 ],
-									"setfilter" : [ 0, 3, 1, 0, 0, 5812.114258, 0.966608, 17.700001, 0.0001, 22050.0, 0.0001, 16.0, 0.5, 25.0 ],
+									"setfilter" : [ 0, 3, 1, 0, 0, 5812.114258, 0.88, 17.700001, 0.0001, 22050.0, 0.0001, 16.0, 0.5, 25.0 ],
 									"style" : ""
 								}
 
@@ -2548,7 +2561,7 @@
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 305.0, 96.0, 50.0, 22.0 ],
 									"style" : "",
-									"text" : "1."
+									"text" : "0.94"
 								}
 
 							}
@@ -2629,7 +2642,7 @@
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 403.0, 160.0, 244.0, 22.0 ],
 									"style" : "",
-									"text" : "0.013821 0. -0.013821 -1.702945 0.972359"
+									"text" : "0.021924 0. -0.021924 -0.997857 0.953354"
 								}
 
 							}
@@ -2917,7 +2930,7 @@
 									"patching_rect" : [ 50.0, 189.0, 305.0, 132.0 ],
 									"presentation" : 1,
 									"presentation_rect" : [ 0.0, 0.0, 305.0, 132.0 ],
-									"setfilter" : [ 0, 3, 1, 0, 0, 4039.851807, 1.0, 18.0, 0.0001, 22050.0, 0.0001, 16.0, 0.5, 25.0 ],
+									"setfilter" : [ 0, 3, 1, 0, 0, 7904.0, 0.94, 18.0, 0.0001, 22050.0, 0.0001, 16.0, 0.5, 25.0 ],
 									"style" : ""
 								}
 
@@ -3376,7 +3389,7 @@
 							"modernui" : 1
 						}
 ,
-						"rect" : [ 44.0, 116.0, 481.0, 132.0 ],
+						"rect" : [ 1078.0, 45.0, 481.0, 132.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 1,
 						"default_fontsize" : 12.0,
@@ -3537,7 +3550,7 @@
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 403.0, 160.0, 244.0, 36.0 ],
 									"style" : "",
-									"text" : "0.010939 -0.008456 -0.002483 -1.881153 0.985442"
+									"text" : "0.010503 -0.008119 -0.002384 -1.881153 0.985442"
 								}
 
 							}
@@ -3825,7 +3838,7 @@
 									"patching_rect" : [ 50.0, 189.0, 305.0, 132.0 ],
 									"presentation" : 1,
 									"presentation_rect" : [ 0.0, 0.0, 305.0, 132.0 ],
-									"setfilter" : [ 0, 3, 1, 1, 0, 2487.075195, 0.92691, 22.200001, 0.0001, 22050.0, 0.0001, 16.0, 0.5, 25.0 ],
+									"setfilter" : [ 0, 3, 1, 1, 0, 2487.075195, 0.89, 22.200001, 0.0001, 22050.0, 0.0001, 16.0, 0.5, 25.0 ],
 									"style" : ""
 								}
 
@@ -20464,7 +20477,7 @@
 					"parameter_enable" : 1,
 					"patching_rect" : [ 11.75, 541.5, 98.0, 153.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 452.699951, 728.5, 62.0, 155.0 ],
+					"presentation_rect" : [ 452.699951, 603.5, 62.0, 155.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
 							"parameter_longname" : "live.gain~",

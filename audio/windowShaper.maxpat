@@ -60,7 +60,7 @@
 					"outlettype" : [ "float", "float", "float", "float", "list", "" ],
 					"patching_rect" : [ 60.0, 305.0, 137.0, 60.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 196.0, 100.0, 60.0 ],
+					"presentation_rect" : [ 0.0, 131.0, 104.0, 60.0 ],
 					"setmode" : 4,
 					"style" : ""
 				}
@@ -523,7 +523,7 @@
 					"numoutlets" : 0,
 					"patching_rect" : [ 112.0, 54.0, 150.0, 20.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 111.0, 104.0, 20.0 ],
+					"presentation_rect" : [ 0.0, 65.0, 104.0, 20.0 ],
 					"style" : "",
 					"text" : "Window Function"
 				}
@@ -537,7 +537,7 @@
 					"numoutlets" : 0,
 					"patching_rect" : [ 82.0, 35.0, 150.0, 20.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 69.0, 50.0, 20.0 ],
+					"presentation_rect" : [ 48.0, 43.0, 50.0, 20.0 ],
 					"style" : "",
 					"text" : "Period"
 				}
@@ -551,7 +551,7 @@
 					"numoutlets" : 0,
 					"patching_rect" : [ 60.0, 10.0, 150.0, 20.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 27.0, 50.0, 20.0 ],
+					"presentation_rect" : [ 48.0, 20.0, 50.0, 20.0 ],
 					"style" : "",
 					"text" : "Wave"
 				}
@@ -578,7 +578,7 @@
 					"numoutlets" : 0,
 					"patching_rect" : [ 191.5, 77.0, 63.0, 20.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 153.0, 63.0, 20.0 ],
+					"presentation_rect" : [ 48.0, 108.0, 63.0, 20.0 ],
 					"style" : "",
 					"text" : "Amplitude"
 				}
@@ -1075,7 +1075,7 @@
 					"parameter_enable" : 0,
 					"patching_rect" : [ 191.5, 109.0, 100.0, 22.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 131.0, 100.0, 22.0 ],
+					"presentation_rect" : [ 0.0, 85.0, 104.0, 22.0 ],
 					"style" : ""
 				}
 
@@ -1093,7 +1093,7 @@
 					"parameter_enable" : 0,
 					"patching_rect" : [ 141.0, 77.0, 50.0, 22.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 173.0, 50.0, 22.0 ],
+					"presentation_rect" : [ 0.0, 108.0, 50.0, 22.0 ],
 					"style" : ""
 				}
 
@@ -1108,7 +1108,7 @@
 					"parameter_enable" : 0,
 					"patching_rect" : [ 75.5, 78.0, 50.0, 22.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 89.0, 50.0, 22.0 ],
+					"presentation_rect" : [ 0.0, 43.0, 50.0, 22.0 ],
 					"style" : ""
 				}
 
@@ -1137,7 +1137,7 @@
 					"parameter_enable" : 0,
 					"patching_rect" : [ 27.0, 78.0, 46.0, 22.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 47.0, 46.0, 22.0 ],
+					"presentation_rect" : [ 0.0, 20.0, 50.0, 22.0 ],
 					"style" : ""
 				}
 
@@ -1163,9 +1163,9 @@
 					"numoutlets" : 0,
 					"patching_rect" : [ 7.0, 8.0, 150.0, 20.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 0.0, 3.0, 150.0, 20.0 ],
+					"presentation_rect" : [ 0.0, 0.0, 150.0, 20.0 ],
 					"style" : "",
-					"text" : "Buffer"
+					"text" : "Buffer: #1"
 				}
 
 			}

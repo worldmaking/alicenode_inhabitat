@@ -1,6 +1,6 @@
 #ifndef STATE_H
 #define STATE_H
-
+// michael: testing the client editor
 #ifndef ALICE_H
 // for the use of Clang-Index:
 #include <stddef.h>
@@ -124,16 +124,20 @@ struct Field2DPod {
 #define NUM_AUDIO_FRAMES 1024
 
 #define FIELD_DIM 32
-#define FIELD_TEXELS FIELD_DIM*FIELD_DIM
-#define FIELD_VOXELS FIELD_DIM*FIELD_DIM*FIELD_DIM
+#define FIELD_TEXELS (FIELD_DIM*FIELD_DIM)
+#define FIELD_VOXELS (FIELD_DIM*FIELD_DIM*FIELD_DIM)
+
 
 
 #define LAND_DIM 200
-#define LAND_TEXELS LAND_DIM*LAND_DIM
-#define LAND_VOXELS LAND_DIM*LAND_DIM*LAND_DIM
+#define LAND_TEXELS (LAND_DIM*LAND_DIM)
+#define LAND_VOXELS (LAND_DIM*LAND_DIM*LAND_DIM)
+
+//#define FLOW_DIM 128
+#define FLOW_TEXELS (512*424)
 
 #define FUNGUS_DIM 512
-#define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
+#define FUNGUS_TEXELS (FUNGUS_DIM*FUNGUS_DIM)
 
 // defined to be at least enough to visualize two kinects:
 #define NUM_DEBUGDOTS (512*424*2)
@@ -287,6 +291,12 @@ struct State {
 	// .xyz represents the normal
 	// .w represents the height
 	glm::vec4 land[LAND_TEXELS];
+
+	glm::vec4 human[LAND_TEXELS];
+
+	// the flow field (hopefully this isn't too high res)
+	// Paris ran at 128 x 64, for example
+	glm::vec2 flow[FLOW_TEXELS];
 
 	// signed distance field representing the landscape
 	// the distance to the nearest land surface, as a 3D SDF

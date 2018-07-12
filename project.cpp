@@ -13,6 +13,7 @@
 #include "al/al_hashspace.h"
 #include "al/al_jxf.h"
 #include "al/al_json.h"
+#include "al/al_opencv.h"
 #include "alice.h"
 #include "state.h"
 
@@ -271,10 +272,12 @@ Shader objectShader;
 Shader creatureShader;
 Shader particleShader;
 Shader landShader;
-Shader heightMeshShader;
+Shader landMeshShader;
+Shader humanMeshShader;
 Shader deferShader; 
 Shader simpleShader;
 Shader debugShader;
+Shader flowShader;
 
 QuadMesh quadMesh;
 GLuint colorTex;
@@ -284,7 +287,11 @@ FloatTexture3D distanceTex;
 
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
+FloatTexture2D humanTex;
+FloatTexture2D flowTex;
 FloatTexture2D noiseTex;
+
+TextureDrawer texDraw;
 
 SimpleOBJ tableObj("island.obj", true, 1.f);
 
@@ -357,6 +364,7 @@ bool enablers[10];
 #define SHOW_PARTICLES 5
 #define SHOW_DEBUGDOTS 6
 #define USE_OBJECT_SHADER 7
+#define SHOW_HUMANMESH 8
 
 Profiler profiler;
 
@@ -1150,12 +1158,15 @@ void State::creatures_update(float dt) {
 void onUnloadGPU() {
 	// free resources:
 	landShader.dest_closing();
-	heightMeshShader.dest_closing();
+	landMeshShader.dest_closing();
+	humanMeshShader.dest_closing();
 	particleShader.dest_closing();
 	objectShader.dest_closing();
 	creatureShader.dest_closing();
 	deferShader.dest_closing();
 	simpleShader.dest_closing();
+	debugShader.dest_closing();
+	flowShader.dest_closing();
 
 	quadMesh.dest_closing();
 	cubeVBO.dest_closing();
@@ -1170,6 +1181,10 @@ void onUnloadGPU() {
 	fungusTex.dest_closing();
 	noiseTex.dest_closing();
 	landTex.dest_closing();
+	flowTex.dest_closing();
+	humanTex.dest_closing();
+
+	texDraw.dest_closing();
 
 	projectors[0].fbo.dest_closing();
 	projectors[1].fbo.dest_closing();
@@ -1197,9 +1212,11 @@ void onReloadGPU() {
 	creatureShader.readFiles("creature.vert.glsl", "creature.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
 	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
-	heightMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
+	humanMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
+	landMeshShader.readFiles("lmesh.vert.glsl", "lmesh.frag.glsl");
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
 	debugShader.readFiles("debug.vert.glsl", "debug.frag.glsl");
+	flowShader.readFiles("flow.vert.glsl", "flow.frag.glsl");
 	
 	quadMesh.dest_changed();
 
@@ -1294,6 +1311,8 @@ void onReloadGPU() {
 	debugVAO.attr(2, &DebugDot::color);
 
 	landTex.wrap = GL_CLAMP_TO_EDGE;
+	flowTex.wrap = GL_CLAMP_TO_EDGE;
+	humanTex.wrap = GL_CLAMP_TO_EDGE;
 	distanceTex.wrap = GL_CLAMP_TO_EDGE;
 	fungusTex.wrap = GL_CLAMP_TO_EDGE;
 
@@ -1323,6 +1342,8 @@ void draw_scene(int width, int height, Projector& projector) {
 	double t = Alice::Instance().simTime;
 	//console.log("%f", t);
 
+	flowTex.bind(1);
+	humanTex.bind(2);
 	noiseTex.bind(3);
 	distanceTex.bind(4);
 	fungusTex.bind(5);
@@ -1336,18 +1357,36 @@ void draw_scene(int width, int height, Projector& projector) {
 	}
 
 	if (enablers[SHOW_LANDMESH]) {
-		heightMeshShader.use();
-		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", state->world2field);
-		heightMeshShader.uniform("uLandMatrixInverse", state->field2world);
-		heightMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
-		heightMeshShader.uniform("uLandLoD", 1.5f);
-		heightMeshShader.uniform("uMapScale", 1.f);
-		heightMeshShader.uniform("uNoiseTex", 3);
-		heightMeshShader.uniform("uDistanceTex", 4);
-		heightMeshShader.uniform("uFungusTex", 5);
-		heightMeshShader.uniform("uLandTex", 6);
+		landMeshShader.use();
+		landMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		landMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		landMeshShader.uniform("uLandMatrix", state->world2field);
+		landMeshShader.uniform("uLandMatrixInverse", state->field2world);
+		landMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		landMeshShader.uniform("uLandLoD", 1.5f);
+		landMeshShader.uniform("uMapScale", 1.f);
+		landMeshShader.uniform("uNoiseTex", 3);
+		landMeshShader.uniform("uDistanceTex", 4);
+		landMeshShader.uniform("uFungusTex", 5);
+		landMeshShader.uniform("uLandTex", 6);
+
+		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		gridVAO.drawElements(grid_elements);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
+	if (enablers[SHOW_HUMANMESH]) {
+		humanMeshShader.use();
+		humanMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		humanMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		humanMeshShader.uniform("uLandMatrix", state->world2field);
+		humanMeshShader.uniform("uLandMatrixInverse", state->field2world);
+		humanMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		humanMeshShader.uniform("uLandLoD", 1.5f);
+		humanMeshShader.uniform("uMapScale", 1.f);
+		humanMeshShader.uniform("uNoiseTex", 3);
+		humanMeshShader.uniform("uDistanceTex", 4);
+		humanMeshShader.uniform("uLandTex", 2);
 
 		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
@@ -1356,16 +1395,16 @@ void draw_scene(int width, int height, Projector& projector) {
 
 	//Mini
 	if (enablers[SHOW_MINIMAP]) {
-		heightMeshShader.use();
-		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", state->world2field);
-		heightMeshShader.uniform("uLandMatrixInverse", state->field2world);
-		heightMeshShader.uniform("uWorld2Map", state->world2minimap);
-		heightMeshShader.uniform("uMapScale", state->minimapScale);
-		heightMeshShader.uniform("uDistanceTex", 4);
-		heightMeshShader.uniform("uFungusTex", 5);
-		heightMeshShader.uniform("uLandTex", 6);
+		landMeshShader.use();
+		landMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		landMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		landMeshShader.uniform("uLandMatrix", state->world2field);
+		landMeshShader.uniform("uLandMatrixInverse", state->field2world);
+		landMeshShader.uniform("uWorld2Map", state->world2minimap);
+		landMeshShader.uniform("uMapScale", state->minimapScale);
+		landMeshShader.uniform("uDistanceTex", 4);
+		landMeshShader.uniform("uFungusTex", 5);
+		landMeshShader.uniform("uLandTex", 6);
 
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
@@ -1446,6 +1485,7 @@ void draw_scene(int width, int height, Projector& projector) {
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
 		debugShader.uniform("uColorTex", 0);
+
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glEnable( GL_PROGRAM_POINT_SIZE );
@@ -1595,6 +1635,36 @@ void onFrame(uint32_t width, uint32_t height) {
 	float aspect = gBufferVR.dim.x / (float)gBufferVR.dim.y;
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+
+	if (1) {
+		CloudDevice& cd = alice.cloudDeviceManager.devices[0];
+		const CloudFrame& frame0 = cd.cloudFramePrev();
+		const CloudFrame& frame1 = cd.cloudFrame();
+
+		// const glm::vec3 * cloud_points = cloudFrame.xyz;
+		// const glm::vec2 * uv_points = cloudFrame.uv;
+		// const glm::vec3 * rgb_points = cloudFrame.rgb;
+		// uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
+		
+		int levels = 3; // default=5;
+		double pyr_scale = 0.5;
+		int winsize = 13;
+		int iterations = 3; // default = 10;
+		int poly_n = 5;
+		double poly_sigma = 1.2; // default = 1.1
+		int flags = 0;
+		
+		// create CV mat wrapper around Jitter matrix data
+		// (cv declares dim as numrows, numcols, i.e. dim1, dim0, or, height, width)
+		void * src;
+		cv::Mat prev(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame0.depth);
+		cv::Mat next(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame1.depth);
+
+		cv::Mat flow(cDepthHeight, cDepthWidth, CV_32FC(2), (void *)state->flow);
+		
+		cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
+		
+	}
 
 	if (1) {	
 		// LEAP & TELEPORTING
@@ -1859,7 +1929,9 @@ void onFrame(uint32_t width, uint32_t height) {
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->field_texture[0]);
 		noiseTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->noise_texture[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
+		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
+		flowTex.submit(glm::ivec2(512,424), &state->flow[0]);
 		
 		//if (alice.cloudDevice->use_colour) {
 			const CloudDevice& cd = alice.cloudDeviceManager.devices[flip];
@@ -2029,7 +2101,6 @@ void onFrame(uint32_t width, uint32_t height) {
 			switch (camMode % 2){
 				case 0: {
 					// WASD mode:
-					
 					float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
 					float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
 
@@ -2055,62 +2126,27 @@ void onFrame(uint32_t width, uint32_t height) {
 
 
 					cameraOri = glm::slerp(cameraOri, newori, 0.25f);
-
-					// now create view matrix:
-					//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
-					//console.log("Cam Mode 0 Active");
 				
 				} break;
 				default: {
 					// orbit around
 					float a = M_PI * t / 30.;
-					/*
-					viewMat = glm::lookAt(
-						world_centre + 
-						glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
-						world_centre, 
-						glm::vec3(0., 1., 0.));
-					*/
+
 					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
 					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*4.f;
 
 					cameraLoc = glm::mix(cameraLoc, newloc, 0.05f);
 					cameraOri = glm::slerp(cameraOri, newori, 0.05f);
-
-					//auto camq = glm::angleAxis(float (M_PI * -1.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) *  cameraOri;
-
-					//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
-					//projMat = glm::perspective(glm::radians(75.0f), aspect, projectors[2].near_clip, 80.f);
-					//console.log("Default Cam mode Active");
 				}
 			}
-			
-			auto camq = cameraOri; // glm::angleAxis(float (M_PI * -2.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) * cameraOri;
-			
+
 			// want to put the forward direction in the middle
-			// sliceoffset goes 0..1
-
 			auto sliceRot = glm::angleAxis((centredslice/float(slices))* float(M_PI * -1.f), quat_uy(cameraOri));
-
 			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(sliceRot * cameraOri));
-
-			
-			float aspect = gBufferVR.dim.x / float(gBufferVR.dim.y);
 
 			// slice frustum x depends on sliceangle:
 			float fw = projectors[2].near_clip * tanf(sliceangle * 0.5f);
-
 			float f = projectors[2].near_clip * 1.f;
-
-
-			// slices ish:
-			// 2 = 20.
-			// 3 = 1.7ish
-			// 4 = 1.0
-			// 6 = 0.55
-			// 8 = 0.4
-			
 			projMat = glm::frustum(-fw, fw, -f, f, projectors[2].near_clip, projectors[2].far_clip);
 
 			viewProjMat = projMat * viewMat;
@@ -2121,15 +2157,13 @@ void onFrame(uint32_t width, uint32_t height) {
 			// draw the scene into the GBuffer:
 			glEnable(GL_SCISSOR_TEST);
 			{
-				glm::vec2 viewport_scale = glm::vec2(slicewidth, 1.f);
+				glm::vec2 viewport_scale = glm::vec2(slicewidth * 2.f, 1.f);
 				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
 
 				gBufferVR.begin();
 
 					viewport.pos = glm::ivec2(gBufferVR.dim.x * viewport_offset.x, gBufferVR.dim.y * viewport_offset.y);
 					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x, gBufferVR.dim.y * viewport_scale.y);
-
-					//console.log("eye %d vp %d %d %d %d", slice, viewport.pos.x, viewport.pos.y, viewport.dim.x, viewport.dim.y);
 
 					glScissor(
 						viewport.pos.x, 
@@ -2150,23 +2184,6 @@ void onFrame(uint32_t width, uint32_t height) {
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
 			}
-
-			/*
-			gBufferVR.begin();
-			
-				// No HMD:
-				glScissor(0, 0, gBufferVR.dim.x, gBufferVR.dim.y);
-				glViewport(0, 0, gBufferVR.dim.x, gBufferVR.dim.y);
-				glEnable(GL_DEPTH_TEST);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				draw_scene(gBufferVR.dim.x, gBufferVR.dim.y, projectors[2]);
-		
-			gBufferVR.end();
-			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-
-			// now process the GBuffer and render the result into the fbo
-			draw_gbuffer(alice.hmd->fbo, gBufferVR, projectors[2], glm::vec2(1.f), glm::vec2(0.f));
-			*/
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
@@ -2184,14 +2201,30 @@ void onFrame(uint32_t width, uint32_t height) {
 			case 1: projectors[0].fbo.draw(); break;
 			case 2: projectors[1].fbo.draw(); break;
 			case 3: projectors[2].fbo.draw(); break;
-			case 4: fbo.draw(); break;
+			case 4: {
+				flowShader.use();
+				flowShader.uniform("tex", 0);
+				flowShader.uniform("uScale", glm::vec2(1.f));
+				flowShader.uniform("uOffset", glm::vec2(0.f));
+				texDraw.draw_no_shader(flowTex.id);
+				flowShader.unuse();
+			} break;
+			//case 4: fbo.draw(); break;
 			default: soloView = 0;
 		}
 	} else {
 		projectors[0].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
 		projectors[1].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
 		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
-		fbo				 .draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
+		{
+				flowShader.use();
+				flowShader.uniform("tex", 0);
+				flowShader.uniform("uScale", glm::vec2(0.5f));
+				flowShader.uniform("uOffset", glm::vec2(0.5,  0.5));
+				texDraw.draw_no_shader(flowTex.id);
+				flowShader.unuse();
+		}
+		//fbo				 .draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
 	}
 	profiler.log("draw to window", alice.fps.dt);
 
@@ -2764,8 +2797,9 @@ extern "C" {
 		}
 
 		landTex.generateMipMap = true;
+		humanTex.generateMipMap = true;
 		emissionTex.generateMipMap = true;
-		
+		flowTex.generateMipMap = true;
 		
 
 		enablers[SHOW_LANDMESH] = 0;
@@ -2776,6 +2810,7 @@ extern "C" {
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 1;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
+		enablers[SHOW_HUMANMESH] = 1;
 
 		threads_begin();
 		

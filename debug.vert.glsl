@@ -1,11 +1,12 @@
 #version 330 core
 uniform mat4 uProjectionMatrix, uViewMatrix;
-uniform float uViewPortHeight, uPointSize, time;
+uniform float uViewPortHeight, time;
 uniform sampler2D uColorTex;
 
 // object in world space:
 layout (location = 0) in vec3 vertex_position;
-layout (location = 1) in vec3 vertex_color;
+layout (location = 1) in float vertex_size;
+layout (location = 2) in vec3 vertex_color;
 
 out vec4 world_orientation;
 out vec3 world_position, eye_position;
@@ -14,7 +15,7 @@ out vec3 color;
 
 void main() {
 
-	world_scale = uPointSize;
+	world_scale = vertex_size;
 	world_orientation = vec4(0, 0, 0, 1);
 
 	// vertex in camera space:

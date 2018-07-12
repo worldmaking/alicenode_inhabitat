@@ -268,7 +268,6 @@ struct Projector {
 //// RENDER STUFF ////
 
 Shader objectShader;
-Shader segmentShader;
 Shader creatureShader;
 Shader particleShader;
 Shader landShader;
@@ -307,8 +306,6 @@ unsigned int table_elements;
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 VAO creatureVAO;
 VBO creaturePartsVBO(sizeof(State::creatureparts));
-VAO segmentVAO;
-VBO segmentInstancesVBO(sizeof(State::segments));
 VAO particlesVAO;
 VBO particlesVBO(sizeof(State::particles));
 VAO debugVAO;
@@ -358,7 +355,7 @@ bool enablers[10];
 #define SHOW_AS_GRID 1
 #define SHOW_MINIMAP 2
 #define SHOW_OBJECTS 3
-#define SHOW_SEGMENTS 4
+//#define SHOW_SEGMENTS 4
 #define SHOW_PARTICLES 5
 #define SHOW_DEBUGDOTS 6
 #define USE_OBJECT_SHADER 7
@@ -659,6 +656,8 @@ void State::sim_update(float dt) {
 		AudioState::Frame& audioframe = audiostate->frames[i % NUM_AUDIO_FRAMES];
 
 		if (o.state == Creature::STATE_ALIVE) {
+
+			//o.island = nearest_island(o.location);
 			
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
@@ -918,7 +917,9 @@ void State::sim_update(float dt) {
 
 			// let song evolve:
 			o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);
-			//o.color = glm::vec3(o.params);
+			o.color = glm::vec3(o.params);
+
+			
 
 			float gravity = 2.0f;
 			o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
@@ -947,7 +948,7 @@ void State::sim_update(float dt) {
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
 
 			audioframe.state = float(o.type) * 0.1f;
-			audioframe.speaker = rnd::integer(5) * 0.1f;
+			audioframe.speaker = o.island * 0.1f;
 			audioframe.health = o.health;
 			audioframe.age = o.phase;
 			audioframe.size = o.scale;
@@ -959,59 +960,73 @@ void State::sim_update(float dt) {
 		}
 	}
 
-	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto &o = segments[i];
-		if (i % 8 == 0) {
-			// a root;
+	// for (int i=0; i<NUM_SEGMENTS; i++) {
+	// 	auto &o = segments[i];
+	// 	if (i % 8 == 0) {
+	// 		// a root;
 			
-			/*
-			glm::vec3 fluidloc = transform(world2field, o.location);
-			glm::vec3 flow;
-			fluid.velocities.front().readnorm(fluidloc, &flow.x);
-			glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-			fluid.velocities.front().addnorm(fluidloc, &push.x);
-			o.velocity = flow * idt;
+	// 		/*
+	// 		glm::vec3 fluidloc = transform(world2field, o.location);
+	// 		glm::vec3 flow;
+	// 		fluid.velocities.front().readnorm(fluidloc, &flow.x);
+	// 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
+	// 		fluid.velocities.front().addnorm(fluidloc, &push.x);
+	// 		o.velocity = flow * idt;
 
-			al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
-			*/
+	// 		al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
+	// 		*/
 
-			// get norm'd coordinate:
-			glm::vec3 norm = transform(world2field, o.location);
+	// 		// get norm'd coordinate:
+	// 		glm::vec3 norm = transform(world2field, o.location);
 
-			// get fluid flow:
-			//glm::vec3 flow;
-			//fluid.velocities.front().readnorm(norm, &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
+	// 		// get fluid flow:
+	// 		//glm::vec3 flow;
+	// 		//fluid.velocities.front().readnorm(norm, &flow.x);
+	// 		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
 
-			// get my distance from the ground:
-			float sdist; // creature's distance above the ground (or negative if below)
-			al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+	// 		// get my distance from the ground:
+	// 		float sdist; // creature's distance above the ground (or negative if below)
+	// 		al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
 
-			// convert to meters per second:
-			flow *= idt;
+	// 		// convert to meters per second:
+	// 		flow *= idt;
 
-			// if below ground, rise up;
-			// if above ground, sink down:
-			float gravity = 0.1f;
-			flow.y += sdist < 0.1f ? gravity : -gravity;
+	// 		// if below ground, rise up;
+	// 		// if above ground, sink down:
+	// 		float gravity = 0.1f;
+	// 		flow.y += sdist < 0.1f ? gravity : -gravity;
 
-			// set my velocity, in meters per second:
-			o.velocity = flow;
-			//if(accel == 1) o.velocity += o.velocity;
-			//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
+	// 		// set my velocity, in meters per second:
+	// 		o.velocity = flow;
+	// 		//if(accel == 1) o.velocity += o.velocity;
+	// 		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
 
-			// use this to sample the landscape:
+	// 		// use this to sample the landscape:
 			
-			// get a normal for the land:
-			glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
-			// re-orient relative to ground:
-			o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
+	// 		// get a normal for the land:
+	// 		glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
+	// 		// re-orient relative to ground:
+	// 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
 			
-		} else {
-			auto& p = segments[i-1];
-			o.scale = p.scale * 0.9f;
+	// 	} else {
+	// 		auto& p = segments[i-1];
+	// 		o.scale = p.scale * 0.9f;
+	// 	}
+	// }
+}
+
+int State::nearest_island(glm::vec3 pos) {
+	int which = -1;
+	float d2 = 1000000000.f;
+	for (int i=0; i<NUM_ISLANDS; i++) {
+		auto r = island_centres[i] - pos;
+		auto d = glm::dot(r, r);
+		if (d < d2) {
+			which = i;
+			d2 = d;
 		}
 	}
+	return which;
 }
 
 void State::creature_reset(int i) {
@@ -1031,6 +1046,7 @@ void State::creature_reset(int i) {
 		a.velocity = glm::vec3(0);
 		a.rot_vel = glm::quat();
 		a.accel = glm::vec3(0);
+		a.island = nearest_island(a.location);
 
 		switch(a.type) {
 			case Creature::TYPE_ANT:
@@ -1060,6 +1076,7 @@ void State::creatures_update(float dt) {
 		creature_reset(i);
 		Creature& a = creatures[i];
 		a.location = glm::linearRand(world_min, world_max);
+		a.island = nearest_island(a.location);
 	}
 
 	// visit each creature:
@@ -1088,8 +1105,9 @@ void State::creatures_update(float dt) {
 				creature_reset(j);
 				Creature& child = creatures[j];
 				child.location = a.location;
+				child.island = nearest_island(child.location);
 				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
-				child.color = glm::mix(child.color, a.color, 0.9f);
+				child.params = glm::mix(child.params, a.params, 0.9f);
 			}
 
 
@@ -1139,7 +1157,6 @@ void onUnloadGPU() {
 	humanMeshShader.dest_closing();
 	particleShader.dest_closing();
 	objectShader.dest_closing();
-	segmentShader.dest_closing();
 	creatureShader.dest_closing();
 	deferShader.dest_closing();
 	simpleShader.dest_closing();
@@ -1148,8 +1165,6 @@ void onUnloadGPU() {
 	cubeVBO.dest_closing();
 	creaturePartsVBO.dest_closing();
 	creatureVAO.dest_closing();
-	segmentInstancesVBO.dest_closing();
-	segmentVAO.dest_closing();
 	particlesVAO.dest_closing();
 	debugVAO.dest_closing();
 
@@ -1183,7 +1198,7 @@ void onReloadGPU() {
 
 	simpleShader.readFiles("simple.vert.glsl", "simple.frag.glsl");
 	objectShader.readFiles("object.vert.glsl", "object.frag.glsl");
-	segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
+	//segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
 	creatureShader.readFiles("creature.vert.glsl", "creature.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
 	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
@@ -1209,6 +1224,7 @@ void onReloadGPU() {
 		gridVertices.resize(dim*dim);
 		
 		const glm::vec3 normalizer = 1.f/glm::vec3(dim, 1.f, dim);
+		const glm::vec2 pixelcenter = glm::vec2(0.5f / (dim-1.f), 0.5f  / (dim-1.f));
 
 		for (int i=0, y=0; y<dim; y++) {
 			for (int x=0; x<dim; x++) {
@@ -1216,7 +1232,7 @@ void onReloadGPU() {
 				v.position = glm::vec3(x, 0, y) * normalizer;
 				v.normal = glm::vec3(0, 1, 0);
 				// depends whether wrapping or not, divide dim or dim+1?
-				v.texcoord = glm::vec2(v.position.x, v.position.z);
+				v.texcoord = glm::vec2(v.position.x, v.position.z) + pixelcenter;
 			}
 		}
 		gridVBO.submit((void *)&gridVertices[0], sizeof(Vertex) * gridVertices.size());
@@ -1271,16 +1287,6 @@ void onReloadGPU() {
 	creatureVAO.attr(6, &CreaturePart::color, true);
 	creatureVAO.attr(7, &CreaturePart::params, true);
 	creatureVAO.attr(8, &CreaturePart::id, true);
-		
-	segmentVAO.bind();
-	cubeVBO.bind();
-	segmentVAO.attr(0, 3, GL_FLOAT, sizeof(glm::vec3), 0);
-	segmentInstancesVBO.bind();
-	segmentVAO.attr(2, &Segment::location, true);
-	segmentVAO.attr(3, &Segment::orientation, true);
-	segmentVAO.attr(4, &Segment::scale, true);
-	segmentVAO.attr(5, &Segment::phase, true);
-	segmentVAO.attr(6, &Segment::color, true);
 
 	particlesVAO.bind();
 	particlesVBO.bind();
@@ -1290,7 +1296,8 @@ void onReloadGPU() {
 	debugVAO.bind();
 	debugVBO.bind();
 	debugVAO.attr(0, &DebugDot::location);
-	debugVAO.attr(1, &DebugDot::color);
+	debugVAO.attr(1, &DebugDot::size);
+	debugVAO.attr(2, &DebugDot::color);
 
 	landTex.wrap = GL_CLAMP_TO_EDGE;
 	humanTex.wrap = GL_CLAMP_TO_EDGE;
@@ -1430,15 +1437,6 @@ void draw_scene(int width, int height, Projector& projector) {
 		creatureVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), rendercreaturecount);
 	}
 
-	if (enablers[SHOW_SEGMENTS]) {
-		segmentShader.use();
-		segmentShader.uniform("time", t);
-		segmentShader.uniform("uEyePos", eyePos);
-		segmentShader.uniform("uViewMatrix", viewMat);
-		segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
-		segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
-	}
-
 	if (enablers[SHOW_PARTICLES]) {
 		particleShader.use(); 
 		particleShader.uniform("time", t);
@@ -1473,7 +1471,6 @@ void draw_scene(int width, int height, Projector& projector) {
 		debugShader.uniform("uProjectionMatrix", projMat);
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
-		debugShader.uniform("uPointSize", state->particleSize * 20.);
 		debugShader.uniform("uColorTex", 0);
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -1611,24 +1608,6 @@ void State::animate(float dt) {
 			part.phase = o.phase;
 			part.params = o.params;
 			rendercreaturecount++;
-		}
-	}
-
-	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto &o = segments[i];
-		if (i % PREDATOR_SEGMENTS_EACH == 0) {
-			// a root;
-			// TODO: dt-ify
-			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
-			o.phase += dt;
-		} else {
-			auto& p = segments[i-1];
-			o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
-			glm::vec3 uz = quat_uz(p.orientation);
-			o.location = p.location + uz*o.scale;
-			o.phase = p.phase + 0.1f;
-			//o.phase += dt;
 		}
 	}
 }
@@ -1895,7 +1874,6 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		// upload VBO data to GPU:
 		creaturePartsVBO.submit(&state->creatureparts[0], sizeof(state->creatureparts));
-		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
 		particlesVBO.submit(&state->particles[0], sizeof(state->particles));
 		debugVBO.submit(&state->debugdots[0], sizeof(state->debugdots));
 		
@@ -2420,6 +2398,7 @@ void State::reset() {
 	//al_field2d_add(fungus_dim, fungus_field.front(), 0.5f);
 	//fungus_field.copy();
 
+
 	{
 		for (int i=0; i<FUNGUS_TEXELS; i++) {
 			noise_texture[i] = glm::linearRand(glm::vec4(0), glm::vec4(1));
@@ -2434,13 +2413,6 @@ void State::reset() {
 		creature_reset(i);
 	}
 
-	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto& o = segments[i];
-		o.location = world_centre+glm::ballRand(10.f);
-		o.color = glm::ballRand(1.f)*0.5f+0.5f;
-		o.phase = rnd::uni();
-		o.scale = 2.5;
-	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = particles[i];
 		o.location = world_centre+glm::ballRand(10.f);
@@ -2580,61 +2552,40 @@ void State::reset() {
 			// get land surface coordinate:
 			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
 
-			// TEMP;
-			land_coord.y = 0;
-			
 			// place on land
 			o.location = land_coord;
-			o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+			o.color = glm::vec3(flatness, 0.5, 1. - flatness) * 0.25f; //glm::vec3(0, 0, 1);
+			o.size = particleSize;
 		}
 	}
 
+
+	// make up some speaker locations:
+	for (int i=0; i<NUM_ISLANDS; i++) {
+
+		
+		float phase = i/float(NUM_ISLANDS);
+		float angle = M_PI * 2. * phase;
+		float radius = (world_max.z - world_min.z) * 0.3;
+
+		island_centres[i] = glm::vec3(
+			world_centre.x + radius * sinf(angle), 
+			0.f, 
+			world_centre.z + radius * cosf(angle)
+		);
+
+		console.log("speaker i %f %f", island_centres[i].x, island_centres[i].z);
+
+		int id = NUM_DEBUGDOTS - NUM_ISLANDS - 1 + i;
+		debugdots[id].location = island_centres[i];
+		debugdots[id].color = glm::vec3(1,0,0);
+		debugdots[id].size = particleSize * 500;
+	}
 
 }
 
 void test() {
 
-	
-	// // try loading a jxf:
-	// // "projector_calibration/"
-	// //console.log("%s", cwd());
-
-	// const char * fname = "projector_calibration/chesspoints_all.jxf";
-    // FILE* filp = fopen(fname, "rb" );
-    // if (!filp) { 
-	// 	console.error("Error: could not open file %s", fname);  
-	// }
-	// console.log("opened %s ok", fname);
-
-	// JXFHeader header;
-	// int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
-	// console.log("read %d ok of %d", bytes_read, sizeof(header));
-
-	// // need to BE->LE this:
-	// header.container_id = SWAP32(header.container_id);
-	// header.form_id = SWAP32(header.form_id);
-	// header.version_id = SWAP32(header.version_id);
-	// header.matrix_id = SWAP32(header.matrix_id);
-
-
-	// header.filesize = SWAP32(header.filesize);
-
-	// if (header.container_id != 'FORM' 
-	// 	|| header.form_id != 'JIT!'
-	// 	|| header.version_id != 'FVER'
-	// 	|| header.matrix_id != 'MTRX'
-	// ) {
-	// 	console.error("bad chunk");
-	// 	goto out;
-	// }
-	
-
-	// console.log("filesize %d", header.filesize);
-	
-
-	
-	// out:
-	// fclose(filp);
 }
 
 
@@ -2761,7 +2712,7 @@ extern "C" {
 			// 3. apply projector loc (i.e. move ground center to desired location)
 			// 4. scale to world
 
-			kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(real_loc) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
+			kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(real_loc + cloud_translate) * glm::mat4_cast(cloud_rotate);
 
 			//kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
 		}
@@ -2849,7 +2800,7 @@ extern "C" {
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
-		enablers[SHOW_SEGMENTS] = 0;//1;
+		//enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 1;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;

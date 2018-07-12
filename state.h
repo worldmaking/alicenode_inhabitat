@@ -1,6 +1,6 @@
 #ifndef STATE_H
 #define STATE_H
-
+// michael: testing the client editor
 #ifndef ALICE_H
 // for the use of Clang-Index:
 #include <stddef.h>
@@ -298,6 +298,8 @@ struct State {
 	// .xyz represents the normal
 	// .w represents the height
 	glm::vec4 land[LAND_TEXELS];
+
+	glm::vec4 human[LAND_TEXELS];
 
 	// signed distance field representing the landscape
 	// the distance to the nearest land surface, as a 3D SDF

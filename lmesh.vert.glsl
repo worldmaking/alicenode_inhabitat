@@ -21,7 +21,6 @@ void main() {
 	// basic grid mesh is 0..1, need to scale that to the world
 	position = (landMat * vec4(aPos, 1.)).xyz;
 
-
 	// get the landscape data (normal + height) from the texture:
 	//vec4 land = texture(uLandTex, texCoord.xy);
 	vec4 land = textureLod(uLandTex, texCoord.xy, uLandLoD);

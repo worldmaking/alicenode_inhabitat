@@ -272,7 +272,8 @@ Shader segmentShader;
 Shader creatureShader;
 Shader particleShader;
 Shader landShader;
-Shader heightMeshShader;
+Shader landMeshShader;
+Shader humanMeshShader;
 Shader deferShader; 
 Shader simpleShader;
 Shader debugShader;
@@ -285,6 +286,7 @@ FloatTexture3D distanceTex;
 
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
+FloatTexture2D humanTex;
 FloatTexture2D noiseTex;
 
 SimpleOBJ tableObj("island.obj", true, 1.f);
@@ -360,6 +362,7 @@ bool enablers[10];
 #define SHOW_PARTICLES 5
 #define SHOW_DEBUGDOTS 6
 #define USE_OBJECT_SHADER 7
+#define SHOW_HUMANMESH 8
 
 Profiler profiler;
 
@@ -1132,7 +1135,8 @@ void State::creatures_update(float dt) {
 void onUnloadGPU() {
 	// free resources:
 	landShader.dest_closing();
-	heightMeshShader.dest_closing();
+	landMeshShader.dest_closing();
+	humanMeshShader.dest_closing();
 	particleShader.dest_closing();
 	objectShader.dest_closing();
 	segmentShader.dest_closing();
@@ -1155,6 +1159,7 @@ void onUnloadGPU() {
 	fungusTex.dest_closing();
 	noiseTex.dest_closing();
 	landTex.dest_closing();
+	humanTex.dest_closing();
 
 	projectors[0].fbo.dest_closing();
 	projectors[1].fbo.dest_closing();
@@ -1182,7 +1187,8 @@ void onReloadGPU() {
 	creatureShader.readFiles("creature.vert.glsl", "creature.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
 	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
-	heightMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
+	humanMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
+	landMeshShader.readFiles("lmesh.vert.glsl", "lmesh.frag.glsl");
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
 	debugShader.readFiles("debug.vert.glsl", "debug.frag.glsl");
 	
@@ -1287,6 +1293,7 @@ void onReloadGPU() {
 	debugVAO.attr(1, &DebugDot::color);
 
 	landTex.wrap = GL_CLAMP_TO_EDGE;
+	humanTex.wrap = GL_CLAMP_TO_EDGE;
 	distanceTex.wrap = GL_CLAMP_TO_EDGE;
 	fungusTex.wrap = GL_CLAMP_TO_EDGE;
 
@@ -1316,6 +1323,7 @@ void draw_scene(int width, int height, Projector& projector) {
 	double t = Alice::Instance().simTime;
 	//console.log("%f", t);
 
+	humanTex.bind(2);
 	noiseTex.bind(3);
 	distanceTex.bind(4);
 	fungusTex.bind(5);
@@ -1329,18 +1337,36 @@ void draw_scene(int width, int height, Projector& projector) {
 	}
 
 	if (enablers[SHOW_LANDMESH]) {
-		heightMeshShader.use();
-		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", state->world2field);
-		heightMeshShader.uniform("uLandMatrixInverse", state->field2world);
-		heightMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
-		heightMeshShader.uniform("uLandLoD", 1.5f);
-		heightMeshShader.uniform("uMapScale", 1.f);
-		heightMeshShader.uniform("uNoiseTex", 3);
-		heightMeshShader.uniform("uDistanceTex", 4);
-		heightMeshShader.uniform("uFungusTex", 5);
-		heightMeshShader.uniform("uLandTex", 6);
+		landMeshShader.use();
+		landMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		landMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		landMeshShader.uniform("uLandMatrix", state->world2field);
+		landMeshShader.uniform("uLandMatrixInverse", state->field2world);
+		landMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		landMeshShader.uniform("uLandLoD", 1.5f);
+		landMeshShader.uniform("uMapScale", 1.f);
+		landMeshShader.uniform("uNoiseTex", 3);
+		landMeshShader.uniform("uDistanceTex", 4);
+		landMeshShader.uniform("uFungusTex", 5);
+		landMeshShader.uniform("uLandTex", 6);
+
+		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		gridVAO.drawElements(grid_elements);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
+	if (enablers[SHOW_HUMANMESH]) {
+		humanMeshShader.use();
+		humanMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		humanMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		humanMeshShader.uniform("uLandMatrix", state->world2field);
+		humanMeshShader.uniform("uLandMatrixInverse", state->field2world);
+		humanMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
+		humanMeshShader.uniform("uLandLoD", 1.5f);
+		humanMeshShader.uniform("uMapScale", 1.f);
+		humanMeshShader.uniform("uNoiseTex", 3);
+		humanMeshShader.uniform("uDistanceTex", 4);
+		humanMeshShader.uniform("uLandTex", 2);
 
 		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
@@ -1349,16 +1375,16 @@ void draw_scene(int width, int height, Projector& projector) {
 
 	//Mini
 	if (enablers[SHOW_MINIMAP]) {
-		heightMeshShader.use();
-		heightMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
-		heightMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		heightMeshShader.uniform("uLandMatrix", state->world2field);
-		heightMeshShader.uniform("uLandMatrixInverse", state->field2world);
-		heightMeshShader.uniform("uWorld2Map", state->world2minimap);
-		heightMeshShader.uniform("uMapScale", state->minimapScale);
-		heightMeshShader.uniform("uDistanceTex", 4);
-		heightMeshShader.uniform("uFungusTex", 5);
-		heightMeshShader.uniform("uLandTex", 6);
+		landMeshShader.use();
+		landMeshShader.uniform("uViewProjectionMatrix", viewProjMat);
+		landMeshShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		landMeshShader.uniform("uLandMatrix", state->world2field);
+		landMeshShader.uniform("uLandMatrixInverse", state->field2world);
+		landMeshShader.uniform("uWorld2Map", state->world2minimap);
+		landMeshShader.uniform("uMapScale", state->minimapScale);
+		landMeshShader.uniform("uDistanceTex", 4);
+		landMeshShader.uniform("uFungusTex", 5);
+		landMeshShader.uniform("uLandTex", 6);
 
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
@@ -1881,6 +1907,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->field_texture[0]);
 		noiseTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->noise_texture[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
+		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 		
 		//if (alice.cloudDevice->use_colour) {
@@ -2813,6 +2840,7 @@ extern "C" {
 		}
 
 		landTex.generateMipMap = true;
+		humanTex.generateMipMap = true;
 		emissionTex.generateMipMap = true;
 		
 		
@@ -2825,6 +2853,7 @@ extern "C" {
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 1;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
+		enablers[SHOW_HUMANMESH] = 1;
 
 		threads_begin();
 		

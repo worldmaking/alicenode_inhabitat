@@ -573,47 +573,65 @@ void State::sim_update(float dt) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
+	// map depth data onto land:
 	if (1) {
-		// map depth data onto land:
-		const CloudFrame& cloudFrame0 = kinect0.cloudFrame();
-		const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
-		const glm::vec2 * uv_points0 = cloudFrame0.uv;
-		const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
-		const uint16_t * depth0 = cloudFrame0.depth;
-
 		// first, dampen the human field:
 		for (int i=0; i<LAND_TEXELS; i++) {
 			human[i].w *= human_height_decay;
 		}
-
-		for (int i=0; i<max_cloud_points; i++) {
-			auto pt = cloud_points0[i];
-			auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;
-			// filter out bad depths
-			// mask outside a circular range
-			// skip OOB locations:
-			if (
-				depth0[i] <= 0 
-				|| glm::length(uv) > 0.5f
-				|| pt.x < world_min.x
-				|| pt.z < world_min.z
-				|| pt.x > world_max.x
-				|| pt.z > world_max.z
-				//|| pt.y > 3.
-				) continue;
-
-			// find nearest land cell for this point:
-			// get norm'd coordinate:
-			glm::vec3 norm = transform(world2field, pt);
-			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
-			// get cell index for this location:
-			int landidx = al_field2d_index_norm(land_dim2, norm2);
+		
+		// for each Kinect
+		for (int i=0; i<2; i++) {
 			
-			// set the land value accordingly:
-			glm::vec4& humanpt = human[landidx];
+			const CloudFrame& cloudFrame0 = i ? kinect1.cloudFrame() : kinect0.cloudFrame();
+			const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
+			const glm::vec2 * uv_points0 = cloudFrame0.uv;
+			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
+			const uint16_t * depth0 = cloudFrame0.depth;
 
-			humanpt.w = world2field_scale * pt.y;
+			// now update with live data:
+			for (int i=0; i<max_cloud_points; i++) {
+				auto pt = cloud_points0[i];
+				auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;
+				// filter out bad depths
+				// mask outside a circular range
+				// skip OOB locations:
+				if (
+					depth0[i] <= 0 
+					|| glm::length(uv) > 0.5f
+					|| pt.x < world_min.x
+					|| pt.z < world_min.z
+					|| pt.x > world_max.x
+					|| pt.z > world_max.z
+					//|| pt.y > 3.
+					) continue;
+
+				// find nearest land cell for this point:
+				// get norm'd coordinate:
+				glm::vec3 norm = transform(world2field, pt);
+				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+				// get cell index for this location:
+				int landidx = al_field2d_index_norm(land_dim2, norm2);
+				
+				// set the land value accordingly:
+				glm::vec4& humanpt = human[landidx];
+
+				// could mix toward this? though live update actually looked pretty good
+				float h = world2field_scale * pt.y;
+				//humanpt.w = glm::mix(humanpt.w, h, 0.5f);
+				humanpt.w = h;
+
+				// in archi15 we also did spatial filtering
+
+
+			}
 		}
+
+		// next, calculate normals
+		generate_land_sdf_and_normals();
+
+		// next, filter out what we think might be the land vs. the human
+		// 1. 
 	}
 
 	if (1) {
@@ -1679,6 +1697,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
+	#ifdef AL_WIN
 	if (1) {
 		CloudDevice& cd = alice.cloudDeviceManager.devices[0];
 		const CloudFrame& frame0 = cd.cloudFramePrev();
@@ -1708,6 +1727,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
 		
 	}
+	#endif
 
 	if (1) {	
 		// LEAP & TELEPORTING
@@ -2531,50 +2551,9 @@ void State::reset() {
 			}
 		}
 	}
-	{
-		// generate SDF from land height:
-		int i=0;
-		glm::ivec3 dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
-		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
-		for (size_t z=0;z<dim.z;z++) {
-			for (size_t y=0;y<dim.y;y++) {
-				for (size_t x=0;x<dim.x;x++) {
-					glm::vec3 coord = glm::vec3(x, y, z);
-					glm::vec3 norm = coord/glm::vec3(dim);
-					
-					int ii = al_field2d_index(dim2, glm::ivec2(x, z));
-					float w = land[ ii ].w;
-
-					distance[i] = norm.y < w ? -1. : 1.;
-					distance_binary[i] = distance[i] < 0.f ? 0.f : 1.f;
-
-					i++;
-				}
-			}
-		}
-		sdf_from_binary(land_dim, distance_binary, distance);
-		//sdf_from_binary_deadreckoning(land_dim, distance_binary, distance);
-		al_field3d_scale(land_dim, distance, 1.f/land_dim.x);
-	}
-	{
-		// generate land normals:
-		int i=0;
-		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
-		for (size_t y=0;y<dim2.y;y++) {
-			for (size_t x=0;x<dim2.x;x++, i++) {
-				glm::vec2 coord = glm::vec2(x, y);
-				glm::vec2 norm = coord/glm::vec2(dim2);
-				glm::vec2 snorm = norm*2.f-1.f;
-
-				float w = land[i].w;
-
-				glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
-
-				glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm3, 1.f/LAND_DIM);
-				land[i] = glm::vec4(normal, w);
-			}
-		}
-	}
+	
+	
+	generate_land_sdf_and_normals();
 
 	if (1) {
 		int div = sqrt(NUM_DEBUGDOTS);
@@ -2632,6 +2611,52 @@ void State::reset() {
 		debugdots[id].size = particleSize * 500;
 	}
 
+}
+
+void State::generate_land_sdf_and_normals() {
+	{
+		// generate SDF from land height:
+		int i=0;
+		glm::ivec3 dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+		for (size_t z=0;z<dim.z;z++) {
+			for (size_t y=0;y<dim.y;y++) {
+				for (size_t x=0;x<dim.x;x++) {
+					glm::vec3 coord = glm::vec3(x, y, z);
+					glm::vec3 norm = coord/glm::vec3(dim);
+					
+					int ii = al_field2d_index(dim2, glm::ivec2(x, z));
+					float w = land[ ii ].w;
+
+					distance[i] = norm.y < w ? -1. : 1.;
+					distance_binary[i] = distance[i] < 0.f ? 0.f : 1.f;
+
+					i++;
+				}
+			}
+		}
+		sdf_from_binary(land_dim, distance_binary, distance);
+		//sdf_from_binary_deadreckoning(land_dim, distance_binary, distance);
+		al_field3d_scale(land_dim, distance, 1.f/land_dim.x);
+	}
+
+	// generate land normals:
+	int i=0;
+	glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+	for (size_t y=0;y<dim2.y;y++) {
+		for (size_t x=0;x<dim2.x;x++, i++) {
+			glm::vec2 coord = glm::vec2(x, y);
+			glm::vec2 norm = coord/glm::vec2(dim2);
+			glm::vec2 snorm = norm*2.f-1.f;
+
+			float w = land[i].w;
+
+			glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
+
+			glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm3, 1.f/LAND_DIM);
+			land[i] = glm::vec4(normal, w);
+		}
+	}
 }
 
 void test() {
@@ -2849,7 +2874,7 @@ extern "C" {
 		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 1;
 		enablers[SHOW_MINIMAP] = 0;//1;
-		enablers[SHOW_OBJECTS] = 0;
+		enablers[SHOW_OBJECTS] = 1;
 		//enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;

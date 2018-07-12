@@ -387,6 +387,8 @@ struct State {
 	void fields_update(float dt);
 	void sim_update(float dt);
 
+	void generate_land_sdf_and_normals();
+
 	void creature_reset(int i);
 	void creatures_update(float dt);
 

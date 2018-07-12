@@ -2148,8 +2148,12 @@ void onFrame(uint32_t width, uint32_t height) {
 			// draw the scene into the GBuffer:
 			glEnable(GL_SCISSOR_TEST);
 			{
-				glm::vec2 viewport_scale = glm::vec2(slicewidth, 1.f);
+				glm::vec2 viewport_scale = glm::vec2(slicewidth * 2.f, 1.f);
 				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
+
+				
+				console.log("viewport %f %f", viewport_scale.x, viewport_offset.x);
+
 
 				gBufferVR.begin();
 

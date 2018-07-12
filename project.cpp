@@ -2151,16 +2151,10 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec2 viewport_scale = glm::vec2(slicewidth * 2.f, 1.f);
 				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
 
-				
-				console.log("viewport %f %f", viewport_scale.x, viewport_offset.x);
-
-
 				gBufferVR.begin();
 
 					viewport.pos = glm::ivec2(gBufferVR.dim.x * viewport_offset.x, gBufferVR.dim.y * viewport_offset.y);
 					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x, gBufferVR.dim.y * viewport_scale.y);
-
-					//console.log("eye %d vp %d %d %d %d", slice, viewport.pos.x, viewport.pos.y, viewport.dim.x, viewport.dim.y);
 
 					glScissor(
 						viewport.pos.x, 

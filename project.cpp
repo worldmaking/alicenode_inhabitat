@@ -360,7 +360,7 @@ bool enablers[10];
 #define SHOW_AS_GRID 1
 #define SHOW_MINIMAP 2
 #define SHOW_OBJECTS 3
-//#define SHOW_SEGMENTS 4
+#define SHOW_TIMELAPSE 4
 #define SHOW_PARTICLES 5
 #define SHOW_DEBUGDOTS 6
 #define USE_OBJECT_SHADER 7
@@ -2265,14 +2265,17 @@ void onFrame(uint32_t width, uint32_t height) {
 			case 2: projectors[1].fbo.draw(); break;
 			case 3: projectors[2].fbo.draw(); break;
 			case 4: {
-				flowShader.use();
-				flowShader.uniform("tex", 0);
-				flowShader.uniform("uScale", glm::vec2(1.f));
-				flowShader.uniform("uOffset", glm::vec2(0.f));
-				texDraw.draw_no_shader(flowTex.id);
-				flowShader.unuse();
+				if (!SHOW_TIMELAPSE) {
+					flowShader.use();
+					flowShader.uniform("tex", 0);
+					flowShader.uniform("uScale", glm::vec2(1.f));
+					flowShader.uniform("uOffset", glm::vec2(0.f));
+					texDraw.draw_no_shader(flowTex.id);
+					flowShader.unuse();
+				} else {
+					fbo.draw(); break;
+				}
 			} break;
-			//case 4: fbo.draw(); break;
 			default: soloView = 0;
 		}
 	} else {
@@ -2280,14 +2283,18 @@ void onFrame(uint32_t width, uint32_t height) {
 		projectors[1].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
 		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
 		{
+			if (!SHOW_TIMELAPSE) {
 				flowShader.use();
 				flowShader.uniform("tex", 0);
 				flowShader.uniform("uScale", glm::vec2(0.5f));
 				flowShader.uniform("uOffset", glm::vec2(0.5,  0.5));
 				texDraw.draw_no_shader(flowTex.id);
 				flowShader.unuse();
+			} else {
+				fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
+			}
 		}
-		//fbo				 .draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
+		//
 	}
 	profiler.log("draw to window", alice.fps.dt);
 
@@ -2875,7 +2882,7 @@ extern "C" {
 		enablers[SHOW_AS_GRID] = 1;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;
-		//enablers[SHOW_SEGMENTS] = 0;//1;
+		enablers[SHOW_TIMELAPSE] = 1;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;

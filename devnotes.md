@@ -3,21 +3,13 @@
 
 Bring in the inhabitat species behaviours!!
 
-Remove Segments
-
-Need to decide on a reasonable world and gallery scale. 
-- gallery space is maybe about 6m x 6m
-- an ant in gallery space is maybe 1-2cm 
-- in VR, an ant could be 50cm-100cm 
-- that means the relative scale is 1:50
-- so the VR space is 50 x 6 = 300m 
+Why is projector not lining up? Is it a 180 flip? Or was it just a mismatch between projector/kinect pair?
 
 creatures shouldn't wander off to lands below the min height; they should turn away
 - also, edge-of-world should mean death
 
 fluid boundaries: shouldn't be toroidal, but shouldn't either drift much beyond the islands! 
 
-creatures are kind of sliding due to collision avoidance, but instead they should turn & move
 
 render process currently:
 - upload to gpu
@@ -64,33 +56,6 @@ I wonder if we can treat it differently, by collating a list of 'near links' in 
 Have a look at CoS, which I think did something similar
 
 
-
-# calibration notes
-
-
-First, 
-Rotation & frustum is now calibrating :-)
-
-
-Second,
-Ground plane is getting derived ok I think. 
-It would be great to consider this in a coordinate system relative to the ground, rather than to the kinect. 
-Getting relative to ground will be super helpful in calibrating the two systems. Simply project a grid at the floor plane and XZ translate/rotate to line them up. 
-
-
-Third,
-Not verified yet whether K2 points correspond well with the Freenect2 points -- i.e. whether the calibration is portable. 
- 
-If not, find a way to do the capturing in alicenode-freenect, save to disk, and load into the Max patcher for calibration.  The patcher needs a raw image and a warped cloud to go with it. Freenect's cloud is based on an 'undistorted' depth image, so it seems like it should be ok? 
-
-The Max SDK describes how to format a .jxf file:
-https://cycling74.com/sdk/MaxSDK-6.0.4/html/chapter_jit_jxf.html
-
-OR, write a jit.libfreenect2 based on the same alicenode code. 
-(probably easier than porting the patcher and opencv objects to C++!)
-
-Fourth,
-Seems logical that the kinect0.cloudTransform should actually work as the viewMat, not sure why it didn't. It does in fact turn real-world meters into virtual-world meters, from the perspective of the kinect sensor. 
 
 # better frame rates
 

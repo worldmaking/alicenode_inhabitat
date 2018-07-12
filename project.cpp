@@ -944,7 +944,7 @@ void State::sim_update(float dt) {
 			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
 
 			audioframe.state = float(o.type) * 0.1f;
-			audioframe.speaker = rnd::integer(5) * 0.1f;
+			audioframe.speaker = o.island * 0.1f;
 			audioframe.health = o.health;
 			audioframe.age = o.phase;
 			audioframe.size = o.scale;
@@ -1028,6 +1028,7 @@ void State::creature_reset(int i) {
 		a.velocity = glm::vec3(0);
 		a.rot_vel = glm::quat();
 		a.accel = glm::vec3(0);
+		a.island = rnd::integer(5);
 
 		switch(a.type) {
 			case Creature::TYPE_ANT:

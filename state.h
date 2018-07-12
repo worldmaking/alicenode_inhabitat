@@ -185,6 +185,7 @@ struct Creature {
 	glm::vec3 velocity;
 	glm::quat rot_vel = glm::quat();
 	glm::vec3 accel;
+	int32_t island;	// which island we are on (0-4)
 
 	// species-specific:
 	union {

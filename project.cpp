@@ -268,7 +268,6 @@ struct Projector {
 //// RENDER STUFF ////
 
 Shader objectShader;
-Shader segmentShader;
 Shader creatureShader;
 Shader particleShader;
 Shader landShader;
@@ -305,8 +304,6 @@ unsigned int table_elements;
 VBO cubeVBO(sizeof(positions_cube), positions_cube);
 VAO creatureVAO;
 VBO creaturePartsVBO(sizeof(State::creatureparts));
-VAO segmentVAO;
-VBO segmentInstancesVBO(sizeof(State::segments));
 VAO particlesVAO;
 VBO particlesVBO(sizeof(State::particles));
 VAO debugVAO;
@@ -356,7 +353,7 @@ bool enablers[10];
 #define SHOW_AS_GRID 1
 #define SHOW_MINIMAP 2
 #define SHOW_OBJECTS 3
-#define SHOW_SEGMENTS 4
+//#define SHOW_SEGMENTS 4
 #define SHOW_PARTICLES 5
 #define SHOW_DEBUGDOTS 6
 #define USE_OBJECT_SHADER 7
@@ -960,59 +957,59 @@ void State::sim_update(float dt) {
 		}
 	}
 
-	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto &o = segments[i];
-		if (i % 8 == 0) {
-			// a root;
+	// for (int i=0; i<NUM_SEGMENTS; i++) {
+	// 	auto &o = segments[i];
+	// 	if (i % 8 == 0) {
+	// 		// a root;
 			
-			/*
-			glm::vec3 fluidloc = transform(world2field, o.location);
-			glm::vec3 flow;
-			fluid.velocities.front().readnorm(fluidloc, &flow.x);
-			glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-			fluid.velocities.front().addnorm(fluidloc, &push.x);
-			o.velocity = flow * idt;
+	// 		/*
+	// 		glm::vec3 fluidloc = transform(world2field, o.location);
+	// 		glm::vec3 flow;
+	// 		fluid.velocities.front().readnorm(fluidloc, &flow.x);
+	// 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
+	// 		fluid.velocities.front().addnorm(fluidloc, &push.x);
+	// 		o.velocity = flow * idt;
 
-			al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
-			*/
+	// 		al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
+	// 		*/
 
-			// get norm'd coordinate:
-			glm::vec3 norm = transform(world2field, o.location);
+	// 		// get norm'd coordinate:
+	// 		glm::vec3 norm = transform(world2field, o.location);
 
-			// get fluid flow:
-			//glm::vec3 flow;
-			//fluid.velocities.front().readnorm(norm, &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
+	// 		// get fluid flow:
+	// 		//glm::vec3 flow;
+	// 		//fluid.velocities.front().readnorm(norm, &flow.x);
+	// 		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
 
-			// get my distance from the ground:
-			float sdist; // creature's distance above the ground (or negative if below)
-			al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+	// 		// get my distance from the ground:
+	// 		float sdist; // creature's distance above the ground (or negative if below)
+	// 		al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
 
-			// convert to meters per second:
-			flow *= idt;
+	// 		// convert to meters per second:
+	// 		flow *= idt;
 
-			// if below ground, rise up;
-			// if above ground, sink down:
-			float gravity = 0.1f;
-			flow.y += sdist < 0.1f ? gravity : -gravity;
+	// 		// if below ground, rise up;
+	// 		// if above ground, sink down:
+	// 		float gravity = 0.1f;
+	// 		flow.y += sdist < 0.1f ? gravity : -gravity;
 
-			// set my velocity, in meters per second:
-			o.velocity = flow;
-			//if(accel == 1) o.velocity += o.velocity;
-			//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
+	// 		// set my velocity, in meters per second:
+	// 		o.velocity = flow;
+	// 		//if(accel == 1) o.velocity += o.velocity;
+	// 		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
 
-			// use this to sample the landscape:
+	// 		// use this to sample the landscape:
 			
-			// get a normal for the land:
-			glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
-			// re-orient relative to ground:
-			o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
+	// 		// get a normal for the land:
+	// 		glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
+	// 		// re-orient relative to ground:
+	// 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
 			
-		} else {
-			auto& p = segments[i-1];
-			o.scale = p.scale * 0.9f;
-		}
-	}
+	// 	} else {
+	// 		auto& p = segments[i-1];
+	// 		o.scale = p.scale * 0.9f;
+	// 	}
+	// }
 }
 
 int State::nearest_island(glm::vec3 pos) {
@@ -1156,7 +1153,6 @@ void onUnloadGPU() {
 	heightMeshShader.dest_closing();
 	particleShader.dest_closing();
 	objectShader.dest_closing();
-	segmentShader.dest_closing();
 	creatureShader.dest_closing();
 	deferShader.dest_closing();
 	simpleShader.dest_closing();
@@ -1165,8 +1161,6 @@ void onUnloadGPU() {
 	cubeVBO.dest_closing();
 	creaturePartsVBO.dest_closing();
 	creatureVAO.dest_closing();
-	segmentInstancesVBO.dest_closing();
-	segmentVAO.dest_closing();
 	particlesVAO.dest_closing();
 	debugVAO.dest_closing();
 
@@ -1199,7 +1193,7 @@ void onReloadGPU() {
 
 	simpleShader.readFiles("simple.vert.glsl", "simple.frag.glsl");
 	objectShader.readFiles("object.vert.glsl", "object.frag.glsl");
-	segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
+	//segmentShader.readFiles("segment.vert.glsl", "segment.frag.glsl");
 	creatureShader.readFiles("creature.vert.glsl", "creature.frag.glsl");
 	particleShader.readFiles("particle.vert.glsl", "particle.frag.glsl");
 	landShader.readFiles("land.vert.glsl", "land.frag.glsl");
@@ -1287,16 +1281,6 @@ void onReloadGPU() {
 	creatureVAO.attr(6, &CreaturePart::color, true);
 	creatureVAO.attr(7, &CreaturePart::params, true);
 	creatureVAO.attr(8, &CreaturePart::id, true);
-		
-	segmentVAO.bind();
-	cubeVBO.bind();
-	segmentVAO.attr(0, 3, GL_FLOAT, sizeof(glm::vec3), 0);
-	segmentInstancesVBO.bind();
-	segmentVAO.attr(2, &Segment::location, true);
-	segmentVAO.attr(3, &Segment::orientation, true);
-	segmentVAO.attr(4, &Segment::scale, true);
-	segmentVAO.attr(5, &Segment::phase, true);
-	segmentVAO.attr(6, &Segment::color, true);
 
 	particlesVAO.bind();
 	particlesVBO.bind();
@@ -1425,15 +1409,6 @@ void draw_scene(int width, int height, Projector& projector) {
 			creatureShader.uniform("uFluidMatrix", state->world2field);
 		}
 		creatureVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), rendercreaturecount);
-	}
-
-	if (enablers[SHOW_SEGMENTS]) {
-		segmentShader.use();
-		segmentShader.uniform("time", t);
-		segmentShader.uniform("uEyePos", eyePos);
-		segmentShader.uniform("uViewMatrix", viewMat);
-		segmentShader.uniform("uViewProjectionMatrix", viewProjMat);
-		segmentVAO.drawInstanced(sizeof(positions_cube) / sizeof(glm::vec3), NUM_SEGMENTS);
 	}
 
 	if (enablers[SHOW_PARTICLES]) {
@@ -1607,24 +1582,6 @@ void State::animate(float dt) {
 			part.phase = o.phase;
 			part.params = o.params;
 			rendercreaturecount++;
-		}
-	}
-
-	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto &o = segments[i];
-		if (i % PREDATOR_SEGMENTS_EACH == 0) {
-			// a root;
-			// TODO: dt-ify
-			o.orientation = safe_normalize(glm::slerp(o.orientation, o.orientation * quat_random(), 0.015f));
-			o.location = wrap(o.location + o.velocity * dt, world_min, world_max);
-			o.phase += dt;
-		} else {
-			auto& p = segments[i-1];
-			o.orientation = safe_normalize(glm::slerp(o.orientation, p.orientation, 0.015f));
-			glm::vec3 uz = quat_uz(p.orientation);
-			o.location = p.location + uz*o.scale;
-			o.phase = p.phase + 0.1f;
-			//o.phase += dt;
 		}
 	}
 }
@@ -1891,7 +1848,6 @@ void onFrame(uint32_t width, uint32_t height) {
 		
 		// upload VBO data to GPU:
 		creaturePartsVBO.submit(&state->creatureparts[0], sizeof(state->creatureparts));
-		segmentInstancesVBO.submit(&state->segments[0], sizeof(state->segments));
 		particlesVBO.submit(&state->particles[0], sizeof(state->particles));
 		debugVBO.submit(&state->debugdots[0], sizeof(state->debugdots));
 		
@@ -2816,7 +2772,7 @@ extern "C" {
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
-		enablers[SHOW_SEGMENTS] = 0;//1;
+		//enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 1;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;

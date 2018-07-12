@@ -114,11 +114,6 @@ struct Field2DPod {
 };
 #endif
 
-#define NUM_PREDATORS 124
-
-#define PREDATOR_SEGMENTS_EACH 1
-#define NUM_SEGMENTS (NUM_PREDATORS*PREDATOR_SEGMENTS_EACH)
-
 #define NUM_CREATURES 512
 #define NUM_CREATURE_PARTS NUM_CREATURES
 
@@ -223,15 +218,6 @@ struct Creature {
 	Creature() {}
 };
 
-struct Segment {
-	glm::vec3 location;
-	float scale;
-	glm::quat orientation;
-	float phase;
-	glm::vec3 velocity;
-	glm::vec3 color;
-};
-
 struct CreaturePart {
 	glm::vec3 location; float scale;
 
@@ -286,8 +272,6 @@ struct State {
 	Lifo<NUM_CREATURES> creature_pool;
 	CellSpace<LAND_DIM> dead_space;
 	Creature creatures[NUM_CREATURES];
-
-	Segment segments[NUM_SEGMENTS];
 
 	// for rendering:
 	Particle particles[NUM_PARTICLES];

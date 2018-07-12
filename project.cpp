@@ -1285,7 +1285,8 @@ void onReloadGPU() {
 	debugVAO.bind();
 	debugVBO.bind();
 	debugVAO.attr(0, &DebugDot::location);
-	debugVAO.attr(1, &DebugDot::color);
+	debugVAO.attr(1, &DebugDot::size);
+	debugVAO.attr(2, &DebugDot::color);
 
 	landTex.wrap = GL_CLAMP_TO_EDGE;
 	distanceTex.wrap = GL_CLAMP_TO_EDGE;
@@ -1448,7 +1449,6 @@ void draw_scene(int width, int height, Projector& projector) {
 		debugShader.uniform("uProjectionMatrix", projMat);
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
-		debugShader.uniform("uPointSize", state->particleSize * 20.);
 		debugShader.uniform("uColorTex", 0);
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
@@ -2394,6 +2394,7 @@ void State::reset() {
 	//al_field2d_add(fungus_dim, fungus_field.front(), 0.5f);
 	//fungus_field.copy();
 
+
 	{
 		for (int i=0; i<FUNGUS_TEXELS; i++) {
 			noise_texture[i] = glm::linearRand(glm::vec4(0), glm::vec4(1));
@@ -2556,10 +2557,33 @@ void State::reset() {
 
 			// place on land
 			o.location = land_coord;
-			o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
+			o.color = glm::vec3(flatness, 0.5, 1. - flatness) * 0.25f; //glm::vec3(0, 0, 1);
+			o.size = particleSize;
 		}
 	}
 
+
+	// make up some speaker locations:
+	for (int i=0; i<NUM_SPEAKERS; i++) {
+
+		
+		float phase = i/float(NUM_SPEAKERS);
+		float angle = M_PI * 2. * phase;
+		float radius = (world_max.z - world_min.z) * 0.3;
+
+		island_centres[i] = glm::vec3(
+			world_centre.x + radius * sinf(angle), 
+			0.f, 
+			world_centre.z + radius * cosf(angle)
+		);
+
+		console.log("speaker i %f %f", island_centres[i].x, island_centres[i].z);
+
+		int id = NUM_DEBUGDOTS - NUM_SPEAKERS - 1 + i;
+		debugdots[id].location = island_centres[i];
+		debugdots[id].color = glm::vec3(1,0,0);
+		debugdots[id].size = particleSize * 500;
+	}
 
 }
 
@@ -2774,10 +2798,10 @@ extern "C" {
 		
 		
 
-		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
-		enablers[SHOW_OBJECTS] = 1;
+		enablers[SHOW_OBJECTS] = 0;
 		enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 1;//1;

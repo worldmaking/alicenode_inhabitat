@@ -144,6 +144,8 @@ struct Field2DPod {
 #define NUM_DEBUGDOTS (512*424*2)
 //2*5*4
 
+#define NUM_SPEAKERS (5)
+
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
 static const glm::ivec2 fungus_dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
@@ -250,7 +252,9 @@ struct Particle {
 
 struct DebugDot {
 	glm::vec3 location;
+	float size;
 	glm::vec3 color;
+	float unused;
 };
 
 struct AudioState {
@@ -323,6 +327,8 @@ struct State {
 	Field3DPod<FIELD_DIM, float> fluid_gradient;
 
 	glm::vec3 teleport_points[NUM_TELEPORT_POINTS];
+
+	glm::vec3 island_centres[NUM_SPEAKERS];
 
 	// transforms:
 	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);

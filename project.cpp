@@ -1203,6 +1203,7 @@ void onReloadGPU() {
 		gridVertices.resize(dim*dim);
 		
 		const glm::vec3 normalizer = 1.f/glm::vec3(dim, 1.f, dim);
+		const glm::vec2 pixelcenter = glm::vec2(0.5f / (dim-1.f), 0.5f  / (dim-1.f));
 
 		for (int i=0, y=0; y<dim; y++) {
 			for (int x=0; x<dim; x++) {
@@ -1210,7 +1211,7 @@ void onReloadGPU() {
 				v.position = glm::vec3(x, 0, y) * normalizer;
 				v.normal = glm::vec3(0, 1, 0);
 				// depends whether wrapping or not, divide dim or dim+1?
-				v.texcoord = glm::vec2(v.position.x, v.position.z);
+				v.texcoord = glm::vec2(v.position.x, v.position.z) + pixelcenter;
 			}
 		}
 		gridVBO.submit((void *)&gridVertices[0], sizeof(Vertex) * gridVertices.size());
@@ -2553,9 +2554,6 @@ void State::reset() {
 			// get land surface coordinate:
 			glm::vec3 land_coord = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
 
-			// TEMP;
-			land_coord.y = 0;
-			
 			// place on land
 			o.location = land_coord;
 			o.color = glm::vec3(flatness, 0.5, 1. - flatness); //glm::vec3(0, 0, 1);
@@ -2567,47 +2565,6 @@ void State::reset() {
 
 void test() {
 
-	
-	// // try loading a jxf:
-	// // "projector_calibration/"
-	// //console.log("%s", cwd());
-
-	// const char * fname = "projector_calibration/chesspoints_all.jxf";
-    // FILE* filp = fopen(fname, "rb" );
-    // if (!filp) { 
-	// 	console.error("Error: could not open file %s", fname);  
-	// }
-	// console.log("opened %s ok", fname);
-
-	// JXFHeader header;
-	// int bytes_read = fread(&header, sizeof(char), sizeof(header), filp);
-	// console.log("read %d ok of %d", bytes_read, sizeof(header));
-
-	// // need to BE->LE this:
-	// header.container_id = SWAP32(header.container_id);
-	// header.form_id = SWAP32(header.form_id);
-	// header.version_id = SWAP32(header.version_id);
-	// header.matrix_id = SWAP32(header.matrix_id);
-
-
-	// header.filesize = SWAP32(header.filesize);
-
-	// if (header.container_id != 'FORM' 
-	// 	|| header.form_id != 'JIT!'
-	// 	|| header.version_id != 'FVER'
-	// 	|| header.matrix_id != 'MTRX'
-	// ) {
-	// 	console.error("bad chunk");
-	// 	goto out;
-	// }
-	
-
-	// console.log("filesize %d", header.filesize);
-	
-
-	
-	// out:
-	// fclose(filp);
 }
 
 
@@ -2734,7 +2691,7 @@ extern "C" {
 			// 3. apply projector loc (i.e. move ground center to desired location)
 			// 4. scale to world
 
-			kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(real_loc) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
+			kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(real_loc + cloud_translate) * glm::mat4_cast(cloud_rotate);
 
 			//kinect0.cloudTransform = glm::scale(glm::vec3(state->kinect2world_scale)) * glm::translate(cloud_translate) * glm::mat4_cast(cloud_rotate);
 		}
@@ -2817,7 +2774,7 @@ extern "C" {
 		
 		
 
-		enablers[SHOW_LANDMESH] = 0;
+		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;

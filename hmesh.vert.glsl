@@ -13,8 +13,13 @@ layout (location = 2) in vec2 aTexCoord;
 out vec2 texCoord;
 out vec3 normal, position;
 
+#define LAND_DIM 200
+
 void main() {
 	texCoord = aTexCoord;
+
+	//texCoord += 0.5 / float(LAND_DIM);
+
 	normal = aNormal;
 
 	mat4 landMat = uWorld2Map * uLandMatrixInverse;
@@ -24,8 +29,8 @@ void main() {
 
 
 	// get the landscape data (normal + height) from the texture:
-	//vec4 land = texture(uLandTex, texCoord.xy);
-	vec4 land = textureLod(uLandTex, texCoord.xy, uLandLoD);
+	vec4 land = texture(uLandTex, texCoord.xy);
+	//vec4 land = textureLod(uLandTex, texCoord.xy, uLandLoD);
 
 	// height (land.w) needs to be scaled to the world
 	vec3 deform = (uLandMatrixInverse * vec4(0., land.w, 0., 1.)).xyz;

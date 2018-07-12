@@ -114,11 +114,6 @@ struct Field2DPod {
 };
 #endif
 
-#define NUM_PREDATORS 124
-
-#define PREDATOR_SEGMENTS_EACH 1
-#define NUM_SEGMENTS (NUM_PREDATORS*PREDATOR_SEGMENTS_EACH)
-
 #define NUM_CREATURES 512
 #define NUM_CREATURE_PARTS NUM_CREATURES
 
@@ -140,8 +135,11 @@ struct Field2DPod {
 #define FUNGUS_DIM 512
 #define FUNGUS_TEXELS FUNGUS_DIM*FUNGUS_DIM
 
-#define NUM_DEBUGDOTS LAND_TEXELS
+// defined to be at least enough to visualize two kinects:
+#define NUM_DEBUGDOTS (512*424*2)
 //2*5*4
+
+#define NUM_ISLANDS (5)
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
@@ -182,6 +180,7 @@ struct Creature {
 	glm::vec3 velocity;
 	glm::quat rot_vel = glm::quat();
 	glm::vec3 accel;
+	int32_t island;	// which island we are on (0-4)
 
 	// species-specific:
 	union {
@@ -219,15 +218,6 @@ struct Creature {
 	Creature() {}
 };
 
-struct Segment {
-	glm::vec3 location;
-	float scale;
-	glm::quat orientation;
-	float phase;
-	glm::vec3 velocity;
-	glm::vec3 color;
-};
-
 struct CreaturePart {
 	glm::vec3 location; float scale;
 
@@ -249,7 +239,9 @@ struct Particle {
 
 struct DebugDot {
 	glm::vec3 location;
+	float size;
 	glm::vec3 color;
+	float unused;
 };
 
 struct AudioState {
@@ -280,8 +272,6 @@ struct State {
 	Lifo<NUM_CREATURES> creature_pool;
 	CellSpace<LAND_DIM> dead_space;
 	Creature creatures[NUM_CREATURES];
-
-	Segment segments[NUM_SEGMENTS];
 
 	// for rendering:
 	Particle particles[NUM_PARTICLES];
@@ -322,6 +312,8 @@ struct State {
 	Field3DPod<FIELD_DIM, float> fluid_gradient;
 
 	glm::vec3 teleport_points[NUM_TELEPORT_POINTS];
+
+	glm::vec3 island_centres[NUM_ISLANDS];
 
 	// transforms:
 	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
@@ -381,6 +373,9 @@ struct State {
 
 	void creature_reset(int i);
 	void creatures_update(float dt);
+
+	// thread-safe:
+	int nearest_island(glm::vec3 pos);
 };
 
 #endif

@@ -9,7 +9,7 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 34.0, 80.0, 1612.0, 933.0 ],
+		"rect" : [ 34.0, 80.0, 730.0, 933.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"bglocked" : 0,
@@ -39,6 +39,57 @@
 		"style" : "",
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-135",
+					"linecount" : 4,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 1248.0, 784.0, 168.0, 60.0 ],
+					"style" : "",
+					"text" : "MAYBE: communication with resiliency.js? i.e. if the audio driver crashed, if rme UFX+ isn't found, etc?"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-133",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 0,
+					"patching_rect" : [ 1248.0, 843.0, 56.0, 22.0 ],
+					"style" : "",
+					"text" : "adstatus"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-132",
+					"maxclass" : "newobj",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "bang" ],
+					"patching_rect" : [ 1131.0, 784.0, 115.0, 22.0 ],
+					"style" : "",
+					"text" : "metro 50 @active 1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-131",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 2,
+					"outlettype" : [ "", "" ],
+					"patching_rect" : [ 1131.0, 814.0, 91.0, 22.0 ],
+					"style" : "",
+					"text" : "ws @port 8080"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-116",
 					"maxclass" : "newobj",
@@ -4490,7 +4541,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 547.75, 0.000023, 70.949951, 20.0 ],
 					"style" : "",
-					"text" : "CPU: 0%"
+					"text" : "CPU: 6%"
 				}
 
 			}
@@ -6853,7 +6904,7 @@
 					"patching_rect" : [ 870.25, 630.5, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 606.333374, 99.875, 35.0 ],
+					"presentation_rect" : [ 1.16666, 596.333374, 99.875, 35.0 ],
 					"style" : "",
 					"text" : "gen~ type4 @dumpoutlet 1"
 				}
@@ -21348,7 +21399,7 @@
 					"patching_rect" : [ 437.916656, 625.0, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.66666, 213.0, 99.874985, 35.0 ],
+					"presentation_rect" : [ 1.66666, 203.0, 99.874985, 35.0 ],
 					"style" : "",
 					"text" : "gen~ type2 @dumpoutlet 1"
 				}
@@ -21567,7 +21618,7 @@
 					"patching_rect" : [ 222.0, 625.0, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 16.499996, 99.875, 35.0 ],
+					"presentation_rect" : [ 1.16666, 6.499996, 99.875, 35.0 ],
 					"style" : "",
 					"text" : "gen~ type1 @dumpoutlet 1"
 				}
@@ -22351,6 +22402,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-6", 1 ],
 					"source" : [ "obj-13", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-131", 0 ],
+					"source" : [ "obj-132", 0 ]
 				}
 
 			}
@@ -23468,6 +23526,10 @@
 			}
 , 			{
 				"name" : "bin2buf~.mxo",
+				"type" : "iLaX"
+			}
+, 			{
+				"name" : "ws.mxo",
 				"type" : "iLaX"
 			}
  ],

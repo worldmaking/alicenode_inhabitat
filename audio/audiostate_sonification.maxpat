@@ -9,7 +9,7 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 228.0, 79.0, 746.0, 933.0 ],
+		"rect" : [ 228.0, 79.0, 735.0, 933.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"bglocked" : 0,
@@ -40,6 +40,58 @@
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
 				"box" : 				{
+					"id" : "obj-21",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 44.0, -13.261841, 72.0, 22.0 ],
+					"style" : "",
+					"text" : "loadmess 1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-19",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "bang" ],
+					"patching_rect" : [ 138.5, 750.0, 60.0, 22.0 ],
+					"style" : "",
+					"text" : "loadbang"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-18",
+					"maxclass" : "newobj",
+					"numinlets" : 3,
+					"numoutlets" : 2,
+					"outlettype" : [ "", "" ],
+					"patching_rect" : [ 138.5, 802.0, 43.0, 22.0 ],
+					"style" : "",
+					"text" : "line 0."
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-16",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 138.5, 779.0, 78.0, 22.0 ],
+					"style" : "",
+					"text" : "-72., 0. 5000"
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"id" : "obj-5",
 					"maxclass" : "newobj",
 					"numinlets" : 1,
@@ -48,58 +100,6 @@
 					"patching_rect" : [ 10.0, 150.5, 60.0, 22.0 ],
 					"style" : "",
 					"text" : "loadbang"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-13",
-					"maxclass" : "newobj",
-					"numinlets" : 0,
-					"numoutlets" : 1,
-					"outlettype" : [ "" ],
-					"patching_rect" : [ 138.5, 742.0, 45.0, 22.0 ],
-					"style" : "",
-					"text" : "r meta"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-11",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 2,
-					"outlettype" : [ "", "" ],
-					"patching_rect" : [ 138.5, 814.0, 43.0, 22.0 ],
-					"style" : "",
-					"text" : "line 0."
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-6",
-					"maxclass" : "message",
-					"numinlets" : 2,
-					"numoutlets" : 1,
-					"outlettype" : [ "" ],
-					"patching_rect" : [ 138.5, 790.0, 41.0, 22.0 ],
-					"style" : "",
-					"text" : "$1 20"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-4",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 2,
-					"outlettype" : [ "", "" ],
-					"patching_rect" : [ 138.5, 766.0, 73.0, 22.0 ],
-					"style" : "",
-					"text" : "route mains"
 				}
 
 			}
@@ -118,16 +118,16 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-225",
-					"linecount" : 22,
+					"linecount" : 10,
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 634.666687, 472.333374, 168.0, 301.0 ],
+					"patching_rect" : [ 634.666687, 472.333374, 169.0, 141.0 ],
 					"presentation" : 1,
-					"presentation_linecount" : 17,
-					"presentation_rect" : [ 515.699951, 500.333374, 212.0, 234.0 ],
+					"presentation_linecount" : 8,
+					"presentation_rect" : [ 515.699951, 500.333374, 207.0, 114.0 ],
 					"style" : "",
-					"text" : "to do: get vr person's position in sim (which island they are on, use that to mix audio in headphones.\n\nsometimes gen~ will crash if params or windows cause duration lengths beyond synthesis (wutever)\nwrite something in this patch that checks if gen~ has crashed. if so, close and reopen this patch (will probably need a separate patcher which actually launches this patch and watches for crashes/errors). \n\nwrite watcher in server.js to check if max is running. if max is not running, launch, and open the launcher patch. "
+					"text" : "to do: get vr person's position in sim (which island they are on, use that to mix audio in headphones.\n\nthe server.js has a watch function to check if max is running. if max is not running, it launches, and then opens this patch"
 				}
 
 			}
@@ -3596,7 +3596,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 547.75, 0.000023, 70.949951, 20.0 ],
 					"style" : "",
-					"text" : "CPU: 0%"
+					"text" : "CPU: 11%"
 				}
 
 			}
@@ -4860,6 +4860,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 8,
 					"id" : "obj-123",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -4877,6 +4878,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 7,
 					"id" : "obj-122",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -4894,6 +4896,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 6,
 					"id" : "obj-120",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -4911,6 +4914,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 5,
 					"id" : "obj-119",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -4928,6 +4932,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 4,
 					"id" : "obj-118",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -4945,6 +4950,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 3,
 					"id" : "obj-117",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -4962,6 +4968,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 2,
 					"id" : "obj-115",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -21305,14 +21312,6 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-41", 0 ],
-					"midpoints" : [ 148.0, 837.0, 128.625, 837.0, 128.625, 737.5, 21.25, 737.5 ],
-					"source" : [ "obj-11", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
 					"destination" : [ "obj-150", 0 ],
 					"source" : [ "obj-110", 0 ]
 				}
@@ -21418,13 +21417,6 @@
 				"patchline" : 				{
 					"destination" : [ "obj-128", 0 ],
 					"source" : [ "obj-129", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-4", 0 ],
-					"source" : [ "obj-13", 0 ]
 				}
 
 			}
@@ -21551,6 +21543,13 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-18", 0 ],
+					"source" : [ "obj-16", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-171", 7 ],
 					"order" : 0,
 					"source" : [ "obj-168", 0 ]
@@ -21620,6 +21619,14 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-41", 0 ],
+					"midpoints" : [ 148.0, 837.0, 128.625, 837.0, 128.625, 737.5, 21.25, 737.5 ],
+					"source" : [ "obj-18", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-168", 0 ],
 					"source" : [ "obj-187", 4 ]
 				}
@@ -21650,6 +21657,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-57", 0 ],
 					"source" : [ "obj-187", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-16", 0 ],
+					"source" : [ "obj-19", 0 ]
 				}
 
 			}
@@ -21747,6 +21761,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-222", 0 ],
 					"source" : [ "obj-208", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-23", 0 ],
+					"source" : [ "obj-21", 0 ]
 				}
 
 			}
@@ -21885,13 +21906,6 @@
 					"destination" : [ "obj-31", 0 ],
 					"midpoints" : [ 19.5, 330.0, 4.5, 330.0, 4.5, 464.0, 21.25, 464.0 ],
 					"source" : [ "obj-34", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-6", 0 ],
-					"source" : [ "obj-4", 0 ]
 				}
 
 			}
@@ -22084,13 +22098,6 @@
 				"patchline" : 				{
 					"destination" : [ "obj-31", 10 ],
 					"source" : [ "obj-57", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-11", 0 ],
-					"source" : [ "obj-6", 0 ]
 				}
 
 			}

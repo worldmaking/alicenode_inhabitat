@@ -4,12 +4,12 @@
 		"appversion" : 		{
 			"major" : 7,
 			"minor" : 3,
-			"revision" : 5,
-			"architecture" : "x86",
+			"revision" : 4,
+			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 34.0, 79.0, 1151.0, 933.0 ],
+		"rect" : [ 38.0, 85.0, 773.0, 875.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"bglocked" : 0,
@@ -40,12 +40,24 @@
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
 				"box" : 				{
+					"id" : "obj-51",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 0,
+					"patching_rect" : [ 1312.0, 881.0, 61.0, 22.0 ],
+					"style" : "",
+					"text" : "ufxStatus"
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"id" : "obj-53",
 					"linecount" : 11,
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 23.75, 919.0, 190.0, 154.0 ],
+					"patching_rect" : [ 23.75, 919.0, 190.0, 158.0 ],
 					"style" : "",
 					"text" : "clipControl [1] prevents audio spikes above 0dB from going out to speaker, and [2] if audio spikes more than 50 times*, it reports this to the resiliency.js\n\n*50 can happen quite quickly, or take a long time, so if it doesn't reach 50 in 5000ms, reset counter. there's probably a more elegant way of doing this all, but..."
 				}
@@ -72,7 +84,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 135.5, 333.0, 77.0, 62.0 ],
+					"patching_rect" : [ 135.5, 333.0, 77.0, 64.0 ],
 					"style" : "",
 					"text" : "\"audiostate_sonification.maxpat safe quit initiated\""
 				}
@@ -85,10 +97,10 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 34.0, 186.0, 180.0, 74.0 ],
+					"patching_rect" : [ 34.0, 186.0, 180.0, 75.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 4,
-					"presentation_rect" : [ 515.75, 685.0, 226.0, 60.0 ],
+					"presentation_rect" : [ 515.75, 685.0, 226.0, 62.0 ],
 					"style" : "",
 					"text" : "Safe shutdown sequence: if launch.sh/bat exits, it runs a node script that sends to this file: save patch, fade audio, close patch file, quit max. "
 				}
@@ -140,21 +152,9 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 1248.0, 784.0, 168.0, 60.0 ],
+					"patching_rect" : [ 1248.0, 784.0, 168.0, 62.0 ],
 					"style" : "",
 					"text" : "MAYBE: communication with resiliency.js? i.e. if the audio driver crashed, if rme UFX+ isn't found, etc?"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-133",
-					"maxclass" : "newobj",
-					"numinlets" : 0,
-					"numoutlets" : 0,
-					"patching_rect" : [ 1248.0, 843.0, 56.0, 22.0 ],
-					"style" : "",
-					"text" : "adstatus"
 				}
 
 			}
@@ -170,8 +170,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -309,8 +309,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -448,8 +448,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -587,8 +587,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -871,10 +871,10 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 48.75, 456.166687, 151.0, 47.0 ],
+					"patching_rect" : [ 48.75, 456.166687, 151.0, 48.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 3,
-					"presentation_rect" : [ 544.75, 627.166687, 151.0, 47.0 ],
+					"presentation_rect" : [ 544.75, 627.166687, 151.0, 48.0 ],
 					"style" : "",
 					"text" : "Disable max quit on patcher close, OFF by default"
 				}
@@ -929,9 +929,9 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 51.25, 648.833313, 55.5, 35.0 ],
+					"patching_rect" : [ 51.25, 648.833313, 55.5, 36.0 ],
 					"style" : "",
-					"text" : ";\rmax quit"
+					"text" : ";\r\nmax quit"
 				}
 
 			}
@@ -1045,10 +1045,10 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 975.666687, 150.5, 169.0, 141.0 ],
+					"patching_rect" : [ 975.666687, 150.5, 169.0, 144.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 8,
-					"presentation_rect" : [ 515.699951, 500.333374, 207.0, 114.0 ],
+					"presentation_rect" : [ 515.699951, 500.333374, 207.0, 117.0 ],
 					"style" : "",
 					"text" : "to do: get vr person's position in sim (which island they are on, use that to mix audio in headphones.\n\nthe server.js has a watch function to check if max is running. if max is not running, it launches, and then opens this patch"
 				}
@@ -1066,8 +1066,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -1873,8 +1873,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -2681,8 +2681,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -3455,8 +3455,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -4230,8 +4230,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -4519,7 +4519,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 547.75, 0.000023, 70.949951, 20.0 ],
 					"style" : "",
-					"text" : "CPU: 8%"
+					"text" : "CPU: 0%"
 				}
 
 			}
@@ -4756,7 +4756,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 0.25, 405.333313, 202.0, 47.0 ],
+					"patching_rect" : [ 0.25, 405.333313, 202.0, 48.0 ],
 					"style" : "",
 					"text" : "remember last patcher state! pls don't encapsulate this section in subpatcher"
 				}
@@ -4814,8 +4814,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -5095,8 +5095,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -5770,7 +5770,6 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
-					"chanoffset" : 8,
 					"id" : "obj-123",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5788,7 +5787,6 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
-					"chanoffset" : 7,
 					"id" : "obj-122",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5806,7 +5804,6 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
-					"chanoffset" : 6,
 					"id" : "obj-120",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5824,7 +5821,6 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
-					"chanoffset" : 5,
 					"id" : "obj-119",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5842,7 +5838,6 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
-					"chanoffset" : 4,
 					"id" : "obj-118",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5860,7 +5855,6 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
-					"chanoffset" : 3,
 					"id" : "obj-117",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5878,7 +5872,6 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
-					"chanoffset" : 2,
 					"id" : "obj-115",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5949,8 +5942,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -6007,8 +6000,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -6686,7 +6679,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1085.5, 407.5, 120.0, 49.0 ],
+					"patching_rect" : [ 1085.5, 407.5, 120.0, 50.0 ],
 					"presentation_rect" : [ 283.5, 288.0, 279.0, 22.0 ],
 					"style" : "",
 					"text" : "bin2buf~ @file audiostate.bin @buffer grain_buffer"
@@ -6705,8 +6698,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -6882,7 +6875,7 @@
 					"patching_rect" : [ 870.25, 630.5, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 596.333374, 99.875, 35.0 ],
+					"presentation_rect" : [ 1.16666, 596.333374, 99.875, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type4 @dumpoutlet 1"
 				}
@@ -6941,7 +6934,7 @@
 					"patching_rect" : [ 654.083374, 630.5, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 406.666687, 99.874969, 35.0 ],
+					"presentation_rect" : [ 1.16666, 406.666687, 99.874969, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type3 @dumpoutlet 1"
 				}
@@ -6961,8 +6954,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -7009,8 +7002,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -9692,7 +9685,7 @@
 , 											{
 												"patchline" : 												{
 													"destination" : [ "obj-266", 1 ],
-													"midpoints" : [ 579.5, 774.5, 68.0, 774.5 ],
+													"midpoints" : [ 579.5, 774.5, 68.000004, 774.5 ],
 													"order" : 3,
 													"source" : [ "obj-10", 0 ]
 												}
@@ -11298,7 +11291,7 @@
 , 											{
 												"patchline" : 												{
 													"destination" : [ "obj-32", 2 ],
-													"midpoints" : [ 549.5, 534.0, 81.5, 534.0 ],
+													"midpoints" : [ 549.5, 534.0, 81.500004, 534.0 ],
 													"order" : 3,
 													"source" : [ "obj-5", 0 ]
 												}
@@ -11335,7 +11328,7 @@
 												"patchline" : 												{
 													"color" : [ 0.67451, 0.819608, 0.572549, 1.0 ],
 													"destination" : [ "obj-142", 0 ],
-													"midpoints" : [ 684.5, 1149.5, 1029.5, 1149.5 ],
+													"midpoints" : [ 684.5, 1149.5, 1029.500061, 1149.5 ],
 													"order" : 0,
 													"source" : [ "obj-52", 0 ]
 												}
@@ -11681,8 +11674,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -14364,7 +14357,7 @@
 , 											{
 												"patchline" : 												{
 													"destination" : [ "obj-266", 1 ],
-													"midpoints" : [ 579.5, 774.5, 68.0, 774.5 ],
+													"midpoints" : [ 579.5, 774.5, 68.000004, 774.5 ],
 													"order" : 3,
 													"source" : [ "obj-10", 0 ]
 												}
@@ -15970,7 +15963,7 @@
 , 											{
 												"patchline" : 												{
 													"destination" : [ "obj-32", 2 ],
-													"midpoints" : [ 549.5, 534.0, 81.5, 534.0 ],
+													"midpoints" : [ 549.5, 534.0, 81.500004, 534.0 ],
 													"order" : 3,
 													"source" : [ "obj-5", 0 ]
 												}
@@ -16007,7 +16000,7 @@
 												"patchline" : 												{
 													"color" : [ 0.67451, 0.819608, 0.572549, 1.0 ],
 													"destination" : [ "obj-142", 0 ],
-													"midpoints" : [ 684.5, 1149.5, 1029.5, 1149.5 ],
+													"midpoints" : [ 684.5, 1149.5, 1029.500061, 1149.5 ],
 													"order" : 0,
 													"source" : [ "obj-52", 0 ]
 												}
@@ -16276,8 +16269,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -18959,7 +18952,7 @@
 , 											{
 												"patchline" : 												{
 													"destination" : [ "obj-266", 1 ],
-													"midpoints" : [ 579.5, 774.5, 68.0, 774.5 ],
+													"midpoints" : [ 579.5, 774.5, 68.000004, 774.5 ],
 													"order" : 3,
 													"source" : [ "obj-10", 0 ]
 												}
@@ -20565,7 +20558,7 @@
 , 											{
 												"patchline" : 												{
 													"destination" : [ "obj-32", 2 ],
-													"midpoints" : [ 549.5, 534.0, 81.5, 534.0 ],
+													"midpoints" : [ 549.5, 534.0, 81.500004, 534.0 ],
 													"order" : 3,
 													"source" : [ "obj-5", 0 ]
 												}
@@ -20602,7 +20595,7 @@
 												"patchline" : 												{
 													"color" : [ 0.67451, 0.819608, 0.572549, 1.0 ],
 													"destination" : [ "obj-142", 0 ],
-													"midpoints" : [ 684.5, 1149.5, 1029.5, 1149.5 ],
+													"midpoints" : [ 684.5, 1149.5, 1029.500061, 1149.5 ],
 													"order" : 0,
 													"source" : [ "obj-52", 0 ]
 												}
@@ -21377,7 +21370,7 @@
 					"patching_rect" : [ 437.916656, 625.0, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.66666, 203.0, 99.874985, 35.0 ],
+					"presentation_rect" : [ 1.66666, 203.0, 99.874985, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type2 @dumpoutlet 1"
 				}
@@ -21479,7 +21472,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 801.5, 990.0, 150.0, 74.0 ],
+					"patching_rect" : [ 801.5, 990.0, 150.0, 75.0 ],
 					"presentation_linecount" : 5,
 					"presentation_rect" : [ 596.5, 159.0, 150.0, 74.0 ],
 					"style" : "",
@@ -21494,7 +21487,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 754.5, 990.0, 150.0, 74.0 ],
+					"patching_rect" : [ 754.5, 990.0, 150.0, 75.0 ],
 					"presentation_linecount" : 5,
 					"presentation_rect" : [ 588.5, 55.0, 150.0, 74.0 ],
 					"style" : "",
@@ -21596,7 +21589,7 @@
 					"patching_rect" : [ 222.0, 625.0, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 6.499996, 99.875, 35.0 ],
+					"presentation_rect" : [ 1.16666, 6.499996, 99.875, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type1 @dumpoutlet 1"
 				}
@@ -22878,7 +22871,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-27", 0 ],
-					"midpoints" : [ 395.536682, 700.5, 395.233337, 700.5 ],
+					"midpoints" : [ 395.53667, 700.5, 395.233337, 700.5 ],
 					"source" : [ "obj-31", 1 ]
 				}
 
@@ -22886,7 +22879,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-60", 0 ],
-					"midpoints" : [ 559.823364, 700.5, 559.5, 700.5 ],
+					"midpoints" : [ 559.82334, 700.5, 559.5, 700.5 ],
 					"source" : [ "obj-31", 2 ]
 				}
 
@@ -22894,7 +22887,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-62", 0 ],
-					"midpoints" : [ 724.109985, 700.5, 724.75, 700.5 ],
+					"midpoints" : [ 724.11001, 700.5, 724.75, 700.5 ],
 					"source" : [ "obj-31", 3 ]
 				}
 
@@ -22910,7 +22903,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 4 ],
-					"midpoints" : [ 333.5, 944.75, 700.449951, 944.75 ],
+					"midpoints" : [ 333.5, 944.75, 700.449982, 944.75 ],
 					"source" : [ "obj-35", 4 ]
 				}
 
@@ -22918,7 +22911,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 3 ],
-					"midpoints" : [ 308.0, 944.75, 583.149963, 944.75 ],
+					"midpoints" : [ 308.0, 944.75, 583.149986, 944.75 ],
 					"source" : [ "obj-35", 3 ]
 				}
 
@@ -22926,7 +22919,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 2 ],
-					"midpoints" : [ 282.5, 944.75, 465.849976, 944.75 ],
+					"midpoints" : [ 282.5, 944.75, 465.849991, 944.75 ],
 					"source" : [ "obj-35", 2 ]
 				}
 
@@ -22934,7 +22927,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 1 ],
-					"midpoints" : [ 257.0, 944.75, 348.549988, 944.75 ],
+					"midpoints" : [ 257.0, 944.75, 348.549996, 944.75 ],
 					"source" : [ "obj-35", 1 ]
 				}
 
@@ -23022,7 +23015,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 4 ],
-					"midpoints" : [ 583.150024, 1019.75, 387.649994, 1019.75 ],
+					"midpoints" : [ 583.149994, 1019.75, 387.649994, 1019.75 ],
 					"source" : [ "obj-42", 4 ]
 				}
 
@@ -23030,7 +23023,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 3 ],
-					"midpoints" : [ 543.775024, 1018.75, 348.549988, 1018.75 ],
+					"midpoints" : [ 543.774994, 1018.75, 348.549996, 1018.75 ],
 					"source" : [ "obj-42", 3 ]
 				}
 
@@ -23038,7 +23031,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 2 ],
-					"midpoints" : [ 504.399994, 1017.5, 309.450012, 1017.5 ],
+					"midpoints" : [ 504.399994, 1017.5, 309.449997, 1017.5 ],
 					"source" : [ "obj-42", 2 ]
 				}
 
@@ -23046,7 +23039,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 1 ],
-					"midpoints" : [ 465.024994, 1017.5, 270.350006, 1017.5 ],
+					"midpoints" : [ 465.024994, 1017.5, 270.349998, 1017.5 ],
 					"source" : [ "obj-42", 1 ]
 				}
 
@@ -23242,7 +23235,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-130", 0 ],
-					"midpoints" : [ 270.350006, 983.0 ],
+					"midpoints" : [ 270.349998, 983.0 ],
 					"order" : 0,
 					"source" : [ "obj-69", 1 ]
 				}
@@ -23267,7 +23260,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 3 ],
-					"midpoints" : [ 348.549988, 982.5, 348.549988, 982.5 ],
+					"midpoints" : [ 348.549995, 982.5, 348.549996, 982.5 ],
 					"order" : 1,
 					"source" : [ "obj-69", 3 ]
 				}
@@ -23276,7 +23269,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 2 ],
-					"midpoints" : [ 309.450012, 982.5, 309.450012, 982.5 ],
+					"midpoints" : [ 309.449997, 982.5, 309.449997, 982.5 ],
 					"order" : 1,
 					"source" : [ "obj-69", 2 ]
 				}
@@ -23285,7 +23278,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 1 ],
-					"midpoints" : [ 270.350006, 982.5, 270.350006, 982.5 ],
+					"midpoints" : [ 270.349998, 982.5, 270.349998, 982.5 ],
 					"order" : 1,
 					"source" : [ "obj-69", 1 ]
 				}
@@ -23476,74 +23469,81 @@
 ,
 		"dependency_cache" : [ 			{
 				"name" : "type1.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "type2.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "type3.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "type4.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "environmentFilter~.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "windowShaper.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "clipControl~.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "audioSpikeCheck~.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "reanimate.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
-				"name" : "bin2buf~.mxo",
-				"type" : "iLaX"
+				"name" : "ufxStatus.maxpat",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
+				"patcherrelativepath" : ".",
+				"type" : "JSON",
+				"implicit" : 1
 			}
 , 			{
-				"name" : "ws.mxo",
-				"type" : "iLaX"
+				"name" : "bin2buf~.mxe64",
+				"type" : "mx64"
+			}
+, 			{
+				"name" : "ws.mxe64",
+				"type" : "mx64"
 			}
  ],
 		"autosave" : 0,

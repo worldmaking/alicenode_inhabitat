@@ -2056,7 +2056,6 @@ void onFrame(uint32_t width, uint32_t height) {
 			switch (camMode % 2){
 				case 0: {
 					// WASD mode:
-					
 					float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
 					float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
 
@@ -2082,62 +2081,27 @@ void onFrame(uint32_t width, uint32_t height) {
 
 
 					cameraOri = glm::slerp(cameraOri, newori, 0.25f);
-
-					// now create view matrix:
-					//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-					//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
-					//console.log("Cam Mode 0 Active");
 				
 				} break;
 				default: {
 					// orbit around
 					float a = M_PI * t / 30.;
-					/*
-					viewMat = glm::lookAt(
-						world_centre + 
-						glm::vec3(0.5*sin(t), 0.85*sin(0.5*a), 4.*sin(a)), 
-						world_centre, 
-						glm::vec3(0., 1., 0.));
-					*/
+
 					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
 					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*4.f;
 
 					cameraLoc = glm::mix(cameraLoc, newloc, 0.05f);
 					cameraOri = glm::slerp(cameraOri, newori, 0.05f);
-
-					//auto camq = glm::angleAxis(float (M_PI * -1.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) *  cameraOri;
-
-					//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(camq));
-					//projMat = glm::perspective(glm::radians(75.0f), aspect, projectors[2].near_clip, 80.f);
-					//console.log("Default Cam mode Active");
 				}
 			}
-			
-			auto camq = cameraOri; // glm::angleAxis(float (M_PI * -2.) * (sliceoffset - 0.5f), glm::vec3(0,1,0)) * cameraOri;
-			
+
 			// want to put the forward direction in the middle
-			// sliceoffset goes 0..1
-
 			auto sliceRot = glm::angleAxis((centredslice/float(slices))* float(M_PI * -1.f), quat_uy(cameraOri));
-
 			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(sliceRot * cameraOri));
-
-			
-			float aspect = gBufferVR.dim.x / float(gBufferVR.dim.y);
 
 			// slice frustum x depends on sliceangle:
 			float fw = projectors[2].near_clip * tanf(sliceangle * 0.5f);
-
 			float f = projectors[2].near_clip * 1.f;
-
-
-			// slices ish:
-			// 2 = 20.
-			// 3 = 1.7ish
-			// 4 = 1.0
-			// 6 = 0.55
-			// 8 = 0.4
-			
 			projMat = glm::frustum(-fw, fw, -f, f, projectors[2].near_clip, projectors[2].far_clip);
 
 			viewProjMat = projMat * viewMat;
@@ -2175,23 +2139,6 @@ void onFrame(uint32_t width, uint32_t height) {
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
 			}
-
-			/*
-			gBufferVR.begin();
-			
-				// No HMD:
-				glScissor(0, 0, gBufferVR.dim.x, gBufferVR.dim.y);
-				glViewport(0, 0, gBufferVR.dim.x, gBufferVR.dim.y);
-				glEnable(GL_DEPTH_TEST);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				draw_scene(gBufferVR.dim.x, gBufferVR.dim.y, projectors[2]);
-		
-			gBufferVR.end();
-			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-
-			// now process the GBuffer and render the result into the fbo
-			draw_gbuffer(alice.hmd->fbo, gBufferVR, projectors[2], glm::vec2(1.f), glm::vec2(0.f));
-			*/
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 

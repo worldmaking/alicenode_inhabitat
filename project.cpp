@@ -657,7 +657,7 @@ void State::sim_update(float dt) {
 
 		if (o.state == Creature::STATE_ALIVE) {
 
-			o.island = nearest_island(o.location);
+			//o.island = nearest_island(o.location);
 			
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);

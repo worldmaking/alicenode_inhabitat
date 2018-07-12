@@ -12,8 +12,10 @@ if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\BuildTools\%VCVARS64%
 rem /I "%KINECTSDK20_DIR%\inc" 
 rem "%KINECTSDK20_DIR%\lib\x64\kinect20.lib"
 
+rem lib/win64/zlib.lib lib/win64/ippicvmt.lib lib/win64/opencv_core320.lib lib/win64/opencv_flann320.lib lib/win64/opencv_calib3d320.lib lib/win64/opencv_imgproc320.lib lib/win64/opencv_features2d320.lib lib/win64/opencv_video320.lib lib/win64/opencv_tracking320.lib ^
+
 REM compile & link:
-cl /nologo /LD /W3 /EHsc /O2 /I "%ALICE_DIR%\include" "%ALICE_DIR%\alice.lib" "%ALICE_DIR%\lib\win64\openvr_api.lib" "%ALICE_DIR%\lib/win64/lib-vc2017/glfw3.lib" project.cpp user32.lib kernel32.lib shell32.lib gdi32.lib opengl32.lib 
+cl /nologo /LD /W3 /EHsc /O2 /I "%ALICE_DIR%\include" "%ALICE_DIR%\alice.lib" "%ALICE_DIR%\lib\win64\openvr_api.lib" "%ALICE_DIR%\lib/win64/lib-vc2017/glfw3.lib" project.cpp "%ALICE_DIR%\lib/win64/ippicvmt.lib" "%ALICE_DIR%\lib/win64/zlib.lib"  "%ALICE_DIR%\lib/win64/opencv_core320.lib" "%ALICE_DIR%\lib/win64/opencv_imgproc320.lib" "%ALICE_DIR%\lib/win64/opencv_video320.lib" user32.lib kernel32.lib shell32.lib gdi32.lib opengl32.lib 
 
 rem "%ALICE_DIR%\lib\win64\SpoutLibrary.lib" 
 

@@ -13,6 +13,7 @@
 #include "al/al_hashspace.h"
 #include "al/al_jxf.h"
 #include "al/al_json.h"
+#include "al/al_opencv.h"
 #include "alice.h"
 #include "state.h"
 
@@ -276,6 +277,7 @@ Shader humanMeshShader;
 Shader deferShader; 
 Shader simpleShader;
 Shader debugShader;
+Shader flowShader;
 
 QuadMesh quadMesh;
 GLuint colorTex;
@@ -286,7 +288,10 @@ FloatTexture3D distanceTex;
 FloatTexture2D fungusTex;
 FloatTexture2D landTex;
 FloatTexture2D humanTex;
+FloatTexture2D flowTex;
 FloatTexture2D noiseTex;
+
+TextureDrawer texDraw;
 
 SimpleOBJ tableObj("island.obj", true, 1.f);
 
@@ -1160,6 +1165,8 @@ void onUnloadGPU() {
 	creatureShader.dest_closing();
 	deferShader.dest_closing();
 	simpleShader.dest_closing();
+	debugShader.dest_closing();
+	flowShader.dest_closing();
 
 	quadMesh.dest_closing();
 	cubeVBO.dest_closing();
@@ -1174,7 +1181,10 @@ void onUnloadGPU() {
 	fungusTex.dest_closing();
 	noiseTex.dest_closing();
 	landTex.dest_closing();
+	flowTex.dest_closing();
 	humanTex.dest_closing();
+
+	texDraw.dest_closing();
 
 	projectors[0].fbo.dest_closing();
 	projectors[1].fbo.dest_closing();
@@ -1206,6 +1216,7 @@ void onReloadGPU() {
 	landMeshShader.readFiles("lmesh.vert.glsl", "lmesh.frag.glsl");
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
 	debugShader.readFiles("debug.vert.glsl", "debug.frag.glsl");
+	flowShader.readFiles("flow.vert.glsl", "flow.frag.glsl");
 	
 	quadMesh.dest_changed();
 
@@ -1300,6 +1311,7 @@ void onReloadGPU() {
 	debugVAO.attr(2, &DebugDot::color);
 
 	landTex.wrap = GL_CLAMP_TO_EDGE;
+	flowTex.wrap = GL_CLAMP_TO_EDGE;
 	humanTex.wrap = GL_CLAMP_TO_EDGE;
 	distanceTex.wrap = GL_CLAMP_TO_EDGE;
 	fungusTex.wrap = GL_CLAMP_TO_EDGE;
@@ -1330,6 +1342,7 @@ void draw_scene(int width, int height, Projector& projector) {
 	double t = Alice::Instance().simTime;
 	//console.log("%f", t);
 
+	flowTex.bind(1);
 	humanTex.bind(2);
 	noiseTex.bind(3);
 	distanceTex.bind(4);
@@ -1472,6 +1485,7 @@ void draw_scene(int width, int height, Projector& projector) {
 		debugShader.uniform("uViewProjectionMatrix", viewProjMat);
 		debugShader.uniform("uViewPortHeight", (float)height);
 		debugShader.uniform("uColorTex", 0);
+
 
 		glBindTexture(GL_TEXTURE_2D, colorTex);
 		glEnable( GL_PROGRAM_POINT_SIZE );
@@ -1621,6 +1635,36 @@ void onFrame(uint32_t width, uint32_t height) {
 	float aspect = gBufferVR.dim.x / (float)gBufferVR.dim.y;
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+
+	if (1) {
+		CloudDevice& cd = alice.cloudDeviceManager.devices[0];
+		const CloudFrame& frame0 = cd.cloudFramePrev();
+		const CloudFrame& frame1 = cd.cloudFrame();
+
+		// const glm::vec3 * cloud_points = cloudFrame.xyz;
+		// const glm::vec2 * uv_points = cloudFrame.uv;
+		// const glm::vec3 * rgb_points = cloudFrame.rgb;
+		// uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
+		
+		int levels = 3; // default=5;
+		double pyr_scale = 0.5;
+		int winsize = 13;
+		int iterations = 3; // default = 10;
+		int poly_n = 5;
+		double poly_sigma = 1.2; // default = 1.1
+		int flags = 0;
+		
+		// create CV mat wrapper around Jitter matrix data
+		// (cv declares dim as numrows, numcols, i.e. dim1, dim0, or, height, width)
+		void * src;
+		cv::Mat prev(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame0.depth);
+		cv::Mat next(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame1.depth);
+
+		cv::Mat flow(cDepthHeight, cDepthWidth, CV_32FC(2), (void *)state->flow);
+		
+		cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
+		
+	}
 
 	if (1) {	
 		// LEAP & TELEPORTING
@@ -1887,6 +1931,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
+		flowTex.submit(glm::ivec2(512,424), &state->flow[0]);
 		
 		//if (alice.cloudDevice->use_colour) {
 			const CloudDevice& cd = alice.cloudDeviceManager.devices[flip];
@@ -2156,14 +2201,30 @@ void onFrame(uint32_t width, uint32_t height) {
 			case 1: projectors[0].fbo.draw(); break;
 			case 2: projectors[1].fbo.draw(); break;
 			case 3: projectors[2].fbo.draw(); break;
-			case 4: fbo.draw(); break;
+			case 4: {
+				flowShader.use();
+				flowShader.uniform("tex", 0);
+				flowShader.uniform("uScale", glm::vec2(1.f));
+				flowShader.uniform("uOffset", glm::vec2(0.f));
+				texDraw.draw_no_shader(flowTex.id);
+				flowShader.unuse();
+			} break;
+			//case 4: fbo.draw(); break;
 			default: soloView = 0;
 		}
 	} else {
 		projectors[0].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
 		projectors[1].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
 		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
-		fbo				 .draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
+		{
+				flowShader.use();
+				flowShader.uniform("tex", 0);
+				flowShader.uniform("uScale", glm::vec2(0.5f));
+				flowShader.uniform("uOffset", glm::vec2(0.5,  0.5));
+				texDraw.draw_no_shader(flowTex.id);
+				flowShader.unuse();
+		}
+		//fbo				 .draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
 	}
 	profiler.log("draw to window", alice.fps.dt);
 
@@ -2738,7 +2799,7 @@ extern "C" {
 		landTex.generateMipMap = true;
 		humanTex.generateMipMap = true;
 		emissionTex.generateMipMap = true;
-		
+		flowTex.generateMipMap = true;
 		
 
 		enablers[SHOW_LANDMESH] = 0;

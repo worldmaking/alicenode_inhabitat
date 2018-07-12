@@ -147,6 +147,9 @@ struct Field2DPod {
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+
+static const glm::ivec2 field_dim2 = glm::ivec2(FIELD_DIM, FIELD_DIM);
+static const glm::ivec2 land_dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
 static const glm::ivec2 fungus_dim = glm::ivec2(FUNGUS_DIM, FUNGUS_DIM);
 
 struct Creature {
@@ -330,6 +333,7 @@ struct State {
 	glm::vec3 world_max = glm::vec3(300.f, 300.f, 300.f);
 	glm::vec3 world_centre = glm::vec3(150.f, 50.f, 150.f);
 	float field2world_scale;
+	float world2field_scale;
 	glm::mat4 world2field;
 	glm::mat4 field2world;
 	glm::mat4 vive2world;
@@ -371,6 +375,8 @@ struct State {
 
 	float alive_lifespan_decay = 0.01;
 	float dead_lifespan_decay = 0.25;
+
+	float human_height_decay = 0.95;
 
 	// main thread:
 	void animate(float dt);

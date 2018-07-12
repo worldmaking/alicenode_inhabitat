@@ -566,11 +566,55 @@ void State::sim_update(float dt) {
 	const glm::vec2 * uv_points = cloudFrame.uv;
 	const glm::vec3 * rgb_points = cloudFrame.rgb;
 	uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
+	glm::vec2 kaspectnorm = 1.f/glm::vec2(float(cColorHeight)/float(cColorWidth), 1.f);
 	glm::vec3 kinectloc = world_centre + glm::vec3(0,0,-4);
 
 	// deal with Kinect data:
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
+
+	if (1) {
+		// map depth data onto land:
+		const CloudFrame& cloudFrame0 = kinect0.cloudFrame();
+		const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
+		const glm::vec2 * uv_points0 = cloudFrame0.uv;
+		const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
+		const uint16_t * depth0 = cloudFrame0.depth;
+
+		// first, dampen the human field:
+		for (int i=0; i<LAND_TEXELS; i++) {
+			human[i].w *= human_height_decay;
+		}
+
+		for (int i=0; i<max_cloud_points; i++) {
+			auto pt = cloud_points0[i];
+			auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;
+			// filter out bad depths
+			// mask outside a circular range
+			// skip OOB locations:
+			if (
+				depth0[i] <= 0 
+				|| glm::length(uv) > 0.5f
+				|| pt.x < world_min.x
+				|| pt.z < world_min.z
+				|| pt.x > world_max.x
+				|| pt.z > world_max.z
+				//|| pt.y > 3.
+				) continue;
+
+			// find nearest land cell for this point:
+			// get norm'd coordinate:
+			glm::vec3 norm = transform(world2field, pt);
+			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+			// get cell index for this location:
+			int landidx = al_field2d_index_norm(land_dim2, norm2);
+			
+			// set the land value accordingly:
+			glm::vec4& humanpt = human[landidx];
+
+			humanpt.w = world2field_scale * pt.y;
+		}
+	}
 
 	if (1) {
 		{
@@ -586,7 +630,6 @@ void State::sim_update(float dt) {
 			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
 			const uint16_t * depth0 = cloudFrame0.depth;
 
-			glm::vec2 kaspectnorm = 1.f/glm::vec2(float(cColorHeight)/float(cColorWidth), 1.f);
 
 			int drawn = 0;
 			
@@ -2378,6 +2421,7 @@ void State::reset() {
 	// from transform(field2world(glm::vec3(0.)))
 	// to   transform(field2world(glm::vec3(1.)))
 	field2world_scale = world_max.x - world_min.x;
+	world2field_scale = 1.f/field2world_scale;
 	field2world = glm::scale(glm::vec3(field2world_scale));
 	// how to convert world positions into normalized texture coordinates in the fluid field:
 	world2field = glm::inverse(field2world);
@@ -2707,7 +2751,7 @@ extern "C" {
 			projectors[0].location = (pos + real_loc) * state->kinect2world_scale;
 			projectors[0].far_clip = 6.f * state->kinect2world_scale;
 
-			float nearclip = 0.1f * state->kinect2world_scale;
+			float nearclip = 1.f;
 			projectors[0].frustum_min = glm::vec2(frustum.x, frustum.z) * nearclip;
 			projectors[0].frustum_max = glm::vec2(frustum.y, frustum.w) * nearclip;
 			projectors[0].near_clip = nearclip;
@@ -2774,13 +2818,13 @@ extern "C" {
 
 			
 			// TODO: determine the projector ground location in real-space
-			auto real_loc = glm::vec3(1., 0., 1.);
+			auto real_loc = glm::vec3(2., 0., 4.);
 
 			projectors[1].orientation = orient;
 			projectors[1].location = (pos + real_loc) * state->kinect2world_scale;
 			projectors[1].far_clip = 6.f * state->kinect2world_scale;
 
-			float nearclip = 0.1f * state->kinect2world_scale;
+			float nearclip = 1.f;//0.1f * state->kinect2world_scale;
 			projectors[1].frustum_min = glm::vec2(frustum.x, frustum.z) * nearclip;
 			projectors[1].frustum_max = glm::vec2(frustum.y, frustum.w) * nearclip;
 			projectors[1].near_clip = nearclip;
@@ -2803,12 +2847,12 @@ extern "C" {
 		
 
 		enablers[SHOW_LANDMESH] = 0;
-		enablers[SHOW_AS_GRID] = 0;
-		enablers[SHOW_MINIMAP] = 1;//1;
-		enablers[SHOW_OBJECTS] = 1;
+		enablers[SHOW_AS_GRID] = 1;
+		enablers[SHOW_MINIMAP] = 0;//1;
+		enablers[SHOW_OBJECTS] = 0;
 		//enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
-		enablers[SHOW_DEBUGDOTS] = 1;//1;
+		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 		enablers[SHOW_HUMANMESH] = 1;
 
@@ -2827,6 +2871,9 @@ extern "C" {
 			//alice.streamer->init(gBuffer.dim);
 		}
 		console.log("gBuffer dim %d x %d", gBufferVR.dim.x, gBufferVR.dim.y);
+
+		//alice.window.fullScreen(true);
+
 
 		// allocate on GPU:
 		onReloadGPU();

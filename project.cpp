@@ -656,6 +656,8 @@ void State::sim_update(float dt) {
 		AudioState::Frame& audioframe = audiostate->frames[i % NUM_AUDIO_FRAMES];
 
 		if (o.state == Creature::STATE_ALIVE) {
+
+			o.island = nearest_island(o.location);
 			
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
@@ -915,7 +917,9 @@ void State::sim_update(float dt) {
 
 			// let song evolve:
 			o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);
-			//o.color = glm::vec3(o.params);
+			o.color = glm::vec3(o.params);
+
+			
 
 			float gravity = 2.0f;
 			o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
@@ -1011,6 +1015,20 @@ void State::sim_update(float dt) {
 	}
 }
 
+int State::nearest_island(glm::vec3 pos) {
+	int which = -1;
+	float d2 = 1000000000.f;
+	for (int i=0; i<NUM_ISLANDS; i++) {
+		auto r = island_centres[i] - pos;
+		auto d = glm::dot(r, r);
+		if (d < d2) {
+			which = i;
+			d2 = d;
+		}
+	}
+	return which;
+}
+
 void State::creature_reset(int i) {
 		Creature& a = creatures[i];
 		a.idx = i;
@@ -1028,7 +1046,7 @@ void State::creature_reset(int i) {
 		a.velocity = glm::vec3(0);
 		a.rot_vel = glm::quat();
 		a.accel = glm::vec3(0);
-		a.island = rnd::integer(5);
+		a.island = nearest_island(a.location);
 
 		switch(a.type) {
 			case Creature::TYPE_ANT:
@@ -1058,6 +1076,7 @@ void State::creatures_update(float dt) {
 		creature_reset(i);
 		Creature& a = creatures[i];
 		a.location = glm::linearRand(world_min, world_max);
+		a.island = nearest_island(a.location);
 	}
 
 	// visit each creature:
@@ -1086,8 +1105,9 @@ void State::creatures_update(float dt) {
 				creature_reset(j);
 				Creature& child = creatures[j];
 				child.location = a.location;
+				child.island = nearest_island(child.location);
 				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
-				child.color = glm::mix(child.color, a.color, 0.9f);
+				child.params = glm::mix(child.params, a.params, 0.9f);
 			}
 
 
@@ -2410,13 +2430,6 @@ void State::reset() {
 		creature_reset(i);
 	}
 
-	for (int i=0; i<NUM_SEGMENTS; i++) {
-		auto& o = segments[i];
-		o.location = world_centre+glm::ballRand(10.f);
-		o.color = glm::ballRand(1.f)*0.5f+0.5f;
-		o.phase = rnd::uni();
-		o.scale = 2.5;
-	}
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = particles[i];
 		o.location = world_centre+glm::ballRand(10.f);
@@ -2565,10 +2578,10 @@ void State::reset() {
 
 
 	// make up some speaker locations:
-	for (int i=0; i<NUM_SPEAKERS; i++) {
+	for (int i=0; i<NUM_ISLANDS; i++) {
 
 		
-		float phase = i/float(NUM_SPEAKERS);
+		float phase = i/float(NUM_ISLANDS);
 		float angle = M_PI * 2. * phase;
 		float radius = (world_max.z - world_min.z) * 0.3;
 
@@ -2580,7 +2593,7 @@ void State::reset() {
 
 		console.log("speaker i %f %f", island_centres[i].x, island_centres[i].z);
 
-		int id = NUM_DEBUGDOTS - NUM_SPEAKERS - 1 + i;
+		int id = NUM_DEBUGDOTS - NUM_ISLANDS - 1 + i;
 		debugdots[id].location = island_centres[i];
 		debugdots[id].color = glm::vec3(1,0,0);
 		debugdots[id].size = particleSize * 500;
@@ -2802,7 +2815,7 @@ extern "C" {
 		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
-		enablers[SHOW_OBJECTS] = 0;
+		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_SEGMENTS] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 1;//1;

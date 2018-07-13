@@ -1706,6 +1706,14 @@ void onFrame(uint32_t width, uint32_t height) {
 	//state->projector1_rotation = t;
 	// TODO: DISABLE!!!!
 	state->update_projector_loc();
+  
+  	
+		#ifdef AL_WIN
+		if (alice.fps.count == 30 && !alice.window.isFullScreen) {
+          alice.window.fullScreen(true);
+        }
+		#endif
+
 
 	#ifdef AL_WIN
 	if (1) {
@@ -2868,10 +2876,6 @@ extern "C" {
 		audiostate = audiostatemap.create("audio/audiostate.bin", true);
 
 		
-		#ifdef AL_WIN
-		//alice.window.fullScreen(true);
-		#endif
-
 		onReset();
 
 		
@@ -2940,11 +2944,13 @@ extern "C" {
 		alice.onKeyEvent.connect(onKeyEvent);
 		alice.window.position(45, 45);
       
+      
       	#ifdef AL_WIN
       	if (!alice.window.isFullScreen) {
-          alice.window.fullscreen(true);
+          alice.window.fullScreen(true);
         }
       	#endif
+
 
 		return 0;
     }

@@ -1706,6 +1706,13 @@ void onFrame(uint32_t width, uint32_t height) {
 	//state->projector1_rotation = t;
 	// TODO: DISABLE!!!!
 	state->update_projector_loc();
+  
+  
+		#ifdef AL_WIN
+		if (alice.fps.count == 30 && !alice.window.isFullScreen) {
+          alice.window.fullScreen(true);
+        }
+		#endif
 
 	#ifdef AL_WIN
 	if (1) {

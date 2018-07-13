@@ -16,7 +16,8 @@
 #include "al/al_opencv.h"
 #include "alice.h"
 #include "state.h"
-// harmless?
+
+
 struct Profiler {
 	Timer timer;
 	std::vector<std::string> logs;

@@ -2869,7 +2869,7 @@ extern "C" {
 
 		
 		#ifdef AL_WIN
-		//alice.window.fullScreen(true);
+		alice.goFullScreen = true;
 		#endif
 
 		onReset();

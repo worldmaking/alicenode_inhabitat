@@ -2940,13 +2940,6 @@ extern "C" {
 		alice.onKeyEvent.connect(onKeyEvent);
 		alice.window.position(45, 45);
       
-      
-      	#ifdef AL_WIN
-      	if (!alice.window.isFullScreen) {
-          alice.window.fullscreen(true);
-        }
-      	#endif
-
 
 		return 0;
     }

@@ -186,7 +186,7 @@ struct Creature {
 	
 	glm::vec3 velocity;
 	glm::quat rot_vel = glm::quat();
-	glm::vec3 accel;
+	//glm::vec3 accel;
 	int32_t island;	// which island we are on (0-4)
 
 	// species-specific:
@@ -373,10 +373,16 @@ struct State {
 	float particleSize = 0.005;
 	float creature_fluid_push = 0.25f;
 
+	float fungus_recovery_rate = 0.02;
+	float fungus_seeding_chance = 0.00001;
+	float fungus_migration_chance = 1.f;
+	float fungus_decay_chance = 0.05;
+
 	float alive_lifespan_decay = 0.01;
 	float dead_lifespan_decay = 0.25;
 
 	float human_height_decay = 0.95;
+	float coastline_height = 5.f;
 
 	// main thread:
 	void animate(float dt);
@@ -389,11 +395,14 @@ struct State {
 
 	void generate_land_sdf_and_normals();
 
+
 	void creature_reset(int i);
-	void creatures_update(float dt);
+	void creatures_health_update(float dt);
+	void creature_alive_update(Creature& o, float dt);
 
 	// thread-safe:
 	int nearest_island(glm::vec3 pos);
+	glm::vec3 random_location_above_land(float h=0.1f);
 };
 
 #endif

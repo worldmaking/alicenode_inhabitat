@@ -25,11 +25,11 @@ void main() {
 
  	
 	vec4 noise = texture(uNoiseTex, texCoord);
-	vec2 texCoord1 = texCoord + (noise.xy - 0.5) * 0.003;
+	vec2 texCoord1 = texCoord + (noise.xy - 0.5) * 0.00;
 	vec4 fields = texture(uFungusTex, texCoord);
 	vec4 fields1 = texture(uFungusTex, texCoord1);
 
-	vec3 nnorm = normalize(normal);
+	vec3 nnorm = normalize(normal + noise.xyz * 0.1);
 
 	// steepness depends on normal:
 	//float steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
@@ -39,24 +39,27 @@ void main() {
 	float fungus = fields1.a;
 
 
-	vec3 color = normalize(vec3(texCoord, 0.5)) * 0.5;
+	vec3 color = normalize(vec3(texCoord , 0.5)) * 0.5;
 	
 	// TODO: color += rock colour
 
 	if (fungus > 0.) {
 		// fungus:
-		float factor = fungus * 0.7;
+		float factor = fungus;
 		//factor += noise.z * 0.1;
-		//color = mix(vec3(1) * min(1., position.y*0.5), color, factor);
-		color = vec3(fungus);
+		color = mix(vec3(1) * min(1., position.y*0.05), color*fungus, factor);
+		//color = vec3(0,1,0) * fungus;
 		
 	} else {
+
+		// fungus ranges from -1 to 0 as it recovers toward life
+
 		//color -= 0.8*(0.8-steepness);
 		//color *= 0.25;
 		// darken lowlands:
-		color *= clamp(position.y*0.1, 0., 1.);
+		
 		//color = vec3(0);
-
+		//color = vec3(0);//vec3(1,0,0) * -fungus;
 		
 	}
 
@@ -69,6 +72,8 @@ void main() {
 	// humanshadow:
 	//float hu = texture2D(tex4, texcoord0).z;
 	//color *= clamp((1.-4.*hu), 0., 1);
+
+	color *= clamp((position.y - 5.)*0.1, 0., 1.);
 
 	FragColor.rgb = color;
 	//FragColor.rgb = nnorm;

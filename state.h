@@ -385,6 +385,13 @@ struct State {
 	float fungus_migration_chance = 1.f;
 	float fungus_decay_chance = 0.05;
 
+	float ant_nestsize = 0.04f;
+	float ant_phero_decay = 0.999f;
+	float ant_sensor_size = 0.5;
+	float ant_food_min = 0.02;
+	float ant_sniff_min = 0.001;
+	float ant_follow = 0.05;
+
 	float alive_lifespan_decay = 0.01;
 	float dead_lifespan_decay = 0.25;
 
@@ -412,6 +419,8 @@ struct State {
 	glm::vec3 random_location_above_land(float h=0.1f);
 
 	void update_projector_loc();
+
+	float ant_sniff_turn(Creature& a, float p1, float p2);
 };
 
 #endif

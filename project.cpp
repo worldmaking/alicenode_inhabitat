@@ -351,7 +351,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 0;
+int soloView = 3;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -364,6 +364,7 @@ bool enablers[10];
 #define SHOW_DEBUGDOTS 6
 #define USE_OBJECT_SHADER 7
 #define SHOW_HUMANMESH 8
+#define CALIBRATE 9
 
 Profiler profiler;
 
@@ -438,12 +439,18 @@ void State::fluid_update(float dt) {
 					// get a normal for the land:
 					// TODO: or read from state->land xyz?
 					glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 2.f/LAND_DIM);
-
 					// re-orient to be orthogonal to the land normal:
 					glm::vec3 rescaled = make_orthogonal_to(vel, normal);
-
 					// update:
 					vel = mix(vel, rescaled, influence);	
+
+					// also provide an outer boundary:
+					glm::vec3 central = 0.5f-norm;
+					central.y = 0.f;
+					auto factor = glm::dot(central, central);
+					central = glm::length(vel) * safe_normalize(central);
+					// update:
+					//vel = mix(vel, central, factor);	
 				}
 			}
 		}
@@ -507,7 +514,7 @@ void State::fields_update(float dt) {
 					// if alive, copy it
 					if (tv > 0.) { dst = tv; }
 				}
-				dst_array[i] = dst;
+				dst_array[i] = glm::clamp(dst, -1.f, 1.f);
 			}
 		}
 		fungus_field.swap();
@@ -824,7 +831,7 @@ int State::nearest_island(glm::vec3 pos) {
 void State::creature_reset(int i) {
 		Creature& a = creatures[i];
 		a.idx = i;
-		a.type = Creature::TYPE_BOID;//rnd::integer(4) + 1;
+		a.type = rnd::integer(2) + 1;
 		a.state = Creature::STATE_ALIVE;
 		a.health = rnd::uni();
 
@@ -841,6 +848,10 @@ void State::creature_reset(int i) {
 
 		switch(a.type) {
 			case Creature::TYPE_ANT:
+				a.ant.nest_idx = rnd::integer(NUM_ISLANDS);
+				a.location = island_centres[rnd::integer(NUM_ISLANDS)];
+				a.ant.food = 0;
+				a.ant.nestness = 1;
 				break;
 			case Creature::TYPE_BUG:
 				break;
@@ -940,6 +951,18 @@ void State::creatures_health_update(float dt) {
 	//console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
 }
 
+float State::ant_sniff_turn(Creature& a, float p1, float p2) {
+		
+	//-- is there any pheromone near?
+	//-- (use random factor to avoid over-reliance on pheromone trails)
+	float pnear = p1+p2; // - rnd::uni();
+	if (pnear * rnd::uni() > ant_sniff_min) {
+		//-- turn left or right?
+		a.rot_vel = glm::angleAxis(p1 > p2 ? -ant_follow : ant_follow, quat_uf(a.orientation)) * a.rot_vel;
+	} 
+	return pnear;
+}
+
 void State::creature_alive_update(Creature& o, float dt) {
 	float idt = 1.f/dt;
 	// float daylight_factor = sin(daytime + 1.5 * a.pos.x) * 0.4 + 0.6; // 0.2 ... 1
@@ -957,6 +980,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 	// derive from orientation:
 	glm::vec3 up = quat_uy(oq);
 	glm::vec3 uf = quat_uf(oq);
+	glm::vec3 ux = quat_ux(oq);
 	// go slower when moving uphill? 
 	// positive value means going uphill, range is -1 to 1
 	//float downhill = glm::dot(uf, glm::vec3(0.f,1.f,0.f)); 
@@ -1015,55 +1039,104 @@ void State::creature_alive_update(Creature& o, float dt) {
 			// * daylight_factor*3.f
 			;
 
-	//
-		
-
-	switch (o.type) {
-		case Creature::TYPE_ANT: {
-			// add some field stuff:
-			glm::vec3 chem;
-			if (o.idx % 2 == 1) chem = food_color * 2.f * dt;
-			if (o.idx % 2 == 0) chem = nest_color * 2.f * dt;
-			// add to land, add to emission:
-			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
-			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
-		}
-		break;
-
-		case Creature::TYPE_BOID: {
-			// SENSE FUNGUS
-			size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
-			//float fungal = fungus_field.front()[fungus_idx];
-			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
-			//if(i == objectSel) console.log("fungal %f", fungal);
-			float eat = glm::max(0.f, fungal) * 2.f;
-			//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
-			fungus_field.front()[fungus_idx] -= eat;
-		} 
-		break;
-
-		case Creature::TYPE_BUG: {
-
-		} break;
-
-		case Creature::TYPE_PREDATOR_HEAD: {
-
-		} break;
-
-		case Creature::TYPE_PREDATOR_BODY: {
-
-		} break;
-
-		
-	}
-
 	o.velocity = speed * glm::normalize(uf);
 
-	
+	switch (o.type) {
+	case Creature::TYPE_ANT: {
+		// add some field stuff:
+		glm::vec3 chem = food_color * o.ant.food
+			+ nest_color * o.ant.nestness;
+		// add to land, add to emission:
+		al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem * dt);
+		al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * dt * emission_scale);
 
-	
+		auto nest = island_centres[o.ant.nest_idx];
+		// cheat
+		nest.y = o.location.y;
+		glm::vec3 nest_relative = nest - o.location;
+		float nestdist = glm::length(nest_relative) - ant_nestsize;
 
-	//o.color = glm::vec3(0, 1, 0);
+		//-- my own food decays too:
+		o.ant.food *= ant_phero_decay;
+		o.ant.nestness *= ant_phero_decay;
+
+
+		// get antenna locations:
+		glm::vec3 a1 = o.location + ant_sensor_size * o.scale * (uf + ux);
+		glm::vec3 a2 = o.location + ant_sensor_size * o.scale * (uf - ux);
+		// look for nest if we have food
+		// or if we lack health
+		if (o.ant.food > ant_food_min || o.health < 0.5) {
+			//-- are we there yet?
+			if (nestdist < 0.) {
+				// TODO sounds.ant_nest(a)	
+				// drop food and search again:
+				//nestfood = nestfood + a.food
+				o.ant.food = 0;
+				o.ant.nestness = 1;
+				o.health = 1;
+			} else {
+				//-- look for nest:
+				auto normp1 = transform(world2field, a1);
+				auto normp2 = transform(world2field, a2);
+				float p1 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp1.x, normp1.z)).z;
+				float p2 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp2.x, normp2.z)).z;
+				ant_sniff_turn(o, p1, p2);
+			}
+		} else {
+			// look for food (blood)
+			float f = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), norm2).x;
+			if (f > ant_food_min) {
+				//sounds.ant_food(a)	
+				// remove it:
+				f = glm::clamp(f, 0.f, 1.f);
+				al_field2d_addnorm_interp(fungus_dim, chemical_field.back(), norm2, glm::vec3(-f, 0.f, 0.f));
+				o.ant.food += f;
+				//a.vel = -a.vel;
+				o.health = 1;
+			
+			} else {
+				// look for food:
+				auto normp1 = transform(world2field, a1);
+				auto normp2 = transform(world2field, a2);
+				float p1 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp1.x, normp1.z)).y;
+				float p2 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp2.x, normp2.z)).y;
+				
+				//DPRINT("%f %f", p1, p2);
+				
+				ant_sniff_turn(o, p1, p2);
+			}
+
+			o.color = chem;
+		}
+
+	} break;
+	case Creature::TYPE_BOID: {
+
+		// SENSE FUNGUS
+		size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
+		//float fungal = fungus_field.front()[fungus_idx];
+		float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
+		//if(i == objectSel) console.log("fungal %f", fungal);
+		float eat = glm::max(0.f, fungal) * 2.f;
+		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
+		fungus_field.front()[fungus_idx] -= eat;
+
+		o.color = glm::vec3(o.params);
+
+
+		
+	} break;
+	case Creature::TYPE_BUG: {
+
+	} break;
+	case Creature::TYPE_PREDATOR_HEAD: {
+
+	} break;
+	case Creature::TYPE_PREDATOR_BODY: {
+
+	} break;
+	} // end switch
 
 	glm::vec3 copy;
 	int copycount = 0;
@@ -1071,8 +1144,6 @@ void State::creature_alive_update(Creature& o, float dt) {
 	int centrecount = 0;
 	glm::vec3 avoid;
 	int avoidcount = 0;
-
-
 	//for (auto j : neighbours) {
 	for (int j=0; j<nres; j++) {
 		auto& n = creatures[neighbours[j]];
@@ -1131,12 +1202,12 @@ void State::creature_alive_update(Creature& o, float dt) {
 	// so need to adjust direction
 	// (though, could throttle speed to avoid collision)
 
-	o.color = glm::vec3(0,1,0);
+	//glm::vec3(0,1,0);
 	// turn away from lowlands:
 	
 	if (o.location.y < coastline_height) {
 		// instant death
-		o.health = 0.;
+		o.health = -1.;
 	} else if (o.location.y < coastline_height*2.) {
 
 		// get a very smooth normal:
@@ -1146,7 +1217,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 		auto desired_dir = safe_normalize(glm::vec3(-ln.x, 0.f, -ln.z));
 		auto q = get_forward_rotation_to(o.orientation, desired_dir);
 		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.5f);
-		o.color = glm::vec3(1,0,0);
+		//o.color = glm::vec3(1,0,0);
 
 	} else if (avoidcount > 0) {
 		auto desired_dir = safe_normalize(avoid);
@@ -1155,47 +1226,77 @@ void State::creature_alive_update(Creature& o, float dt) {
 		auto q = get_forward_rotation_to(o.orientation, desired_dir);
 		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
 		
-	} else if (centrecount > 0) {
-
-		if (copycount > 0) {
-			// average neighbour velocity
-			copy /= float(copycount);
-
-			// split into speed & direction
-			float desired_speed = glm::length(copy);
-
-			auto desired_dir = safe_normalize(copy);
-
-			auto q = get_forward_rotation_to(o.orientation, desired_dir);
-			o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
-			
-			// // get disparity
-			// auto influence_diff = desired_dir - uf;
-			// float diff_mag = glm::length(influence_diff);
-			// if (diff_mag > 0.001f && desired_speed > 0.001f) {
-			// 	// try to match speed:
-			// 	speed = glm::min(speed, desired_speed);
-			// 	// try to match orientation:
-
-			// }
-		}
-
-		center /= float(centrecount);
-
-		auto desired_dir = safe_normalize(center);
-
-		// if centre is too close, rotate away from it?
-		// centre is relative to self, but not rotated
-		auto q = get_forward_rotation_to(o.orientation, desired_dir);
-		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
-		
 	} else {
-		float range = M_PI * steepness * M_PI;
-		glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
-		float wander_factor = 0.5f * dt;
-		//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
-	}
 
+		switch (o.type) {
+		case Creature::TYPE_ANT: {
+			
+			// TODO:
+			// burrow down near nest:
+			//h += 0.2*AL_MIN(0, nestdist);
+			{
+				float range = M_PI * steepness * M_PI;
+				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+				float wander_factor = 0.5f * dt;
+				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+			}
+
+		} break;
+		case Creature::TYPE_BOID: {
+
+			
+			if (copycount > 0) {
+				// average neighbour velocity
+				copy /= float(copycount);
+
+				// split into speed & direction
+				float desired_speed = glm::length(copy);
+
+				auto desired_dir = safe_normalize(copy);
+
+				auto q = get_forward_rotation_to(o.orientation, desired_dir);
+				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
+				
+				// // get disparity
+				// auto influence_diff = desired_dir - uf;
+				// float diff_mag = glm::length(influence_diff);
+				// if (diff_mag > 0.001f && desired_speed > 0.001f) {
+				// 	// try to match speed:
+				// 	speed = glm::min(speed, desired_speed);
+				// 	// try to match orientation:
+
+				// }
+			}
+			if (centrecount > 0) {
+
+				center /= float(centrecount);
+
+				auto desired_dir = safe_normalize(center);
+
+				// if centre is too close, rotate away from it?
+				// centre is relative to self, but not rotated
+				auto q = get_forward_rotation_to(o.orientation, desired_dir);
+				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
+				
+			} else {
+				float range = M_PI * steepness * M_PI;
+				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+				float wander_factor = 0.5f * dt;
+				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+			}
+		} break;
+		case Creature::TYPE_BUG: {
+
+		} break;
+		case Creature::TYPE_PREDATOR_HEAD: {
+
+		} break;
+		case Creature::TYPE_PREDATOR_BODY: {
+
+		} break;
+		} // end switch
+		
+	}
 
 	// let song evolve:
 	o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);
@@ -1640,6 +1741,11 @@ void State::animate(float dt) {
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = particles[i];
 		o.location = o.location + o.velocity * dt;
+		auto norm = transform(world2field, o.location);
+		float h = al_field2d_readnorm_interp(land_dim2, land, glm::vec2(norm.x, norm.z)).w * field2world_scale;
+		if (o.location.y < h || o.location.y > world_centre.y) {
+			o.location.y += dt * 0.1f * (h - o.location.y);
+		}
 		o.location = wrap(o.location, world_min, world_max);
 	}
 
@@ -1657,7 +1763,6 @@ void State::animate(float dt) {
 			// stick to land surface:
 			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), land, norm2);
 			p1 = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
-			p1.y += o.scale*0.5f;
 
 			float distance = glm::length(p1 - o.location);
 			o.location = p1;
@@ -1680,7 +1785,7 @@ void State::animate(float dt) {
 		if (o.state != Creature::STATE_BARDO) {
 			// copy data into the creatureparts:
 			CreaturePart& part = creatureparts[rendercreaturecount];
-			part.id = i;
+			part.id = o.type;//i;
 			part.location = o.location;
 			part.scale = o.scale;
 			part.orientation = o.orientation;
@@ -1705,7 +1810,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	//state->projector1_rotation = t;
 	// TODO: DISABLE!!!!
-	state->update_projector_loc();
+	if (enablers[CALIBRATE]) state->update_projector_loc();
 
 	#ifdef AL_WIN
 	if (1) {
@@ -2500,7 +2605,10 @@ void State::reset() {
 
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = particles[i];
-		o.location = world_centre+glm::ballRand(10.f);
+		auto randpt = glm::linearRand(world_min, world_max);
+		auto norm = transform(world2field, randpt);
+		auto landpt = al_field2d_readnorm_interp(land_dim2, land, glm::vec2(norm.x, norm.z));
+		o.location = transform(field2world, glm::vec3(randpt.x, landpt.w, randpt.z));
 		o.color = glm::vec3(1.f);
 	}
 
@@ -2870,6 +2978,7 @@ extern "C" {
 		
 		#ifdef AL_WIN
 		alice.goFullScreen = true;
+		soloView = 0;
 		#endif
 
 		onReset();
@@ -2900,10 +3009,11 @@ extern "C" {
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_TIMELAPSE] = 1;//1;
-		enablers[SHOW_PARTICLES] = 0;//1;
+		enablers[SHOW_PARTICLES] = 1;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 		enablers[SHOW_HUMANMESH] = 0;
+		enablers[CALIBRATE] = 0;
 
 		//threads_begin();
 

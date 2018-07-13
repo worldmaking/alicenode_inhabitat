@@ -2865,6 +2865,11 @@ extern "C" {
 
 		audiostate = audiostatemap.create("audio/audiostate.bin", true);
 
+		
+		#ifdef AL_WIN
+		alice.window.fullScreen(true);
+		#endif
+
 		onReset();
 
 		
@@ -2900,6 +2905,8 @@ extern "C" {
 
 		//threads_begin();
 
+
+
 	
 		console.log("onload fluid initialized");
 	
@@ -2917,9 +2924,6 @@ extern "C" {
 
 		//alice.window.fullScreen(true);
 
-		#ifdef AL_WIN
-		alice.window.fullScreen(true);
-		#endif
 
 
 		// allocate on GPU:

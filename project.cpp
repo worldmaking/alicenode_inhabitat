@@ -2736,7 +2736,6 @@ void State::update_projector_loc() {
 		console.log("cloud_translate %f %f %f", cloud_translate.x, cloud_translate.y, cloud_translate.z);
 		console.log("cloud_rotate %f %f %f %f", cloud_rotate.x, cloud_rotate.y, cloud_rotate.z, cloud_rotate.w);
 
-		
 		// TODO: determine the projector ground location in real-space
 		auto real_loc = glm::vec3(state->projector1_location_x, 0., state->projector1_location_y);
 		auto rot_mat = glm::rotate(projector1_rotation, glm::vec3(0,1,0));

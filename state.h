@@ -363,6 +363,13 @@ struct State {
 	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
 	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
 
+	float projector1_location_x = 2.;
+	float projector1_location_y = 2.;
+	float projector1_rotation;
+	float projector2_location_x = 3.;
+	float projector2_location_y = 3.;
+	float projector2_rotation;
+
 	float vrFade = 0.f;
 	float creature_speed = 2.f; // in object-size per second
 
@@ -403,6 +410,8 @@ struct State {
 	// thread-safe:
 	int nearest_island(glm::vec3 pos);
 	glm::vec3 random_location_above_land(float h=0.1f);
+
+	void update_projector_loc();
 };
 
 #endif

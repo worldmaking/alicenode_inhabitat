@@ -1,5 +1,7 @@
 # urgency
 
+hide mouse
+
 why does alice disappear when fullscreen but not focused?
 
 generating normals/SDF is waaay to slow, needs to be distributed somehow.

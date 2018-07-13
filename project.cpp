@@ -16,7 +16,7 @@
 #include "al/al_opencv.h"
 #include "alice.h"
 #include "state.h"
-
+// harmless?
 struct Profiler {
 	Timer timer;
 
@@ -2888,8 +2888,9 @@ extern "C" {
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 		enablers[SHOW_HUMANMESH] = 1;
 
-		threads_begin();
-		
+		//threads_begin();
+
+	
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);

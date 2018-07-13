@@ -19,7 +19,6 @@
 // harmless?
 struct Profiler {
 	Timer timer;
-
 	std::vector<std::string> logs;
 
 	void reset() {

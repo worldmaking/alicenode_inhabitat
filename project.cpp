@@ -341,7 +341,7 @@ int fadeState = 0;
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 0; 
+int camMode = 1; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 float camera_speed_default = 40.f;
@@ -352,7 +352,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 0;
+int soloView = 2;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -478,24 +478,29 @@ void State::fields_update(float dt) {
 				//float h = 20 * .1;//heightmap_array.sample(norm);
 				glm::vec4 l;
 				al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), land, norm, &l);
-				float h = 20.f * l.w;
+				float hm = l.w * field2world_scale - coastline_height;
+				float h = l.w;
 				float hu = 0.;//humanmap_array.sample(norm);
 				float dst = C;
 				if (h <= 0 || hu > 0.1) {
 					// force lowlands to be vacant
 					// (note, human will also do this)
 					dst = 0;
-				} else if (C < -0.1) {
+					
+				} else if (C < 0.) {
 					// very negative values gradually drift back to zero
-					dst = C * 0.999;
-				} else if (C < 0) {
-					// and then jump to zero when in [-0.1,0) range
-					dst = 0;
-				} else if (h < C1 || rnd::uni() < 0.00005*h) {
+					// maybe this "fertility" should also depend on height!!
+					dst = C + dt*fungus_recovery_rate;
+				} else if (hm < 0.) {
+					dst = 0.;
+				} else if (rnd::uni() < hm * fungus_seeding_chance * dt) {
+					// seeding chance
+					dst = rnd::uni();
+				} else if (rnd::uni() < fungus_decay_chance * dt / hm) {
 					// if land lower than vitality, decrease vitality
 					// also random chance of decay for any living cell
-					dst = h*rnd::uni();
-				} else if (rnd::uni() < 0.06*h) {
+					dst *= rnd::uni();
+				} else if (rnd::uni() < hm * fungus_migration_chance * dt) {
 					// migration chance increases with altitude
 					// pick a neighbour cell:
 					glm::vec2 tc = cell + glm::vec2(floor(rnd::uni()*3)-1, floor(rnd::uni()*3)-1);
@@ -703,315 +708,16 @@ void State::sim_update(float dt) {
 		}
 	} 
 
-
 	// update all creatures
-	creatures_update(dt);
+	creatures_health_update(dt);
 
 	// simulate creature pass:
 	for (int i=0; i<NUM_CREATURES; i++) {
 		auto &o = creatures[i];
-		// update location in hashspace:
-		if (o.state == Creature::STATE_ALIVE) {
-			hashspace.move(i, glm::vec2(o.location.x, o.location.z));
-		}
-	}
-
-	// simulate creature pass:
-	for (int i=0; i<NUM_CREATURES; i++) {
-		auto &o = creatures[i];
-		AudioState::Frame& audioframe = audiostate->frames[i % NUM_AUDIO_FRAMES];
+		AudioState::Frame& audioframe = audiostate->frames[o.idx % NUM_AUDIO_FRAMES];
 
 		if (o.state == Creature::STATE_ALIVE) {
-
-			//o.island = nearest_island(o.location);
-			
-			// get norm'd coordinate:
-			glm::vec3 norm = transform(world2field, o.location);
-			glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
-			// get a normal for the land:
-			glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
-
-			// re-orient relative to ground:
-			// this happens in main thread, no need here
-			//o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
-				
-			// 0..1 factors:
-			//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
-			float flatness = fabsf(land_normal.y);
-			float steepness = 1.f-flatness;
-			// a direction along which the ground is horizontal (contour)
-			//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
-			glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
-
-			size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
-			//float fungal = fungus_field.front()[fungus_idx];
-			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
-			//if(i == objectSel) console.log("fungal %f", fungal);
-			float eat = glm::max(0.f, fungal) * 1.5f;
-			//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
-			fungus_field.front()[fungus_idx] -= eat;
-			
-			// get my distance from the ground:
-			float sdist; // creature's distance above the ground (or negative if below)
-			al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
-
-			// get fluid flow:
-			//glm::vec3 flow;
-			//fluid.velocities.front().readnorm(norm, &flow.x);
-			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
-			// convert to meters per second:
-			// (why is this needed? shouldn't it be m/s already?)
-			flow *= idt;
-
-
-			// get orientation:
-			glm::quat& oq = o.orientation;
-			
-			// derive from orientation:
-			glm::vec3 up = quat_uy(oq);
-			glm::vec3 uf = quat_uf(oq);
-			// go slower when moving uphill? 
-			// positive value means going uphill, range is -1 to 1
-			//float downhill = glm::dot(uf, glm::vec3(0.f,1.f,0.f)); 
-			float uphill = uf.y;  
-			float downhill = -uphill;
-
-			
-			// zero out by default:
-			// TODO: or decay?
-			o.rot_vel = glm::quat();
-
-			// wander means changing orientation around the creature's up axis
-			if (1) {
-				float range = M_PI * steepness * M_PI;
-				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
-				float wander_factor = 0.5f;
-				//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
-			}
-
-			// float daylight_factor = sin(daytime + 1.5 * a.pos.x) * 0.4 + 0.6; // 0.2 ... 1
-
-			// set my velocity, in meters per second:
-			float speed = creature_speed * o.scale 
-						* (1. + downhill*0.5f)
-						// * (1.f + 0.1f*rnd::bi()) 
-						// * glm::min(1.f, a.health * 10.f)
-						// * daylight_factor*3.f
-						;
-			o.velocity = speed * glm::normalize(uf);
-			//o.velocity = avoid + flow + o.accel*dt;
-			// how far in the future want to focus attention?
-			// look ahead to where we will be in 1 sim frame
-			float lookahead_m = speed * dt; 
-			glm::vec3 ahead_pos = o.location + uf * lookahead_m;
-
-			// maximum number of agents a spatial query can return
-			const int NEIGHBOURS_MAX = 16;
-			// see who's around:
-			std::vector<int32_t> neighbours;
-			float agent_range_of_view = o.scale + 2.f;
-			float agent_personal_space = o.scale * 1.f;
-			float field_of_view = -1.f; // in -1..1
-			// TODO: figure out why the non-toroidal mode isn't working
-			int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(ahead_pos.x, ahead_pos.z), i, agent_range_of_view, 0.f, true);
-
-			//o.color = glm::vec3(0, 1, 0);
-
-			glm::vec3 influence;
-			int influencecount = 0;
-			glm::vec3 center;
-			int centrecount = 0;
-			glm::vec3 avoid;
-			int avoidcount = 0;
-
-
-			//for (auto j : neighbours) {
-			for (int j=0; j<nres; j++) {
-				auto& n = creatures[neighbours[j]];
-
-
-				// get relative vector from a to n:
-				glm::vec3 rel = n.location - ahead_pos; //o.location;
-				float cdistance = glm::length(rel);
-				// skip if we are right on top of each other -- no point
-				if (cdistance < 0.0001f || cdistance > agent_range_of_view) continue;
-
-				//o.color = glm::vec3(0, 0, 1);
-
-				// normalize relative vector:
-				glm::vec3 nrel = rel / cdistance;
-			
-				// get distance between bodies (never be negative)
-				float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
-
-				// skip if not in my field of view
-				float similarity = glm::dot(uf, nrel);
-				if (similarity < field_of_view) continue;
-
-				// copy song (params)
-				o.params = glm::mix(o.params, n.params, creature_song_copy_factor*dt);
-
-
-				// copy velocity
-				influence += n.velocity;
-				influencecount++;
-				
-				// if too close, stop moving:
-				if (distance > 0.0000001f && distance < agent_personal_space) {
-					// add an avoidance force:
-					//float mag = 1. - (distance / agent_personal_space);
-					//float avoid_factor = -0.5;
-
-					// factor is 0 at agent_personal_space
-					// factor is massive when distance is near zero
-					float avoid_factor = ((agent_personal_space/distance) - 1.f);
-					avoid -= rel  * avoid_factor;
-					avoidcount++;
-					//avoid += rel * (mag * avoid_factor);
-					//o.velocity *= glm::vec3(0.5f);
-					//o.velocity = limit(o.velocity, distance);
-				} else {
-					// not too near, so use centering force
-
-					// accumulate centres:
-					center += rel;
-					centrecount++;
-				}
-
-				/*
-				// accumulate avoidances:
-				// base this on where we are going to be next:
-				glm::vec3 future_rel = n.pos - a.pos + ((n.vel - a.vel) * agent_lookahead_frames);
-				float future_distance = glm::max(glm::length(future_rel) - a.size - n.size, 0.f);
-				// if likely to collide:
-				if (future_distance < agent_personal_space) {
-					// add an avoidance force:
-					float mag = 1. - (future_distance / agent_personal_space);
-					glm::vec3 avoid += future_rel * -mag;
-				}
-				*/
-			}
-
-			// adjust velocity according to neighbourhood
-			// actually velocity is just a function of speed & uf
-			// so need to adjust direction
-			
-
-			if (avoidcount > 0) {
-				auto desired_dir = safe_normalize(avoid);
-				desired_dir = quat_unrotate(o.orientation, desired_dir);
-
-				auto q = get_forward_rotation_to(o.orientation, avoid);
-				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.125f);
-				//o.rot_vel = glm::slerp(glm::quat(), q, -2.f);
-
-				// we want the shortest rotation around up that sets the uf toward avoid
-
-				// 
-
-				// auto desired_dir = avoid; //-(world_centre - o.location); //safe_normalize(avoid);
-				// desired_dir = quat_unrotate(o.orientation, desired_dir);
-				// desired_dir = safe_normalize(desired_dir);
-
-				// auto v1 = quat_uf(o.orientation);
-				// auto v2 = desired_dir;
-				// auto axis = glm::cross(v1, v2);
-				// //float w = sqrt(glm::dot(v1,v1)*glm::dot(v2,v2)) + glm::dot(v1, v2);
-				// float w = sqrt(glm::dot(v1,v1)*glm::dot(v2,v2)) + glm::dot(v1, v2);
-
-				// glm::quat arc = safe_normalize(glm::quat(w, axis.x, axis.y, axis.z));
-
-				// auto away = safe_normalize(arc * o.orientation);
-				// o.rot_vel = o.orientation * arc;
-				// //o.orientation = glm::slerp(o.orientation, away, 0.01f);
-				
-				//o.velocity = speed * glm::normalize(avoid);
-				
-				//o.color = glm::vec3(1, 0, 1);
-
-				// // rotate this into my space:
-				// desired_dir = quat_unrotate(o.orientation, desired_dir);
-
-				// // compare with uf:
-				// float similar = -desired_dir.z; //glm::dot(desired_dir, glm::vec3(0, 0, -1));
-				// float angle = -atan2(desired_dir.x, desired_dir.z);
-
-				// //if (fabsf(angle) > 0.001f) {
-				// 	// get desired rotation around our up vector:
-				// 	glm::quat diff = glm::angleAxis(angle, glm::vec3(0,1,0));
-
-				// 	//o.rot_vel = diff;
-				// 	//o.orientation = glm::slerp(o.orientation, diff * o.orientation, 0.1f);
-
-				// 	o.color = glm::vec3(1, 0, 0);
-				//}
-
-				//o.color = desired_dir*0.5f+0.5f;
-				//auto dq = align_forward_to(o.orientation, desired_dir);
-				//o.orientation = glm::slerp(o.orientation, dq, dt);
-
-				//o.rot_vel = get_forward_rotation_to(o.orientation, desired_dir);
-				
-			}
-
-			if (influencecount > 0) {
-				// average neighbour velocity
-				influence /= float(influencecount);
-
-				// split into speed & direction
-				float desired_speed = glm::length(influence);
-				
-				// get disparity
-				auto influence_diff = influence - o.velocity;
-				float diff_mag = glm::length(influence_diff);
-				if (diff_mag > 0.001f && desired_speed > 0.001f) {
-					// try to match speed:
-					speed = glm::min(speed, desired_speed);
-					// try to match orientation:
-
-				}
-			}
-
-			if (centrecount > 0) {
-				center /= float(centrecount);
-
-				// if centre is too close, rotate away from it?
-				// centre is relative to self, but not rotated
-				auto qtocenter = align_forward_to(o.orientation, center);
-				//o.orientation = safe_normalize(glm::slerp(o.orientation, qtocenter, -0.2f));
-			}
-
-			// let song evolve:
-			o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);
-			o.color = glm::vec3(o.params);
-
-			
-
-			float gravity = 2.0f;
-			o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
-			if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
-				// jump!
-				float jump = rnd::uni();
-				o.accel.y = jump * gravity * 2.f * o.scale;
-
-				
-			}
-
-			
-			// add my direction to the fluid current
-			//glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-			glm::vec3 push = o.velocity * (creature_fluid_push * (float)dt);
-			//fluid.velocities.front().addnorm(norm, &push.x);
-			al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
-
-
-			// add some field stuff:
-			glm::vec3 chem;
-			if (i % 2 == 1) chem = food_color * 2.f * dt;
-			if (i % 2 == 0) chem = nest_color * 2.f * dt;
-			// add to land, add to emission:
-			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
-			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
+			creature_alive_update(o, dt);
 
 			audioframe.state = float(o.type) * 0.1f;
 			audioframe.speaker = o.island * 0.1f;
@@ -1081,6 +787,22 @@ void State::sim_update(float dt) {
 	// }
 }
 
+glm::vec3 State::random_location_above_land(float h) {
+	glm::vec2 p;
+	glm::vec4 landpt;
+	int runaway = 100;
+	bool found = false;
+	while (runaway--) {
+		p = glm::linearRand(glm::vec2(0.f), glm::vec2(1.f));
+		landpt = al_field2d_readnorm_interp(land_dim2, land, p);
+		if (landpt.w > h) {
+			break;
+		}
+	}
+	console.log("runaway %d", runaway);
+	return transform(field2world, glm::vec3(p.x, landpt.w, p.y));
+}
+
 int State::nearest_island(glm::vec3 pos) {
 	int which = -1;
 	float d2 = 1000000000.f;
@@ -1098,11 +820,11 @@ int State::nearest_island(glm::vec3 pos) {
 void State::creature_reset(int i) {
 		Creature& a = creatures[i];
 		a.idx = i;
-		a.type = rnd::integer(4) + 1;
+		a.type = Creature::TYPE_BOID;//rnd::integer(4) + 1;
 		a.state = Creature::STATE_ALIVE;
 		a.health = rnd::uni();
 
-		a.location = glm::linearRand(world_min,world_max);
+		a.location = random_location_above_land(0.05f);
 		a.scale = rnd::uni(0.5f) + 0.75f;
 		a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
 		a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
@@ -1111,7 +833,6 @@ void State::creature_reset(int i) {
 
 		a.velocity = glm::vec3(0);
 		a.rot_vel = glm::quat();
-		a.accel = glm::vec3(0);
 		a.island = nearest_island(a.location);
 
 		switch(a.type) {
@@ -1126,13 +847,12 @@ void State::creature_reset(int i) {
 		}
 	}
 
-void State::creatures_update(float dt) {
+void State::creatures_health_update(float dt) {
 
 	int birthcount = 0;
 	int deathcount = 0;
 	int recyclecount = 0;
 
-	
 	// spawn new?
 	//console.log("creature pool count %d", creature_pool.count);
 	if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {
@@ -1161,7 +881,7 @@ void State::creatures_update(float dt) {
 			}
 
 			// simulate as alive
-			//... 
+			hashspace.move(i, glm::vec2(a.location.x, a.location.z));
 
 			// birth chance?
 			if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
@@ -1195,6 +915,10 @@ void State::creatures_update(float dt) {
 				continue;
 			}
 
+			// retain corpse in deadspace:
+			// (TODO: Is this needed, or could a hashspace query do what we need?)
+			dead_space.set_safe(i, norm2);
+
 			// simulate as dead:
 			
 			// rate of decay:
@@ -1207,13 +931,290 @@ void State::creatures_update(float dt) {
 
 			// deposit blood:
 			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, decay * blood_color);
-
-			// retain corpse in deadspace:
-			// (TODO: Is this needed, or could a hashspace query do what we need?)
-			dead_space.set_safe(i, norm2);
 		}
 	}
 	//console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
+}
+
+void State::creature_alive_update(Creature& o, float dt) {
+	float idt = 1.f/dt;
+	// float daylight_factor = sin(daytime + 1.5 * a.pos.x) * 0.4 + 0.6; // 0.2 ... 1
+
+
+	/// FOR ALL CREATURE TYPES ///
+
+
+	// SENSE LOCATION & ORIENTATION
+	// get norm'd coordinate:
+	glm::vec3 norm = transform(world2field, o.location);
+	glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+	// get orientation:
+	glm::quat& oq = o.orientation;
+	// derive from orientation:
+	glm::vec3 up = quat_uy(oq);
+	glm::vec3 uf = quat_uf(oq);
+	// go slower when moving uphill? 
+	// positive value means going uphill, range is -1 to 1
+	//float downhill = glm::dot(uf, glm::vec3(0.f,1.f,0.f)); 
+	float uphill = uf.y;  
+	float downhill = -uphill;
+
+	// SENSE LAND
+	// get a normal for the land:
+	glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
+	// 0..1 factors:
+	//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
+	float flatness = fabsf(land_normal.y);
+	float steepness = 1.f-flatness;
+	// a direction along which the ground is horizontal (contour)
+	//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
+	glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
+	// get my distance from the ground:
+	float sdist; // creature's distance above the ground (or negative if below)
+	al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+
+	// SENSE FLUID
+	// get fluid flow:
+	//glm::vec3 flow;
+	//fluid.velocities.front().readnorm(norm, &flow.x);
+	glm::vec3 fluid = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
+	// convert to meters per second:
+	// (why is this needed? shouldn't it be m/s already?)
+	fluid *= idt;
+
+	// NEIGHBOUR SEARCH:
+	// how far in the future want to focus attention?
+	// look ahead to where we will be in 1 sim frame
+	float lookahead_m = glm::length(o.velocity) * dt; 
+	glm::vec3 ahead_pos = o.location + uf * lookahead_m;
+	// maximum number of agents a spatial query can return
+	const int NEIGHBOURS_MAX = 16;
+	// see who's around:
+	std::vector<int32_t> neighbours;
+	float agent_range_of_view = o.scale * 10.f;
+	float agent_personal_space = o.scale * 1.f;
+	float field_of_view = -0.5f; // in -1..1
+	// TODO: figure out why the non-toroidal mode isn't working
+	int nres = hashspace.query(neighbours, NEIGHBOURS_MAX, glm::vec2(ahead_pos.x, ahead_pos.z), o.idx, agent_range_of_view, 0.f, true);
+
+	// initialize for navigation
+	// zero out by default:
+	// TODO: or decay?
+	o.rot_vel = glm::quat();
+
+	// set my speed in meters per second:
+	float speed = o.scale;
+	speed *= creature_speed 
+			//* (1. + downhill*0.5f)		// tends to make them stay downhill
+			// * (1.f + 0.1f*rnd::bi()) 
+			// * glm::min(1.f, a.health * 10.f)
+			// * daylight_factor*3.f
+			;
+
+	//
+		
+
+	switch (o.type) {
+		case Creature::TYPE_ANT: {
+			// add some field stuff:
+			glm::vec3 chem;
+			if (o.idx % 2 == 1) chem = food_color * 2.f * dt;
+			if (o.idx % 2 == 0) chem = nest_color * 2.f * dt;
+			// add to land, add to emission:
+			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
+			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
+		}
+		break;
+
+		case Creature::TYPE_BOID: {
+			// SENSE FUNGUS
+			size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
+			//float fungal = fungus_field.front()[fungus_idx];
+			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
+			//if(i == objectSel) console.log("fungal %f", fungal);
+			float eat = glm::max(0.f, fungal) * 2.f;
+			//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
+			fungus_field.front()[fungus_idx] -= eat;
+		} 
+		break;
+
+		case Creature::TYPE_BUG: {
+
+		} break;
+
+		case Creature::TYPE_PREDATOR_HEAD: {
+
+		} break;
+
+		case Creature::TYPE_PREDATOR_BODY: {
+
+		} break;
+
+		
+	}
+
+	o.velocity = speed * glm::normalize(uf);
+
+	
+
+	
+
+	//o.color = glm::vec3(0, 1, 0);
+
+	glm::vec3 copy;
+	int copycount = 0;
+	glm::vec3 center;
+	int centrecount = 0;
+	glm::vec3 avoid;
+	int avoidcount = 0;
+
+
+	//for (auto j : neighbours) {
+	for (int j=0; j<nres; j++) {
+		auto& n = creatures[neighbours[j]];
+		// its future location
+		auto nfut = n.location + n.scale * n.velocity*dt;
+
+		// get relative vector from a to n:
+		glm::vec3 rel = nfut - ahead_pos; //o.location;
+		float cdistance = glm::length(rel);
+		// skip if we are right on top of each other -- no point
+		if (cdistance < 0.0001f || cdistance > agent_range_of_view) continue;
+
+		//o.color = glm::vec3(0, 0, 1);
+
+		// normalize relative vector:
+		glm::vec3 nrel = rel / cdistance;
+	
+		// get distance between bodies (never be negative)
+		float distance = glm::max(cdistance - o.scale - n.scale, 0.f);
+
+		// skip if not in my field of view
+		float similarity = glm::dot(uf, nrel);
+		if (similarity < field_of_view) continue;
+
+		// copy song (params)
+		o.params = glm::mix(o.params, n.params, creature_song_copy_factor*dt);
+		
+		// if too close, stop moving:
+		if (distance > 0.0000001f && distance < agent_personal_space) {
+			// add an avoidance force:
+			//float mag = 1. - (distance / agent_personal_space);
+			//float avoid_factor = -0.5;
+
+			// factor is 0 at agent_personal_space
+			// factor is massive when distance is near zero
+			float avoid_factor = ((agent_personal_space/distance) - 1.f);
+			avoid -= rel  * avoid_factor;
+			avoidcount++;
+			//avoid += rel * (mag * avoid_factor);
+			//o.velocity *= glm::vec3(0.5f);
+			//o.velocity = limit(o.velocity, distance);
+		} else {
+			// not too near, so use centering force
+
+			// accumulate centres:
+			center += rel;
+			centrecount++;
+
+			copy += n.velocity;
+			copycount++;
+		}
+	}
+
+	// adjust velocity according to neighbourhood
+	// actually velocity is just a function of speed & uf
+	// so need to adjust direction
+	// (though, could throttle speed to avoid collision)
+
+	o.color = glm::vec3(0,1,0);
+	// turn away from lowlands:
+	
+	if (o.location.y < coastline_height) {
+		// instant death
+		o.health = 0.;
+	} else if (o.location.y < coastline_height*2.) {
+
+		// get a very smooth normal:
+		float smooth = 0.5f;
+		glm::vec3 ln = sdf_field_normal4(land_dim, distance, norm, 0.125f/LAND_DIM);
+
+		auto desired_dir = safe_normalize(glm::vec3(-ln.x, 0.f, -ln.z));
+		auto q = get_forward_rotation_to(o.orientation, desired_dir);
+		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.5f);
+		o.color = glm::vec3(1,0,0);
+
+	} else if (avoidcount > 0) {
+		auto desired_dir = safe_normalize(avoid);
+		//desired_dir = quat_unrotate(o.orientation, desired_dir);
+
+		auto q = get_forward_rotation_to(o.orientation, desired_dir);
+		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
+		
+	} else if (centrecount > 0) {
+
+		if (copycount > 0) {
+			// average neighbour velocity
+			copy /= float(copycount);
+
+			// split into speed & direction
+			float desired_speed = glm::length(copy);
+
+			auto desired_dir = safe_normalize(copy);
+
+			auto q = get_forward_rotation_to(o.orientation, desired_dir);
+			o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
+			
+			// // get disparity
+			// auto influence_diff = desired_dir - uf;
+			// float diff_mag = glm::length(influence_diff);
+			// if (diff_mag > 0.001f && desired_speed > 0.001f) {
+			// 	// try to match speed:
+			// 	speed = glm::min(speed, desired_speed);
+			// 	// try to match orientation:
+
+			// }
+		}
+
+		center /= float(centrecount);
+
+		auto desired_dir = safe_normalize(center);
+
+		// if centre is too close, rotate away from it?
+		// centre is relative to self, but not rotated
+		auto q = get_forward_rotation_to(o.orientation, desired_dir);
+		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
+		
+	} else {
+		float range = M_PI * steepness * M_PI;
+		glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+		float wander_factor = 0.5f * dt;
+		//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+	}
+
+
+	// let song evolve:
+	o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);
+	//o.color = glm::vec3(o.params);
+
+	// float gravity = 2.0f;
+	// o.accel.y -= gravity; //glm::mix(o.accel.y, newrise, 0.04f);
+	// if (sdist < (o.scale * 0.025f)) { //(o.scale * rnd::uni(2.f))) {
+	// 	// jump!
+	// 	float jump = rnd::uni();
+	// 	o.accel.y = jump * gravity * 2.f * o.scale;
+
+		
+	// }
+
+	
+	// add my direction to the fluid current
+	//glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
+	glm::vec3 push = o.velocity * (creature_fluid_push * (float)dt);
+	//fluid.velocities.front().addnorm(norm, &push.x);
+	al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
+
+	
 }
 
 void onUnloadGPU() {
@@ -1964,7 +1965,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				navloc = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w+0.01f), norm.z));
 
 				navloc = glm::mix(navloc, loc, 0.1f);
-				navquat = glm::slerp(navquat, o.orientation, 0.1f);
+				navquat = glm::slerp(navquat, o.orientation, 0.03f);
 			}
 		}
 	}
@@ -2482,14 +2483,6 @@ void State::reset() {
 		}
 	}
 
-	for (int i=0; i<NUM_CREATURES; i++) {
-		Creature& a = creatures[i];
-		a.idx = i;
-		a.type = rnd::integer(4) + 1;
-
-		creature_reset(i);
-	}
-
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = particles[i];
 		o.location = world_centre+glm::ballRand(10.f);
@@ -2595,7 +2588,6 @@ void State::reset() {
 		}
 	}
 
-
 	// make up some speaker locations:
 	for (int i=0; i<NUM_ISLANDS; i++) {
 
@@ -2616,6 +2608,14 @@ void State::reset() {
 		debugdots[id].location = island_centres[i];
 		debugdots[id].color = glm::vec3(1,0,0);
 		debugdots[id].size = particleSize * 500;
+	}
+
+	for (int i=0; i<NUM_CREATURES; i++) {
+		Creature& a = creatures[i];
+		a.idx = i;
+		a.type = rnd::integer(4) + 1;
+
+		creature_reset(i);
 	}
 
 }
@@ -2878,15 +2878,15 @@ extern "C" {
 		flowTex.generateMipMap = true;
 		
 
-		enablers[SHOW_LANDMESH] = 0;
-		enablers[SHOW_AS_GRID] = 1;
+		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;
-		enablers[SHOW_TIMELAPSE] = 1;//1;
+		enablers[SHOW_TIMELAPSE] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
-		enablers[SHOW_HUMANMESH] = 1;
+		enablers[SHOW_HUMANMESH] = 0;
 
 		//threads_begin();
 

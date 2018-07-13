@@ -1,9 +1,66 @@
+# Bring in the inhabitat species behaviours!!
+
+onFrame -> animate():
+- particle movement
+- creature anim (if alive):
+      - add vel, stay on land, twist, orient to land, add phase
+sim_update:
+- land, particles
+- creatures_health_update():
+      - spawn new?
+      - hashspace/deadspace move/remove
+      - death check
+      - reproduction check
+      - decay process
+- creatures_alive_update
+      - get local status (fungus, land,  etc.)
+      - find neighbours
+      - navigate
+      - evolve song, push fluid
+
+TODO: 
+      - turn away from island borders (steepness)
+      - human carry
+
+- BOIDS
+      - speed boid-specific, depends on 'daylight'
+      - slower when eating
+      - velocity approximates "influence" 
+      - grab neighbours for avoid, copy, center forces
+            - viz limited by dot > -0.5
+            - viewrange boid-specific
+            - copy songs of in-range
+            - if distance < boids_closerange, avoid
+            - else center + copy
+            - avoiding coastline takes precedence over flocking
+            - otherwise smooth avoid/copy/center factors & add them to get influence (a direction)
+            - otherwise if no neighbours, wander
+      - then eat food
+
+
 
 # TODO list
 
-Bring in the inhabitat species behaviours!!
-
 Why is projector not lining up? Is it a 180 flip? Or was it just a mismatch between projector/kinect pair?
+
+Land generation from kinect data;
+- have a decent human-texture following, need to filter this to acquire land
+- old method was: 
+      - spatial blur (4-points)
+            - (Could maybe use diffuse() instead?)
+      - temporal mix (needs land_prev)
+      - decay
+- old human method:
+      - also 4-point blur, but ignoring points lower than central point
+- also need to project human back onto land (from projector POV) for accurate fungus-killing
+
+Do we really need normals for human field?
+
+Flow for carrying
+- cv routine data is being generated, but looks quite noisy
+- perhaps run it on the human field, which is already smoothed?
+- test by applying to particles (instead of fluid)?
+
 
 creatures shouldn't wander off to lands below the min height; they should turn away
 - also, edge-of-world should mean death

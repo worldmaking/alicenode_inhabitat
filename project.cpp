@@ -17,7 +17,6 @@
 #include "alice.h"
 #include "state.h"
 
-
 struct Profiler {
 	Timer timer;
 	std::vector<std::string> logs;

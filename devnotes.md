@@ -1,9 +1,13 @@
+# urgency
+
+why does alice disappear when fullscreen but not focused?
+
+generating normals/SDF is waaay to slow, needs to be distributed somehow.
 
 # TODO list
 
-Bring in the inhabitat species behaviours!!
 
-Why is projector not lining up? Is it a 180 flip? Or was it just a mismatch between projector/kinect pair?
+Bring in the inhabitat species behaviours!!
 
 creatures shouldn't wander off to lands below the min height; they should turn away
 - also, edge-of-world should mean death

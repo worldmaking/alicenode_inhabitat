@@ -555,7 +555,6 @@ void State::sim_update(float dt) {
 	float idt = 1.f/dt;
 
 	Alice& alice = Alice::Instance();
-	if (!alice.isSimulating) return;
 
 
 	// get the most recent complete frame:
@@ -628,11 +627,13 @@ void State::sim_update(float dt) {
 		}
 
 		// next, calculate normals
-		generate_land_sdf_and_normals();
+		// THIS IS TOO SLOW!!!!
+		//generate_land_sdf_and_normals();
 
 		// next, filter out what we think might be the land vs. the human
 		// 1. 
 	}
+	if (!alice.isSimulating) return;
 
 	if (1) {
 		{
@@ -2299,7 +2300,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	profiler.log("draw to window", alice.fps.dt);
 
 	if (showFPS) {
-		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f)wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, gBufferVR.dim.x, gBufferVR.dim.y);
+		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
 		//profiler.dump();
 	}
 }

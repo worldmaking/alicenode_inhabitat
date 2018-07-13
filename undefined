@@ -16,10 +16,9 @@
 #include "al/al_opencv.h"
 #include "alice.h"
 #include "state.h"
-// harmless?
+
 struct Profiler {
 	Timer timer;
-
 	std::vector<std::string> logs;
 
 	void reset() {
@@ -2728,6 +2727,7 @@ void State::update_projector_loc() {
 			// glm declares as w x y z
 			cloud_rotate = glm::quat(j.at(3), j.at(0), j.at(1), j.at(2));
 		}
+
 
 		console.log("pos %f %f %f", pos.x, pos.y, pos.z);
 		console.log("quat %f %f %f %f", orient.x, orient.y, orient.z, orient.w);

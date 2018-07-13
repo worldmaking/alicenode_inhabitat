@@ -9,7 +9,7 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 38.0, 85.0, 773.0, 875.0 ],
+		"rect" : [ 8.0, 51.0, 773.0, 875.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"bglocked" : 0,
@@ -44,7 +44,7 @@
 					"maxclass" : "newobj",
 					"numinlets" : 0,
 					"numoutlets" : 0,
-					"patching_rect" : [ 1312.0, 881.0, 61.0, 22.0 ],
+					"patching_rect" : [ 23.75, 790.333374, 61.0, 22.0 ],
 					"style" : "",
 					"text" : "ufxStatus"
 				}
@@ -4519,7 +4519,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 547.75, 0.000023, 70.949951, 20.0 ],
 					"style" : "",
-					"text" : "CPU: 0%"
+					"text" : "CPU: 33%"
 				}
 
 			}
@@ -5770,6 +5770,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 8,
 					"id" : "obj-123",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5787,6 +5788,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 7,
 					"id" : "obj-122",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5804,6 +5806,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 6,
 					"id" : "obj-120",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5821,6 +5824,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 5,
 					"id" : "obj-119",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5838,6 +5842,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 4,
 					"id" : "obj-118",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5855,6 +5860,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 3,
 					"id" : "obj-117",
 					"labels" : 0,
 					"maxclass" : "waveform~",
@@ -5872,6 +5878,7 @@
 , 			{
 				"box" : 				{
 					"buffername" : "grain_buffer",
+					"chanoffset" : 2,
 					"id" : "obj-115",
 					"labels" : 0,
 					"maxclass" : "waveform~",

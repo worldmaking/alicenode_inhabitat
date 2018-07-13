@@ -2315,6 +2315,10 @@ void onFrame(uint32_t width, uint32_t height) {
 		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
 		//profiler.dump();
 	}
+
+		#ifdef AL_WIN
+		//alice.window.fullScreen(true);
+		#endif
 }
 
 
@@ -2867,7 +2871,7 @@ extern "C" {
 
 		
 		#ifdef AL_WIN
-		alice.window.fullScreen(true);
+		//alice.window.fullScreen(true);
 		#endif
 
 		onReset();

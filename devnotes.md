@@ -1,6 +1,7 @@
 # urgency
 
 hide mouse
+fs on windows
 
 why does alice disappear when fullscreen but not focused?
 

@@ -338,6 +338,9 @@ glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
 glm::vec3 nextVrLocation;
 int fadeState = 0;
 
+uint8_t humanchar0[LAND_TEXELS];
+uint8_t humanchar1[LAND_TEXELS];
+
 //// DEBUG STUFF ////
 int debugMode = 0;
 int camMode = 1; 
@@ -374,6 +377,7 @@ std::mutex sim_mutex;
 MetroThread simThread(25);
 MetroThread fieldThread(25);
 MetroThread fluidThread(10);
+MetroThread landThread(10);
 bool isRunning = 1;
 bool teleporting = false;
 
@@ -486,7 +490,7 @@ void State::fields_update(float dt) {
 				al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), land, norm, &l);
 				float hm = l.w * field2world_scale - coastline_height;
 				float h = l.w;
-				float hu = 0.;//humanmap_array.sample(norm);
+				float hu = al_field2d_readnorm_interp(land_dim2, human.front(), norm);
 				float dst = C;
 				if (h <= 0 || hu > 0.1) {
 					// force lowlands to be vacant
@@ -556,6 +560,36 @@ void State::fields_update(float dt) {
 	}
 }
 
+void land_update(double dt) { 
+	if (Alice::Instance().isSimulating) state->land_update(dt); 
+}
+
+void State::land_update(float dt) {
+	for (int y=0; y<LAND_DIM; y++) {
+		for (int x=0; x<LAND_DIM; x++) {
+			auto land_idx = al_field2d_index_nowrap(land_dim2, x, y);
+
+			float h = human.front()[land_idx];
+
+			if (h == 0.f) continue;
+
+			glm::vec4& landpt = land[land_idx];
+			if (h < landpt.w) {
+				// fall quickly:
+				landpt.w = glm::mix(landpt.w, h, land_fall_rate * dt);
+			} else {
+				// fall quickly:
+				landpt.w = glm::mix(landpt.w, h, land_rise_rate * dt);
+			}
+			
+		}
+	}
+	
+	// next, calculate normals
+	// THIS IS TOO SLOW!!!!
+	generate_land_sdf_and_normals();
+}
+
 void sim_update(double dt) { 
 	if (Alice::Instance().isSimulating) state->sim_update(dt); 
 }
@@ -587,13 +621,14 @@ void State::sim_update(float dt) {
 	if (1) {
 		// first, dampen the human field:
 		for (int i=0; i<LAND_TEXELS; i++) {
-			human[i].w *= human_height_decay;
+			human.front()[i] *= human_height_decay;
 		}
 		
 		// for each Kinect
 		for (int i=0; i<2; i++) {
 			
 			const CloudFrame& cloudFrame0 = i ? kinect1.cloudFrame() : kinect0.cloudFrame();
+			const CloudFrame& cloudFrame1 = i ? kinect1.cloudFramePrev() : kinect0.cloudFramePrev();
 			const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
 			const glm::vec2 * uv_points0 = cloudFrame0.uv;
 			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
@@ -624,29 +659,69 @@ void State::sim_update(float dt) {
 				int landidx = al_field2d_index_norm(land_dim2, norm2);
 				
 				// set the land value accordingly:
-				glm::vec4& humanpt = human[landidx];
+				float& humanpt0 = human.front()[landidx];
+				float& humanpt1 = human.back()[landidx];
 
-				// could mix toward this? though live update actually looked pretty good
 				float h = world2field_scale * pt.y;
-				//humanpt.w = glm::mix(humanpt.w, h, 0.5f);
-				humanpt.w = h;
+				humanpt1 = glm::mix(humanpt0, h, 0.5f);
 
 				// in archi15 we also did spatial filtering
 
 
-				// TODO: make land smoother
-				glm::vec4& landpt = land[landidx];
-				landpt.w = glm::mix(landpt.w, h, 0.1f);
+			}
 
+		} // end 2 kinects
+		
+		human.swap();
+
+		// NOW FLOW
+		#ifdef AL_WIN
+		if (1) {
+
+			// copy human to char arrays for CV:
+			for (int i=0; i<LAND_TEXELS; i++) {
+				humanchar0[i] = humanchar1[i];
+				humanchar1[i] = human.front()[i] * 255;
+			}
+			
+			int levels = 3; // default=5;
+			double pyr_scale = 0.5;
+			int winsize = 13;
+			int iterations = 3; // default = 10;
+			int poly_n = 5;
+			double poly_sigma = 1.2; // default = 1.1
+			int flags = 0;
+			
+			// create CV mat wrapper around Jitter matrix data
+			// (cv declares dim as numrows, numcols, i.e. dim1, dim0, or, height, width)
+			void * src;
+			cv::Mat prev(LAND_DIM, LAND_DIM, CV_8UC(1), (void *)humanchar0);
+			cv::Mat next(LAND_DIM, LAND_DIM, CV_8UC(1), (void *)humanchar1);
+			cv::Mat flow(LAND_DIM, LAND_DIM, CV_32FC(2), (void *)state->flow);
+			cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
+			
+			// now disturb the fluid:
+			for (int y=0, i=0; y<LAND_DIM; y++) {
+				for (int x=0; x<LAND_DIM; x++, i++) {
+					glm::vec3 norm = glm::vec3(
+						x/float(LAND_DIM), 
+						human.front()[i], 
+						y/float(LAND_DIM)
+					);
+
+					glm::vec3 push = glm::vec3(
+						flow[i].x, 
+						0.f, 
+						flow[i].y); 
+					push = push * (flow_scale * dt);
+
+					al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
+				}
 			}
 		}
+		#endif
 
-		// next, calculate normals
-		// THIS IS TOO SLOW!!!!
-		//generate_land_sdf_and_normals();
-
-		// next, filter out what we think might be the land vs. the human
-		// 1. 
+		
 	}
 	if (!alice.isSimulating) return;
 
@@ -1812,37 +1887,6 @@ void onFrame(uint32_t width, uint32_t height) {
 	// TODO: DISABLE!!!!
 	if (enablers[CALIBRATE]) state->update_projector_loc();
 
-	#ifdef AL_WIN
-	if (1) {
-		CloudDevice& cd = alice.cloudDeviceManager.devices[0];
-		const CloudFrame& frame0 = cd.cloudFramePrev();
-		const CloudFrame& frame1 = cd.cloudFrame();
-
-		// const glm::vec3 * cloud_points = cloudFrame.xyz;
-		// const glm::vec2 * uv_points = cloudFrame.uv;
-		// const glm::vec3 * rgb_points = cloudFrame.rgb;
-		// uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
-		
-		int levels = 3; // default=5;
-		double pyr_scale = 0.5;
-		int winsize = 13;
-		int iterations = 3; // default = 10;
-		int poly_n = 5;
-		double poly_sigma = 1.2; // default = 1.1
-		int flags = 0;
-		
-		// create CV mat wrapper around Jitter matrix data
-		// (cv declares dim as numrows, numcols, i.e. dim1, dim0, or, height, width)
-		void * src;
-		cv::Mat prev(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame0.depth);
-		cv::Mat next(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame1.depth);
-
-		cv::Mat flow(cDepthHeight, cDepthWidth, CV_32FC(2), (void *)state->flow);
-		
-		cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
-		
-	}
-	#endif
 
 	if (1) {	
 		// LEAP & TELEPORTING
@@ -2107,7 +2151,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->field_texture[0]);
 		noiseTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->noise_texture[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
-		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human[0]);
+		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human.front()[0]);
 		distanceTex.submit(land_dim, (float *)&state->distance[0]);
 		flowTex.submit(glm::ivec2(512,424), &state->flow[0]);
 		
@@ -2416,7 +2460,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	profiler.log("draw to window", alice.fps.dt);
 
 	if (showFPS) {
-		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
+		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) land %f (%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, landThread.fps.fps, landThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
 		//profiler.dump();
 	}
 
@@ -2537,6 +2581,7 @@ void threads_begin() {
 	simThread.begin(sim_update);
 	fieldThread.begin(fields_update);
 	fluidThread.begin(fluid_update);
+	landThread.begin(land_update);
 	console.log("started threads");
 }
 
@@ -2547,6 +2592,7 @@ void threads_end() {
 	simThread.end();
 	fieldThread.end();
 	fluidThread.end();
+	landThread.end();
 	console.log("ended threads");
 }
 

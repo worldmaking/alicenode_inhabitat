@@ -3,6 +3,10 @@
 why does alice disappear when fullscreen but not focused?
 
 generating normals/SDF is waaay to slow, needs to be distributed somehow.
+
+land should be infered from human, not from kinect data
+
+
 # Bring in the inhabitat species behaviours!!
 
 onFrame -> animate():

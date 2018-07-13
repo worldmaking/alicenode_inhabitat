@@ -1,10 +1,8 @@
-<<<<<<< HEAD
 # urgency
 
 why does alice disappear when fullscreen but not focused?
 
 generating normals/SDF is waaay to slow, needs to be distributed somehow.
-=======
 # Bring in the inhabitat species behaviours!!
 
 onFrame -> animate():
@@ -44,7 +42,6 @@ TODO:
             - otherwise if no neighbours, wander
       - then eat food
 
->>>>>>> 694d6728e4ecc04a0ecfa5f112e036999bc8fd91
 
 
 <<<<<<< HEAD

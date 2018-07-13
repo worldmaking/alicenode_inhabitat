@@ -352,7 +352,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 2;
+int soloView = 0;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -628,6 +628,10 @@ void State::sim_update(float dt) {
 				// in archi15 we also did spatial filtering
 
 
+				// TODO: make land smoother
+				glm::vec4& landpt = land[landidx];
+				landpt.w = glm::mix(landpt.w, h, 0.1f);
+
 			}
 		}
 
@@ -800,7 +804,7 @@ glm::vec3 State::random_location_above_land(float h) {
 			break;
 		}
 	}
-	console.log("runaway %d", runaway);
+	//console.log("runaway %d", runaway);
 	return transform(field2world, glm::vec3(p.x, landpt.w, p.y));
 }
 
@@ -2281,19 +2285,21 @@ void onFrame(uint32_t width, uint32_t height) {
 			default: soloView = 0;
 		}
 	} else {
-		projectors[0].fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5, -0.5));
-		projectors[1].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5, -0.5));
-		projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
+		float third = 1.f/3.f;
+		float sixth = 1.f/6.f;
+		projectors[0].fbo.draw(glm::vec2(third, 1.f), glm::vec2(-2.f*third, 0.f));
+		projectors[1].fbo.draw(glm::vec2(third, 1.f), glm::vec2(0.f, 0.f));
+		//projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
 		{
 			if (!SHOW_TIMELAPSE) {
 				flowShader.use();
 				flowShader.uniform("tex", 0);
-				flowShader.uniform("uScale", glm::vec2(0.5f));
-				flowShader.uniform("uOffset", glm::vec2(0.5,  0.5));
+				flowShader.uniform("uScale", glm::vec2(third, 1.f));
+				flowShader.uniform("uOffset", glm::vec2(2.f*third,  0.f));
 				texDraw.draw_no_shader(flowTex.id);
 				flowShader.unuse();
 			} else {
-				fbo.draw(glm::vec2(0.5f), glm::vec2( 0.5,  0.5));
+				fbo.draw(glm::vec2(third, 1.f), glm::vec2(2.f*third,  0.f));
 			}
 		}
 		//
@@ -2883,11 +2889,11 @@ extern "C" {
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;
-		enablers[SHOW_TIMELAPSE] = 0;//1;
+		enablers[SHOW_TIMELAPSE] = 1;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
-		enablers[SHOW_HUMANMESH] = 0;
+		enablers[SHOW_HUMANMESH] = 1;
 
 		//threads_begin();
 

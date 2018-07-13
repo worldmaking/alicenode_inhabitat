@@ -365,10 +365,10 @@ struct State {
 
 	float projector1_location_x = 2.;
 	float projector1_location_y = 2.;
-	float projector1_rotation;
+	float projector1_rotation = 0.f;
 	float projector2_location_x = 3.;
 	float projector2_location_y = 3.;
-	float projector2_rotation;
+	float projector2_rotation = 0.f;
 
 	float vrFade = 0.f;
 	float creature_speed = 2.f; // in object-size per second

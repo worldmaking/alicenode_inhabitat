@@ -2896,7 +2896,7 @@ extern "C" {
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
-		enablers[SHOW_HUMANMESH] = 1;
+		enablers[SHOW_HUMANMESH] = 0;
 
 		//threads_begin();
 
@@ -2916,6 +2916,10 @@ extern "C" {
 		console.log("gBuffer dim %d x %d", gBufferVR.dim.x, gBufferVR.dim.y);
 
 		//alice.window.fullScreen(true);
+
+		#ifdef AL_WIN
+		alice.window.fullScreen(true);
+		#endif
 
 
 		// allocate on GPU:

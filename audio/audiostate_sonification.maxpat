@@ -4,12 +4,12 @@
 		"appversion" : 		{
 			"major" : 7,
 			"minor" : 3,
-			"revision" : 5,
-			"architecture" : "x86",
+			"revision" : 4,
+			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 76.0, 115.0, 801.0, 807.0 ],
+		"rect" : [ 76.0, 115.0, 731.0, 807.0 ],
 		"bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"editing_bgcolor" : [ 0.898039, 0.898039, 0.898039, 1.0 ],
 		"bglocked" : 0,
@@ -40,6 +40,37 @@
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
 				"box" : 				{
+					"id" : "obj-7",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 20.0, 1104.5, 69.0, 22.0 ],
+					"saved_object_attributes" : 					{
+						"allwindowsactive" : 0,
+						"audiosupport" : 1,
+						"bundleidentifier" : "com.mycompany.myprogram",
+						"cantclosetoplevelpatchers" : 1,
+						"cefsupport" : 1,
+						"copysupport" : 1,
+						"database" : 0,
+						"extensions" : 1,
+						"gensupport" : 1,
+						"midisupport" : 1,
+						"noloadbangdefeating" : 0,
+						"overdrive" : 0,
+						"preffilename" : "Max 7 Preferences",
+						"searchformissingfiles" : 1,
+						"statusvisible" : 0,
+						"usesearchpath" : 0
+					}
+,
+					"style" : "",
+					"text" : "standalone"
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"id" : "obj-13",
 					"maxclass" : "message",
 					"numinlets" : 2,
@@ -63,8 +94,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -193,8 +224,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -251,8 +282,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -537,7 +568,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 621.5, 18.499992, 77.25, 22.0 ],
 					"style" : "",
-					"text" : "connected 0"
+					"text" : "connected 1"
 				}
 
 			}
@@ -553,8 +584,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -723,8 +754,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -780,8 +811,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -824,8 +855,8 @@
 														"appversion" : 														{
 															"major" : 7,
 															"minor" : 3,
-															"revision" : 5,
-															"architecture" : "x86",
+															"revision" : 4,
+															"architecture" : "x64",
 															"modernui" : 1
 														}
 ,
@@ -1205,8 +1236,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -1378,7 +1409,7 @@
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 152.0, 372.5, 55.5, 36.0 ],
 									"style" : "",
-									"text" : ";\rmax quit"
+									"text" : ";\r\nmax quit"
 								}
 
 							}
@@ -1627,7 +1658,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 23.75, 919.0, 190.0, 154.0 ],
+					"patching_rect" : [ 23.75, 919.0, 190.0, 158.0 ],
 					"style" : "",
 					"text" : "clipControl [1] prevents audio spikes above 0dB from going out to speaker, and [2] if audio spikes more than 50 times*, it reports this to the resiliency.js\n\n*50 can happen quite quickly, or take a long time, so if it doesn't reach 50 in 5000ms, reset counter. there's probably a more elegant way of doing this all, but..."
 				}
@@ -1653,10 +1684,10 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 15.5, 497.333313, 180.0, 74.0 ],
+					"patching_rect" : [ 15.5, 497.333313, 180.0, 75.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 4,
-					"presentation_rect" : [ 515.75, 685.0, 226.0, 60.0 ],
+					"presentation_rect" : [ 515.75, 685.0, 226.0, 62.0 ],
 					"style" : "",
 					"text" : "Safe shutdown sequence: if launch.sh/bat exits, it runs a node script that sends to this file: save patch, fade audio, close patch file, quit max. "
 				}
@@ -1669,7 +1700,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 1248.0, 784.0, 168.0, 60.0 ],
+					"patching_rect" : [ 1248.0, 784.0, 168.0, 62.0 ],
 					"style" : "",
 					"text" : "MAYBE: communication with resiliency.js? i.e. if the audio driver crashed, if rme UFX+ isn't found, etc?"
 				}
@@ -1687,8 +1718,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -1826,8 +1857,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -1965,8 +1996,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -2104,8 +2135,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -2362,10 +2393,10 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 15.5, 574.333313, 93.0, 60.0 ],
+					"patching_rect" : [ 15.5, 574.333313, 93.0, 62.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 3,
-					"presentation_rect" : [ 544.75, 627.166687, 151.0, 47.0 ],
+					"presentation_rect" : [ 544.75, 627.166687, 151.0, 48.0 ],
 					"style" : "",
 					"text" : "Disable max quit on patcher close, OFF by default"
 				}
@@ -2418,7 +2449,7 @@
 					"maxclass" : "newobj",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 34.0, 126.5, 56.0, 22.0 ],
+					"patching_rect" : [ 20.0, 1080.5, 56.0, 22.0 ],
 					"style" : "",
 					"text" : "onecopy"
 				}
@@ -2431,10 +2462,10 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 975.666687, 150.5, 169.0, 141.0 ],
+					"patching_rect" : [ 975.666687, 150.5, 169.0, 144.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 8,
-					"presentation_rect" : [ 515.699951, 500.333374, 207.0, 114.0 ],
+					"presentation_rect" : [ 515.699951, 500.333374, 207.0, 117.0 ],
 					"style" : "",
 					"text" : "to do: get vr person's position in sim (which island they are on, use that to mix audio in headphones.\n\nthe server.js has a watch function to check if max is running. if max is not running, it launches, and then opens this patch"
 				}
@@ -2452,8 +2483,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -3259,8 +3290,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -4067,8 +4098,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -4841,8 +4872,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -5616,8 +5647,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -5905,7 +5936,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 547.75, 0.000023, 70.949951, 20.0 ],
 					"style" : "",
-					"text" : "CPU: 5%"
+					"text" : "CPU: 24%"
 				}
 
 			}
@@ -6142,7 +6173,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 70.75, 693.0, 149.0, 33.0 ],
+					"patching_rect" : [ 70.75, 693.0, 149.0, 34.0 ],
 					"style" : "",
 					"text" : "pls don't encapsulate the closebang nor thispatcher!"
 				}
@@ -6187,8 +6218,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -6468,8 +6499,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -7322,8 +7353,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -7380,8 +7411,8 @@
 										"appversion" : 										{
 											"major" : 7,
 											"minor" : 3,
-											"revision" : 5,
-											"architecture" : "x86",
+											"revision" : 4,
+											"architecture" : "x64",
 											"modernui" : 1
 										}
 ,
@@ -8059,7 +8090,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1085.5, 407.5, 120.0, 49.0 ],
+					"patching_rect" : [ 1085.5, 407.5, 120.0, 50.0 ],
 					"presentation_rect" : [ 283.5, 288.0, 279.0, 22.0 ],
 					"style" : "",
 					"text" : "bin2buf~ @file audiostate.bin @buffer grain_buffer"
@@ -8078,8 +8109,8 @@
 						"appversion" : 						{
 							"major" : 7,
 							"minor" : 3,
-							"revision" : 5,
-							"architecture" : "x86",
+							"revision" : 4,
+							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
@@ -8255,7 +8286,7 @@
 					"patching_rect" : [ 870.25, 630.5, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 596.333374, 99.875, 35.0 ],
+					"presentation_rect" : [ 1.16666, 596.333374, 99.875, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type4 @dumpoutlet 1"
 				}
@@ -8314,7 +8345,7 @@
 					"patching_rect" : [ 654.083374, 630.5, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 398.666687, 99.874969, 35.0 ],
+					"presentation_rect" : [ 1.16666, 398.666687, 99.874969, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type3 @dumpoutlet 1"
 				}
@@ -8388,7 +8419,7 @@
 					"patching_rect" : [ 437.916656, 625.0, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.66666, 203.0, 99.874985, 35.0 ],
+					"presentation_rect" : [ 1.66666, 203.0, 99.874985, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type2 @dumpoutlet 1"
 				}
@@ -8490,7 +8521,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 801.5, 990.0, 150.0, 74.0 ],
+					"patching_rect" : [ 801.5, 990.0, 150.0, 75.0 ],
 					"presentation_linecount" : 5,
 					"presentation_rect" : [ 596.5, 159.0, 150.0, 74.0 ],
 					"style" : "",
@@ -8505,7 +8536,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 754.5, 990.0, 150.0, 74.0 ],
+					"patching_rect" : [ 754.5, 990.0, 150.0, 75.0 ],
 					"presentation_linecount" : 5,
 					"presentation_rect" : [ 588.5, 55.0, 150.0, 74.0 ],
 					"style" : "",
@@ -8607,7 +8638,7 @@
 					"patching_rect" : [ 222.0, 625.0, 155.0, 22.0 ],
 					"presentation" : 1,
 					"presentation_linecount" : 2,
-					"presentation_rect" : [ 1.16666, 4.0, 99.875, 35.0 ],
+					"presentation_rect" : [ 1.16666, 4.0, 99.875, 36.0 ],
 					"style" : "",
 					"text" : "gen~ type1 @dumpoutlet 1"
 				}
@@ -9840,7 +9871,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-27", 0 ],
-					"midpoints" : [ 395.536682, 700.5, 395.233337, 700.5 ],
+					"midpoints" : [ 395.53667, 700.5, 395.233337, 700.5 ],
 					"source" : [ "obj-31", 1 ]
 				}
 
@@ -9848,7 +9879,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-60", 0 ],
-					"midpoints" : [ 559.823364, 700.5, 559.5, 700.5 ],
+					"midpoints" : [ 559.82334, 700.5, 559.5, 700.5 ],
 					"source" : [ "obj-31", 2 ]
 				}
 
@@ -9856,7 +9887,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-62", 0 ],
-					"midpoints" : [ 724.109985, 700.5, 724.75, 700.5 ],
+					"midpoints" : [ 724.11001, 700.5, 724.75, 700.5 ],
 					"source" : [ "obj-31", 3 ]
 				}
 
@@ -9881,7 +9912,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 4 ],
-					"midpoints" : [ 333.25, 944.75, 720.449951, 944.75 ],
+					"midpoints" : [ 333.25, 944.75, 720.449982, 944.75 ],
 					"source" : [ "obj-35", 5 ]
 				}
 
@@ -9889,7 +9920,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 3 ],
-					"midpoints" : [ 312.850006, 944.75, 603.149963, 944.75 ],
+					"midpoints" : [ 312.85, 944.75, 603.149986, 944.75 ],
 					"source" : [ "obj-35", 4 ]
 				}
 
@@ -9897,7 +9928,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 2 ],
-					"midpoints" : [ 292.450012, 944.75, 485.849976, 944.75 ],
+					"midpoints" : [ 292.45, 944.75, 485.849991, 944.75 ],
 					"source" : [ "obj-35", 3 ]
 				}
 
@@ -9905,7 +9936,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 1 ],
-					"midpoints" : [ 272.049988, 944.75, 368.549988, 944.75 ],
+					"midpoints" : [ 272.05, 944.75, 368.549996, 944.75 ],
 					"source" : [ "obj-35", 2 ]
 				}
 
@@ -9913,7 +9944,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-69", 0 ],
-					"midpoints" : [ 251.649994, 943.75, 251.25, 943.75 ],
+					"midpoints" : [ 251.65, 943.75, 251.25, 943.75 ],
 					"source" : [ "obj-35", 1 ]
 				}
 
@@ -10113,7 +10144,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 3 ],
-					"midpoints" : [ 564.049988, 1020.75, 368.549988, 1020.75 ],
+					"midpoints" : [ 564.049972, 1020.75, 368.549996, 1020.75 ],
 					"source" : [ "obj-6", 3 ]
 				}
 
@@ -10121,7 +10152,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 2 ],
-					"midpoints" : [ 524.949951, 1019.5, 329.450012, 1019.5 ],
+					"midpoints" : [ 524.949982, 1019.5, 329.449997, 1019.5 ],
 					"source" : [ "obj-6", 2 ]
 				}
 
@@ -10129,7 +10160,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 1 ],
-					"midpoints" : [ 485.849976, 1019.5, 290.350006, 1019.5 ],
+					"midpoints" : [ 485.849991, 1019.5, 290.349998, 1019.5 ],
 					"source" : [ "obj-6", 1 ]
 				}
 
@@ -10200,7 +10231,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-130", 0 ],
-					"midpoints" : [ 290.350006, 985.0 ],
+					"midpoints" : [ 290.349998, 985.0 ],
 					"order" : 0,
 					"source" : [ "obj-69", 1 ]
 				}
@@ -10225,7 +10256,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 3 ],
-					"midpoints" : [ 368.549988, 984.5, 368.549988, 984.5 ],
+					"midpoints" : [ 368.549995, 984.5, 368.549996, 984.5 ],
 					"order" : 1,
 					"source" : [ "obj-69", 3 ]
 				}
@@ -10234,7 +10265,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 2 ],
-					"midpoints" : [ 329.450012, 984.5, 329.450012, 984.5 ],
+					"midpoints" : [ 329.449997, 984.5, 329.449997, 984.5 ],
 					"order" : 1,
 					"source" : [ "obj-69", 2 ]
 				}
@@ -10243,7 +10274,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-28", 1 ],
-					"midpoints" : [ 290.350006, 984.5, 290.350006, 984.5 ],
+					"midpoints" : [ 290.349998, 984.5, 290.349998, 984.5 ],
 					"order" : 1,
 					"source" : [ "obj-69", 1 ]
 				}
@@ -10433,91 +10464,95 @@
 ,
 		"dependency_cache" : [ 			{
 				"name" : "type1.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "type2.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "type3.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "type4.gendsp",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "gDSP",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "environmentFilter~.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "windowShaper.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "clipControl~.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "audioSpikeCheck~.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "reanimate.maxpat",
-				"bootpath" : "~/Documents/Max 7/Packages/RTC-lib_71/patchers/Toolbox",
-				"patcherrelativepath" : "../../Documents/Max 7/Packages/RTC-lib_71/patchers/Toolbox",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
+				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "ufxStatus.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "count-bang.maxpat",
-				"bootpath" : "~/Documents/Max 7/Packages/RTC-lib_71/patchers/Toolbox",
-				"patcherrelativepath" : "../../Documents/Max 7/Packages/RTC-lib_71/patchers/Toolbox",
+				"bootpath" : "~/Documents/Max 7/Packages/RTC-lib_71-Win/patchers/Toolbox",
+				"patcherrelativepath" : "../../../Users/exhibit/Documents/Max 7/Packages/RTC-lib_71-Win/patchers/Toolbox",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "genReverbs~.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
+				"bootpath" : "C:/an/alicenode_inhabitat/audio",
 				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{
-				"name" : "bin2buf~.mxo",
-				"type" : "iLaX"
+				"name" : "bin2buf~.mxe64",
+				"type" : "mx64"
+			}
+, 			{
+				"name" : "ws.client.mxe64",
+				"type" : "mx64"
 			}
  ],
 		"autosave" : 0,

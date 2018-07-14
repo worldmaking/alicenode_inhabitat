@@ -197,13 +197,13 @@ struct Creature {
 			int64_t nest_idx;
 		} ant;
 		struct {
-			glm::vec2 influence = glm::vec2(0);
-			glm::vec2 copy = glm::vec2(0);
-			glm::vec2 avoid = glm::vec2(0);
-			glm::vec2 center = glm::vec2(0);
-			glm::vec3 song = glm::vec3(0);
-			float speed;
-			int64_t eating;
+			// glm::vec2 influence = glm::vec2(0);
+			// glm::vec2 copy = glm::vec2(0);
+			// glm::vec2 avoid = glm::vec2(0);
+			// glm::vec2 center = glm::vec2(0);
+			// glm::vec3 song = glm::vec3(0);
+			// float speed;
+			// int64_t eating;
 		} boid;
 		struct {
 			float rate;
@@ -213,6 +213,7 @@ struct Creature {
 		} bug;
 		struct {
 			float full_size;
+			int32_t victim;
 			glm::vec2 vel;
 			int64_t carried = 0;
 		} pred_head;
@@ -352,6 +353,7 @@ struct State {
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
 
+	// how much the optical flow impacts the fluid:
 	float flow_scale = 1.f;
 
 	float emission_decay = 0.98f;
@@ -396,6 +398,9 @@ struct State {
 	float ant_food_min = 0.02;
 	float ant_sniff_min = 0.001;
 	float ant_follow = 0.05;
+
+	float predator_eat_range = 0.125f;
+	float predator_view_range = 8.f;
 
 	float alive_lifespan_decay = 0.01;
 	float dead_lifespan_decay = 0.25;

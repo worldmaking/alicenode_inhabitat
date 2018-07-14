@@ -581,9 +581,10 @@ void State::land_update(float dt) {
 				// fall quickly:
 				landpt.w = glm::mix(landpt.w, h, land_rise_rate * dt);
 			}
-			
 		}
 	}
+
+	// maybe diffuse too to smoothen land?
 	
 	// next, calculate normals
 	// THIS IS TOO SLOW!!!!
@@ -906,7 +907,8 @@ int State::nearest_island(glm::vec3 pos) {
 void State::creature_reset(int i) {
 		Creature& a = creatures[i];
 		a.idx = i;
-		a.type = rnd::integer(2) + 1;
+		a.type = (rnd::integer(2) + 1) * 2;
+		//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
 		a.state = Creature::STATE_ALIVE;
 		a.health = rnd::uni();
 
@@ -933,6 +935,7 @@ void State::creature_reset(int i) {
 			case Creature::TYPE_BOID:
 				break;
 			case Creature::TYPE_PREDATOR_HEAD:
+				a.pred_head.victim = -1;
 				break;
 		}
 	}
@@ -951,8 +954,8 @@ void State::creatures_health_update(float dt) {
 		//console.log("spawn %d", i);
 		creature_reset(i);
 		Creature& a = creatures[i];
-		a.location = glm::linearRand(world_min, world_max);
-		a.island = nearest_island(a.location);
+		//a.location = glm::linearRand(world_min, world_max);
+		//a.island = nearest_island(a.location);
 	}
 
 	// visit each creature:
@@ -974,13 +977,16 @@ void State::creatures_health_update(float dt) {
 			hashspace.move(i, glm::vec2(a.location.x, a.location.z));
 
 			// birth chance?
-			if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
+			if (rnd::integer(NUM_CREATURES) < creature_pool.count
+				&& a.type != Creature::TYPE_PREDATOR_HEAD
+				&& a.type != Creature::TYPE_PREDATOR_BODY) {
 				auto j = creature_pool.pop();
 				birthcount++;
 				//console.log("spawn %d", i);
 				creature_reset(j);
 				Creature& child = creatures[j];
-				child.location = a.location;
+				child.type = a.type;
+				if (child.type != Creature::TYPE_ANT) child.location = a.location;
 				child.island = nearest_island(child.location);
 				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
 				child.params = glm::mix(child.params, a.params, 0.9f);
@@ -1091,7 +1097,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 	float lookahead_m = glm::length(o.velocity) * dt; 
 	glm::vec3 ahead_pos = o.location + uf * lookahead_m;
 	// maximum number of agents a spatial query can return
-	const int NEIGHBOURS_MAX = 16;
+	const int NEIGHBOURS_MAX = 8;
 	// see who's around:
 	std::vector<int32_t> neighbours;
 	float agent_range_of_view = o.scale * 10.f;
@@ -1113,8 +1119,6 @@ void State::creature_alive_update(Creature& o, float dt) {
 			// * glm::min(1.f, a.health * 10.f)
 			// * daylight_factor*3.f
 			;
-
-	o.velocity = speed * glm::normalize(uf);
 
 	switch (o.type) {
 	case Creature::TYPE_ANT: {
@@ -1206,6 +1210,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 
 	} break;
 	case Creature::TYPE_PREDATOR_HEAD: {
+		speed = speed * 2.f;
 
 	} break;
 	case Creature::TYPE_PREDATOR_BODY: {
@@ -1247,7 +1252,9 @@ void State::creature_alive_update(Creature& o, float dt) {
 		o.params = glm::mix(o.params, n.params, creature_song_copy_factor*dt);
 		
 		// if too close, stop moving:
-		if (distance > 0.0000001f && distance < agent_personal_space) {
+		if (distance > 0.0000001f 
+			&& distance < agent_personal_space
+			&& (o.type != Creature::TYPE_PREDATOR_HEAD || n.type == Creature::TYPE_PREDATOR_HEAD)) {
 			// add an avoidance force:
 			//float mag = 1. - (distance / agent_personal_space);
 			//float avoid_factor = -0.5;
@@ -1365,6 +1372,63 @@ void State::creature_alive_update(Creature& o, float dt) {
 		} break;
 		case Creature::TYPE_PREDATOR_HEAD: {
 
+			// speed varies with hunger
+			// can we eat?
+			for (int j=0; j<nres; j++) {
+				auto& n = creatures[neighbours[j]];
+				auto rel = n.location - o.location;
+				float dist = glm::length(rel) - o.scale - n.scale;
+				if (dist < o.scale * predator_eat_range) {
+
+
+					// jump:
+					o.location += rel * 0.5f;
+					float e = n.health;
+					o.health = AL_MIN(2.f, o.health + e);
+					n.health = -0.5f;
+
+					o.pred_head.victim = -1;
+					break;
+				}
+			}
+
+			if (rnd::uni() * 0.2f < dt) {
+				// change target:
+				o.pred_head.victim = -1;
+
+				if (nres) {
+					auto j = neighbours[0];
+					Creature& n = creatures[j];
+					if (n.type != Creature::TYPE_PREDATOR_HEAD
+						&& n.type != Creature::TYPE_PREDATOR_BODY) {
+						o.pred_head.victim = j;
+						}
+				}
+			}
+
+			// follow target:
+			if (o.pred_head.victim >= 0) {
+				Creature& n = creatures[o.pred_head.victim];
+				auto rel = n.location - o.location;
+
+				auto desired_dir = safe_normalize(rel);
+				// if centre is too close, rotate away from it?
+				// centre is relative to self, but not rotated
+				auto q = get_forward_rotation_to(o.orientation, desired_dir);
+				//o.orientation = glm::slerp(o.orientation, q * o.orientation, .125f);
+				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, q, 0.25f));
+			} else {
+				// wander
+				float range = M_PI;
+				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+				float wander_factor = dt;
+				//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+
+			}
+
+
+			o.color = glm::mix(glm::vec3(0.7), glm::vec3(1, 0.5, 0), o.health);
+
 		} break;
 		case Creature::TYPE_PREDATOR_BODY: {
 
@@ -1372,6 +1436,9 @@ void State::creature_alive_update(Creature& o, float dt) {
 		} // end switch
 		
 	}
+
+	// velocity
+	o.velocity = speed * glm::normalize(uf);
 
 	// let song evolve:
 	o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);

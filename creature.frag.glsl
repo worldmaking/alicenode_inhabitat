@@ -663,10 +663,11 @@ vec3 fScene_tex_z_old(vec3 p) {
 float fScene_quadpod(vec3 p0) {
 	float timephase = phase;
 
-	vec3 p = p0;
+	vec3 p = p0 - vec3(0, 0.25, 0);
 
 	// cheap symmetry:
 	p.xy = abs(p.xy);
+	vec3 p2 = p;
 	
 	// blobbies
 	
@@ -680,7 +681,7 @@ float fScene_quadpod(vec3 p0) {
 
 	float w2 = w*w;
 	float backbone = part_ant_backbone(p).z;//sdCapsule1(p, vec3(0., 0., 1.-w2), vec3(0., 0., -1.+w2), w*w);
-	float limbs = sdCapsule2(p, vec3(fz, fz, y), vec3(0., -0., -0.25), 0.125, 0.1);
+	float limbs = sdCapsule2(p - vec3(0, 0, -0.75), vec3(fz, fz, -y), vec3(0., 0., 0.25), 0.125, 0.1);
 	//float a = 0.7;
 	//float b = 0.7;
 	float d = smin(backbone, limbs, 0.5);
@@ -1251,14 +1252,15 @@ vec3 fScene_tex_z(vec3 p) {
 	switch(species) {
 		case 1: return fScene_tex_z_ant(p); 
 		case 2: return fScene_tex_z_old(p);
-		case 3: return fScene_tex_z_quadpod(p);
-		case 4: return fScene_tex_z_cashew(p);
+		case 3: return fScene_tex_z_cashew(p);
+		case 4: return fScene_tex_z_quadpod(p);
 		case 5: return fScene_tex_oldsegment(p);
 		case 6: return fScene_tex_z_nick_cashew(p, false);
 		case 7: return fScene_tex_z_nick_bulbworm(p);
 		case 8: return fScene_tex_z_nick_squidlike(p);
 		case 9: return fScene_tex_z_nick_walkTest(p, false);
 		case 10: return fScene_tex_z_wingtest(p, false);
+		case 11:
 		default: return fScene_tex_z_graham(p);
 	}
 	//return fScene_tex_z_old(p);

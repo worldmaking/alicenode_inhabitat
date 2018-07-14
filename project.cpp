@@ -676,7 +676,7 @@ void State::sim_update(float dt) {
 		human.swap();
 
 		// NOW FLOW
-		#ifdef AL_WIN
+#ifdef AL_WIN
 		if (1) {
 
 			// copy human to char arrays for CV:
@@ -720,7 +720,7 @@ void State::sim_update(float dt) {
 				}
 			}
 		}
-		#endif
+#endif
 
 		
 	}
@@ -1969,7 +1969,8 @@ void onFrame(uint32_t width, uint32_t height) {
 	
 	#ifdef AL_WIN
 	if (alice.fps.count == 30 && !alice.window.isFullScreen) {
-		alice.window.fullScreen(true);
+		//alice.window.fullScreen(true);
+		alice.goFullScreen = true;
 	}
 	#endif
 	if (enablers[CALIBRATE]) state->update_projector_loc();
@@ -2506,7 +2507,10 @@ void onFrame(uint32_t width, uint32_t height) {
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #ifdef AL_WIN
-	projectors[0].fbo.draw(glm::vec2(0.f), glm::vec2(1.f));
+	float third = 1.f/3.f;
+	fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	projectors[1].fbo.draw(glm::vec2(third, 0.f), glm::vec2(2.f*third, 1.f));
+	projectors[0].fbo.draw(glm::vec2(0.f, 0.f), glm::vec2(third, 1.f));
 #else
 
 	if (soloView) {
@@ -2531,22 +2535,10 @@ void onFrame(uint32_t width, uint32_t height) {
 	} else {
 		float third = 1.f/3.f;
 		float sixth = 1.f/6.f;
-		projectors[0].fbo.draw(glm::vec2(third, 1.f), glm::vec2(-2.f*third, 0.f));
-		projectors[1].fbo.draw(glm::vec2(third, 1.f), glm::vec2(0.f, 0.f));
-		//projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
-		{
-			if (!SHOW_TIMELAPSE) {
-				flowShader.use();
-				flowShader.uniform("tex", 0);
-				flowShader.uniform("uScale", glm::vec2(third, 1.f));
-				flowShader.uniform("uOffset", glm::vec2(2.f*third,  0.f));
-				texDraw.draw_no_shader(flowTex.id);
-				flowShader.unuse();
-			} else {
-				fbo.draw(glm::vec2(third, 1.f), glm::vec2(2.f*third,  0.f));
-			}
-		}
-		//
+		projectors[0].fbo.draw(glm::vec2(0.f,  0.f),  glm::vec2(0.5f,0.5f));
+		projectors[1].fbo.draw(glm::vec2(0.5f, 0.f),  glm::vec2(1.f ,0.5f));
+		projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
+		fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.f ,1.f));
 	}
 #endif
 	profiler.log("draw to window", alice.fps.dt);
@@ -3168,9 +3160,7 @@ extern "C" {
 		}
 		console.log("gBuffer dim %d x %d", gBufferVR.dim.x, gBufferVR.dim.y);
 
-		//alice.window.fullScreen(true);
-
-
+		
 
 		// allocate on GPU:
 		onReloadGPU();

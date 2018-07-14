@@ -946,6 +946,20 @@ void State::creatures_health_update(float dt) {
 	int deathcount = 0;
 	int recyclecount = 0;
 
+	// spawn a predator?
+	if (rnd::integer(NUM_CREATURES) < creature_pool.count/4
+		&& creature_pool.count > 7) {
+
+		auto idx = creature_pool.pop();
+		creature_reset(idx);
+		Creature& a = creatures[idx];
+		a.type = Creature::TYPE_PREDATOR_HEAD;
+		for (int i=0; i<6; i++) {
+			auto seg = creature_pool.pop();
+		}
+	}
+
+
 	// spawn new?
 	//console.log("creature pool count %d", creature_pool.count);
 	if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {

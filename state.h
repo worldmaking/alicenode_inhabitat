@@ -295,11 +295,11 @@ struct State {
 	// .w represents the height
 	glm::vec4 land[LAND_TEXELS];
 
-	glm::vec4 human[LAND_TEXELS];
+	Field2DPod<LAND_DIM> human;
 
 	// the flow field (hopefully this isn't too high res)
 	// Paris ran at 128 x 64, for example
-	glm::vec2 flow[FLOW_TEXELS];
+	glm::vec2 flow[LAND_TEXELS];
 
 	// signed distance field representing the landscape
 	// the distance to the nearest land surface, as a 3D SDF
@@ -352,6 +352,8 @@ struct State {
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
 
+	float flow_scale = 1.f;
+
 	float emission_decay = 0.98f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
 	float emission_scale = 0.9;
@@ -370,6 +372,9 @@ struct State {
 	float projector2_location_y = 3.;
 	float projector2_rotation = 0.f;
 
+	float land_fall_rate = 10.f;
+	float land_rise_rate = 1.f;
+
 	float vrFade = 0.f;
 	float creature_speed = 2.f; // in object-size per second
 
@@ -385,6 +390,13 @@ struct State {
 	float fungus_migration_chance = 1.f;
 	float fungus_decay_chance = 0.05;
 
+	float ant_nestsize = 0.04f;
+	float ant_phero_decay = 0.999f;
+	float ant_sensor_size = 0.5;
+	float ant_food_min = 0.02;
+	float ant_sniff_min = 0.001;
+	float ant_follow = 0.05;
+
 	float alive_lifespan_decay = 0.01;
 	float dead_lifespan_decay = 0.25;
 
@@ -399,6 +411,7 @@ struct State {
 	void fluid_update(float dt);
 	void fields_update(float dt);
 	void sim_update(float dt);
+	void land_update(float dt);
 
 	void generate_land_sdf_and_normals();
 
@@ -412,6 +425,8 @@ struct State {
 	glm::vec3 random_location_above_land(float h=0.1f);
 
 	void update_projector_loc();
+
+	float ant_sniff_turn(Creature& a, float p1, float p2);
 };
 
 #endif

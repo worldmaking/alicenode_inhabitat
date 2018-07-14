@@ -1,7 +1,6 @@
 # urgency
 
 hide mouse
-fs on windows
 
 why does alice disappear when fullscreen but not focused?
 
@@ -9,6 +8,9 @@ generating normals/SDF is waaay to slow, needs to be distributed somehow.
 
 land should be infered from human, not from kinect data
 
+also do flow from human data?
+- need to turn human field into a back/front pair
+- would save cost by about 8x too, as it doesn't need to be per-kinect, and the dim is half
 
 # Bring in the inhabitat species behaviours!!
 
@@ -51,10 +53,7 @@ TODO:
 
 
 
-<<<<<<< HEAD
-=======
 # TODO list
->>>>>>> 694d6728e4ecc04a0ecfa5f112e036999bc8fd91
 
 Bring in the inhabitat species behaviours!!
 

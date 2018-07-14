@@ -1249,9 +1249,9 @@ vec3 fScene_tex_z(vec3 p) {
 	
 	int species = id % 11;
 	switch(species) {
-		case 1: return fScene_tex_z_graham(p);
-		case 2: return fScene_tex_z_quadpod(p);
-		case 3: return fScene_tex_z_old(p);
+		case 1: return fScene_tex_z_ant(p); 
+		case 2: return fScene_tex_z_old(p);
+		case 3: return fScene_tex_z_quadpod(p);
 		case 4: return fScene_tex_z_cashew(p);
 		case 5: return fScene_tex_oldsegment(p);
 		case 6: return fScene_tex_z_nick_cashew(p, false);
@@ -1259,7 +1259,7 @@ vec3 fScene_tex_z(vec3 p) {
 		case 8: return fScene_tex_z_nick_squidlike(p);
 		case 9: return fScene_tex_z_nick_walkTest(p, false);
 		case 10: return fScene_tex_z_wingtest(p, false);
-		default: return fScene_tex_z_ant(p); 
+		default: return fScene_tex_z_graham(p);
 	}
 	//return fScene_tex_z_old(p);
 }

@@ -1,5 +1,5 @@
 #version 330 core
-
+//michael: testing cmd-s key binding for sending code
 uniform mat4 uViewProjectionMatrix;
 
 layout (location = 0) in vec3 aPos;

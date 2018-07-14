@@ -850,7 +850,13 @@ void State::sim_update(float dt) {
 	// 		flow *= idt;
 
 	// 		// if below ground, rise up;
-	// 		// if above ground, sink down:
+	// 		// if above ground, sink down:d_dim, distance, norm, 0.05f/LAND_DIM);
+	// 		// re-orient relative to ground:
+	// 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
+			
+	// 	} else {
+	// 		auto& p = segments[i-1];
+	// 		o.scale = p.scale * 0.9f;
 	// 		float gravity = 0.1f;
 	// 		flow.y += sdist < 0.1f ? gravity : -gravity;
 
@@ -862,13 +868,7 @@ void State::sim_update(float dt) {
 	// 		// use this to sample the landscape:
 			
 	// 		// get a normal for the land:
-	// 		glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
-	// 		// re-orient relative to ground:
-	// 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
-			
-	// 	} else {
-	// 		auto& p = segments[i-1];
-	// 		o.scale = p.scale * 0.9f;
+	// 		glm::vec3 normal = sdf_field_normal4(lan
 	// 	}
 	// }
 }
@@ -2424,6 +2424,10 @@ void onFrame(uint32_t width, uint32_t height) {
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#ifdef AL_WIN
+	projectors[0].fbo.draw(glm::vec2(0.f), glm::vec2(1.f));
+#else
+
 	if (soloView) {
 		switch (soloView) {
 			case 1: projectors[0].fbo.draw(); break;
@@ -2463,16 +2467,13 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 		//
 	}
+#endif
 	profiler.log("draw to window", alice.fps.dt);
 
 	if (showFPS) {
 		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) land %f (%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, landThread.fps.fps, landThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
 		//profiler.dump();
 	}
-
-		#ifdef AL_WIN
-		//alice.window.fullScreen(true);
-		#endif
 }
 
 
@@ -3100,7 +3101,11 @@ extern "C" {
 		alice.onReloadGPU.connect(onReloadGPU);
 		alice.onReset.connect(onReset);
 		alice.onKeyEvent.connect(onKeyEvent);
+		#ifdef AL_WIN
+		alice.window.position(0, 4000);
+		#else
 		alice.window.position(45, 45);
+		#endif
       
 
 		return 0;

@@ -66,7 +66,7 @@ void main() {
 	// }
 
 	// add chems:
-	color += chem;
+	//color += chem;
 
 	// // darken steep slopes:
 	color *= vec3(1. - steepness);

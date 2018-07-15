@@ -367,7 +367,7 @@ struct State {
 	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
 	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
 
-	float projector1_location_x = 2.;
+	float projector1_location_x = 3.;
 	float projector1_location_y = 2.;
 	float projector1_rotation = 0.f;
 	float projector2_location_x = 1.2;

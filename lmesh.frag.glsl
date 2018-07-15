@@ -78,6 +78,7 @@ void main() {
 
 	color = vec3(position.y, mod(position.y * 10., 1.), mod(position.y * 0.5, 1.));
 
+/*
   	//color = vec3(1.);
 
 	vec2 div = ceil(texCoord * 10.);
@@ -115,7 +116,7 @@ void main() {
 	} else {
 		discard;
 		
-	}
+	}*/
 
 	FragColor.rgb = color;
 	//FragColor.rgb = nnorm;

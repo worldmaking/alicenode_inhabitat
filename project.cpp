@@ -2854,6 +2854,12 @@ void State::reset() {
 		}
 	}
 
+	island_centres[0] = glm::vec3(290., 0., 390.);
+	island_centres[1] = glm::vec3(290., 0., 390.);
+	island_centres[2] = glm::vec3(290., 0., 390.);
+	island_centres[3] = glm::vec3(290., 0., 390.);
+	island_centres[4] = glm::vec3(290., 0., 390.);
+
 	// make up some speaker locations:
 	for (int i=0; i<NUM_ISLANDS; i++) {
 
@@ -2861,12 +2867,6 @@ void State::reset() {
 		float phase = i/float(NUM_ISLANDS);
 		float angle = M_PI * 2. * phase;
 		float radius = (world_max.z - world_min.z) * 0.3;
-
-		island_centres[i] = glm::vec3(
-			world_centre.x + radius * sinf(angle), 
-			0.f, 
-			world_centre.z + radius * cosf(angle)
-		);
 
 		console.log("speaker i %f %f", island_centres[i].x, island_centres[i].z);
 

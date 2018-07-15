@@ -1985,16 +1985,12 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
-	//state->projector1_rotation = t;
-	// TODO: DISABLE!!!!
-	
 	#ifdef AL_WIN
 	if (alice.fps.count == 30 && !alice.window.isFullScreen) {
 		//alice.window.fullScreen(true);
 		alice.goFullScreen = true;
 	}
 	#endif
-	//if (enablers[CALIBRATE]) state->update_projector_loc();
 
 
 	if (1) {	

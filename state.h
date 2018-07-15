@@ -390,7 +390,7 @@ struct State {
 	float creature_song_mutate_rate = 0.25f;
 
 	float particleSize = 0.1;
-	float particle_noise = 0.01f;
+	float particle_noise = 0.003f;
 
 	float creature_fluid_push = 0.25f;
 

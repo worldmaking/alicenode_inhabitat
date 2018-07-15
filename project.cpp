@@ -845,7 +845,7 @@ void State::sim_update(float dt) {
 		if (o.state == Creature::STATE_ALIVE) {
 			creature_alive_update(o, dt);
 
-			audioframe.state = 0.1f;// float(o.type) * 0.1f;
+			audioframe.state = float(o.type) * 0.1f;
 			audioframe.speaker = o.island * 0.1f;
 			audioframe.health = o.health;
 			audioframe.age = o.phase;

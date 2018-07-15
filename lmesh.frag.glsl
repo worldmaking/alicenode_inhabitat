@@ -77,34 +77,34 @@ void main() {
   
   	//color = vec3(1.);
 
-	// vec2 div = ceil(texCoord * 10.);
+	vec2 div = ceil(texCoord * 10.);
 
-	// vec2 tc = mod(texCoord * 10., 1.);
-	// float tcr = length(tc - 0.5);
-	// vec2 tc1 = mod(texCoord * div, 1.);
-	// float tcr1 = length(tc1);
+	vec2 tc = mod(texCoord * 10., 1.);
+	float tcr = length(tc - 0.5);
+	vec2 tc1 = mod(texCoord * div, 1.);
+	float tcr1 = length(tc1);
 
-	// float l = length(texCoord - 0.5) / 0.2;
+	float l = length(texCoord - 0.5) / 0.2;
 
-	// if (tc.x < 0.03) {
+	if (tc.x < 0.03) {
 
-	// 	color = vec3(1.);
+		color = vec3(1.);
 
-	// } else if (tc.y < 0.03) {
+	} else if (tc.y < 0.03) {
 
-	// 	color = vec3(1.);
+		color = vec3(1.);
 
-	// } else if (l < 1.) {
+	} else if (l < 1.) {
 
-	// 	color = vec3(
-	// 		l > 0.5 ? 1. : 0.5,
-	// 		l > 0.75 ? 1. : 0.5, 
-	// 		l < 0.5 ? 1. : 0.5);
+		color = vec3(
+			l > 0.5 ? 1. : 0.5,
+			l > 0.75 ? 1. : 0.5, 
+			l < 0.5 ? 1. : 0.5);
 
-	// } else {
-	// 	//discard;
-	// 	color = vec3(0.5);
-	// }
+	} else {
+		//discard;
+		color = vec3(0.5);
+	}
 
 	FragColor.rgb = color;
 	//FragColor.rgb = nnorm;

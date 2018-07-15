@@ -632,6 +632,7 @@ void State::sim_update(float dt) {
 		// for each Kinect
 		for (int i=0; i<2; i++) {
 			if (i == 0) continue;
+
 			
 			const CloudFrame& cloudFrame0 = i ? kinect1.cloudFrame() : kinect0.cloudFrame();
 			const CloudFrame& cloudFrame1 = i ? kinect1.cloudFramePrev() : kinect0.cloudFramePrev();
@@ -641,40 +642,45 @@ void State::sim_update(float dt) {
 			const uint16_t * depth0 = cloudFrame0.depth;
 
 			// now update with live data:
-			for (int i=0; i<max_cloud_points; i++) {
-				auto pt = cloud_points0[i];
-				auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;
-				// filter out bad depths
-				// mask outside a circular range
-				// skip OOB locations:
-				if (
-					depth0[i] <= 0 
-					//|| glm::length(uv) > 0.5f
-					|| pt.x < world_min.x
-					|| pt.z < world_min.z
-					|| pt.x > world_max.x
-					|| pt.z > world_max.z
-					//|| pt.y > 3.
-					) continue;
+			for (int i=0, y=0; y < cDepthHeight; y++) {
+				for (int x=0; x < cDepthWidth; x++, i++) {
 
-				// find nearest land cell for this point:
-				// get norm'd coordinate:
-				glm::vec3 norm = transform(world2field, pt);
-				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
-				// get cell index for this location:
-				int landidx = al_field2d_index_norm(land_dim2, norm2);
+					if (i==1 && x < 100) continue;
+						
 				
-				// set the land value accordingly:
-				float& humanpt0 = human.front()[landidx];
-				float& humanpt1 = human.back()[landidx];
+					auto pt = cloud_points0[i];
+					auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;
+					// filter out bad depths
+					// mask outside a circular range
+					// skip OOB locations:
+					if (
+						depth0[i] <= 0 
+						//|| glm::length(uv) > 0.5f
+						|| pt.x < world_min.x
+						|| pt.z < world_min.z
+						|| pt.x > world_max.x
+						|| pt.z > world_max.z
+						//|| pt.y > 3.
+						) continue;
 
-				float h = world2field_scale * pt.y;
-				humanpt1 = glm::mix(humanpt0, h, 0.25f);
+					// find nearest land cell for this point:
+					// get norm'd coordinate:
+					glm::vec3 norm = transform(world2field, pt);
+					glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+					// get cell index for this location:
+					int landidx = al_field2d_index_norm(land_dim2, norm2);
+					
+					// set the land value accordingly:
+					float& humanpt0 = human.front()[landidx];
+					float& humanpt1 = human.back()[landidx];
 
-				// in archi15 we also did spatial filtering
+					float h = world2field_scale * pt.y;
+					humanpt1 = glm::mix(humanpt0, h, 0.25f);
 
+					// in archi15 we also did spatial filtering
+
+				}
 			}
-
 		} // end 2 kinects
 		
 		human.swap();

@@ -2864,14 +2864,6 @@ void State::reset() {
 
 	// make up some speaker locations:
 	for (int i=0; i<NUM_ISLANDS; i++) {
-
-		
-		float phase = i/float(NUM_ISLANDS);
-		float angle = M_PI * 2. * phase;
-		float radius = (world_max.z - world_min.z) * 0.3;
-
-		console.log("speaker i %f %f", island_centres[i].x, island_centres[i].z);
-
 		int id = NUM_DEBUGDOTS - NUM_ISLANDS - 1 + i;
 		debugdots[id].location = island_centres[i];
 		debugdots[id].color = glm::vec3(1,0,0);

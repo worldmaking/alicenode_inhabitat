@@ -406,7 +406,7 @@ struct State {
 	float dead_lifespan_decay = 0.25;
 
 	float human_height_decay = 0.95;
-	float coastline_height = 9.f;
+	float coastline_height = 5.f;
 
 	// main thread:
 	void animate(float dt);

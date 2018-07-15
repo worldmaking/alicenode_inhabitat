@@ -10,7 +10,6 @@ focus window
 
 why does alice disappear when fullscreen but not focused?
 
-vr fade should only affect vr world
 
 FPS
 - only render projectors at 30fps
@@ -18,7 +17,11 @@ FPS
 
 Could we increase the land/chem dim but decrease the SDF dim?
 
+antialias fbo
 
+X vr fade should only affect vr world
+X separate lighting for sand vs vr
+X auto teleport islands
 
 # Bring in the inhabitat species behaviours!!
 

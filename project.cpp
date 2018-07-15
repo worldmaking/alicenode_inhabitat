@@ -242,6 +242,8 @@ struct Projector {
 	glm::mat4 viewMat;
 	glm::mat4 projMat;
 
+	bool altShader = false;
+
 	Projector() {
 		fbo.dim.x = 1920;
 		fbo.dim.y = 1080;
@@ -273,7 +275,7 @@ Shader particleShader;
 Shader landShader;
 Shader landMeshShader;
 Shader humanMeshShader;
-Shader deferShader; 
+Shader deferShader, deferShader2; 
 Shader simpleShader;
 Shader debugShader;
 Shader flowShader;
@@ -337,6 +339,8 @@ glm::vec3 vrLocation;
 
 glm::vec3 nextVrLocation;
 int fadeState = 0;
+int vrIsland = 0;
+float timeToVrJump = 0;
 
 uint8_t humanchar0[LAND_TEXELS];
 uint8_t humanchar1[LAND_TEXELS];
@@ -354,7 +358,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 3;
+int soloView = 0;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -1519,6 +1523,7 @@ void onUnloadGPU() {
 	objectShader.dest_closing();
 	creatureShader.dest_closing();
 	deferShader.dest_closing();
+	deferShader2.dest_closing();
 	simpleShader.dest_closing();
 	debugShader.dest_closing();
 	flowShader.dest_closing();
@@ -1570,6 +1575,7 @@ void onReloadGPU() {
 	humanMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
 	landMeshShader.readFiles("lmesh.vert.glsl", "lmesh.frag.glsl");
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
+	deferShader2.readFiles("defer2.vert.glsl", "defer2.frag.glsl");
 	debugShader.readFiles("debug.vert.glsl", "debug.frag.glsl");
 	flowShader.readFiles("flow.vert.glsl", "flow.frag.glsl");
 	
@@ -1859,7 +1865,7 @@ void draw_scene(int width, int height, Projector& projector) {
 	glDisable(GL_CULL_FACE);
 }
 
-void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
+void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, bool isVR, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
 
 	fbo.begin();
 	glScissor(
@@ -1882,32 +1888,34 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::v
 		emissionTex.bind(6);
 		fluidTex.bind(7);
 
-		deferShader.use();
-		deferShader.uniform("gColor", 0);
-		deferShader.uniform("gNormal", 1);
-		deferShader.uniform("gPosition", 2);
-		deferShader.uniform("gTexCoord", 3);
-		deferShader.uniform("uDistanceTex", 4);
-		deferShader.uniform("uFungusTex", 5);
-		deferShader.uniform("uEmissionTex", 6);
-		deferShader.uniform("uFluidTex", 7);
+		Shader& shader = projector.altShader ? deferShader2 : deferShader;
 
-		deferShader.uniform("uViewMatrix", viewMat);
-		deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		deferShader.uniform("uFluidMatrix", state->world2field);
-		deferShader.uniform("uNearClip", projector.near_clip);
-		deferShader.uniform("uFarClip", projector.far_clip);
+		shader.use();
+		shader.uniform("gColor", 0);
+		shader.uniform("gNormal", 1);
+		shader.uniform("gPosition", 2);
+		shader.uniform("gTexCoord", 3);
+		shader.uniform("uDistanceTex", 4);
+		shader.uniform("uFungusTex", 5);
+		shader.uniform("uEmissionTex", 6);
+		shader.uniform("uFluidTex", 7);
+
+		shader.uniform("uViewMatrix", viewMat);
+		shader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		shader.uniform("uFluidMatrix", state->world2field);
+		shader.uniform("uNearClip", projector.near_clip);
+		shader.uniform("uFarClip", projector.far_clip);
 		
-		deferShader.uniform("time", Alice::Instance().simTime);
-		deferShader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
-		deferShader.uniform("uTexScale", viewport_scale);
-		deferShader.uniform("uTexOffset", viewport_offset);
+		shader.uniform("time", Alice::Instance().simTime);
+		shader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
+		shader.uniform("uTexScale", viewport_scale);
+		shader.uniform("uTexOffset", viewport_offset);
 
-		deferShader.uniform("uFade", state->vrFade);
+		shader.uniform("uFade", isVR ? state->vrFade : 0.f);
 		
 		quadMesh.draw();
 
-		deferShader.unuse();
+		shader.unuse();
 		
 		distanceTex.unbind(4);
 		fungusTex.unbind(5);
@@ -2011,18 +2019,14 @@ void onFrame(uint32_t width, uint32_t height) {
 
 
 	if (1) {	
-		// LEAP & TELEPORTING
-		if (fadeState == 0 && nextVrLocation.y < state->coastline_height) {
-			nextVrLocation = state->random_location_above_land(state->coastline_height * 2);
+		timeToVrJump -= dt; 
+		if (timeToVrJump < 0.f) {
+			vrIsland = (vrIsland + 1) % NUM_ISLANDS;
+			nextVrLocation = state->island_centres[vrIsland];
 			fadeState = -1;
-			cameraLoc = nextVrLocation;
-		}
-		
-		//state->teleport_points[0] = glm::vec3(20., 1., 37.);
 
-		//state->teleport_points[1] = glm::vec3(4., 1., 13.);
-		//state->teleport_points[2] = glm::vec3(60., 2., 13.);
-		//state->teleport_points[3] = glm::vec3(34.5, 17., 33.);
+			timeToVrJump = 30.;
+		}
 
 		//Teleport Fade
 		if (fadeState == -1) {
@@ -2030,6 +2034,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			if (state->vrFade >= 1) {
 				state->vrFade = 1;
 				vrLocation = nextVrLocation;
+				cameraLoc = nextVrLocation;
 				fadeState = 1;
 			}
 		} else if (fadeState == 1) {
@@ -2039,7 +2044,9 @@ void onFrame(uint32_t width, uint32_t height) {
 				state->vrFade = 0;
 			}
 		}
+	}
 
+	if (1) {
 		// later, figure out how to place teleport points in viable locations
 		
 
@@ -2073,38 +2080,11 @@ void onFrame(uint32_t width, uint32_t height) {
 					glm::translate(glm::vec3(mapPos)) * 
 					glm::scale(glm::vec3(state->minimapScale)) *
 					glm::translate(-midPoint);
-			
-
 
 			for (int h=0; h<2; h++) {
 		
 				int d = NUM_TELEPORT_POINTS + h * (num_hand_dots + num_ray_dots);
 				auto& hand = alice.leap->hands[h];
-				
-
-
-				// 
-				// if (h == 0) {
-				// 	if (hand.normal.y >= 0.4f) {
-
-				// 	glm::vec3 mapPos = transform(trans, hand.palmPos);
-				// 	//console.log("hand normal");
-				// 	glm::vec3 midPoint = (world_min + world_max)/2.f;
-				// 	midPoint.y = 0;
-
-				// 	world2minimap = 
-				// 		glm::translate(glm::vec3(mapPos)) * 
-				// 		glm::scale(glm::vec3(minimapScale)) *
-				// 		glm::translate(-midPoint) *
-				// 		glm::mat4(1.0f);
-				// 		console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
-
-				// 	} else {
-				// 		//console.log("No hand normal");
-				// 		//world2minimap = glm::scale(glm::vec3(0.f));
-				// 	}
-
-				// }
 
 				//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 				float cf = fmod(hand.id / 6.f, 1.f);
@@ -2166,56 +2146,25 @@ void onFrame(uint32_t width, uint32_t height) {
 				auto warp = glm::rotate(-0.1f, rotaxis);
 
 				glm::vec3 p = a;
-
-				
-				// for (int i=0; i<num_ray_dots; i++) {
-				// 	glm::vec3 loc = state->debugdots[d].location;
-				// 	//loc = p;
-				// 	if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
-				// 	p = loc;
-
-				// 	//handDir = safe_normalize(transform(warp, handDir));
-				// 	handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
-
-				// 	auto norm = transform(world2field, p);
-				// 	float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
-
-				// 	// distance in world coordinates:
-				// 	//float dist_w = field2world_scale * dist;
-
-				// 	p = p + 0.01f * handDir;
-
-				// 	float c = 0.01;
-				// 	c = c / (c + dist);
-				// 	state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
-				// 	if (dist <= 0) break;
-
-				// 	d++;
-				// }
-
-
 			}
 		}
-		//profiler.log("leap", alice.fps.dt);
 	}
 
-	// navigation
+	// navigation:
 	{
 		glm::vec3& navloc = projectors[2].location;
-		glm::quat& navquat = projectors[2].orientation;
-		
-		switch (camMode % 2){
+		glm::quat& navquat = projectors[2].orientation;	
+		switch (camMode % 3){
 			case 0: {
 				// WASD mode:
-				
 				float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
 				float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
 
 				// move camera:
 				glm::vec3 newloc = navloc + quat_rotate(navquat, camVel) * (camera_speed * dt);
 				// wrap to world:
-				navloc = glm::mix(navloc, newloc, 0.25f);
 				newloc = wrap(newloc, state->world_min, state->world_max);
+				navloc = glm::mix(navloc, newloc, 0.25f);
 
 				// stick to floor:
 				glm::vec3 norm = transform(state->world2field, navloc);
@@ -2233,13 +2182,9 @@ void onFrame(uint32_t width, uint32_t height) {
 
 
 				navquat = glm::slerp(navquat, newori, 0.25f);
-
-				// now create view matrix:
-				//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-				//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
-				//console.log("Cam Mode 0 Active");
+			
 			} break;
-			default: {
+			case 1: {
 				// follow a creature mode:
 				auto& o = state->creatures[objectSel % NUM_CREATURES];
 				
@@ -2255,6 +2200,16 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				navloc = glm::mix(navloc, loc, 0.1f);
 				navquat = glm::slerp(navquat, o.orientation, 0.03f);
+			}
+			default: {
+				// orbit around
+				float a = M_PI * t / 30.;
+
+				glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
+				glm::vec3 newloc = state->world_centre + (quat_uz(navquat))*4.f;
+
+				navloc = glm::mix(navloc, newloc, 0.05f);
+				navquat = glm::slerp(navquat, newori, 0.05f);
 			}
 		}
 	}
@@ -2302,83 +2257,86 @@ void onFrame(uint32_t width, uint32_t height) {
 		Projector& proj = projectors[i];
 		SimpleFBO& fbo = proj.fbo;
 
-		/*
-		// move K-world points to inhabitat-world points:
-		//kinect0.cloudTransform
-		glm::vec3 ksc;
-		glm::quat kro;
-		glm::vec3 ktr;
-		glm::vec3 ksk;
-		glm::vec4 kpe;
-		glm::decompose(kinect0.cloudTransform, ksc, kro, ktr, ksk, kpe);
-		kro = glm::conjugate(kro);
-
-		glm::vec3 p = ktr; //glm::vec3(kinect0.cloudTransform[3]); // translation component, ==
-		//console.log("p %f %f %f", p.x, p.y, p.z);
-
-		glm::mat3 r = glm::mat3(kinect0.cloudTransform);
-		//r = glm::normalize(r); // remove scale
-
-
-		glm::quat kq = kro;//glm::normalize(glm::quat_cast(glm::inverse(kinect0.cloudTransform)));
-		//console.log("kq %f %f %f %f", kq.w, kq.x, kq.y, kq.z);
-
-		glm::quat q = glm::quat();
-		//extraglmq = gl
-
-	//  frustum -0.0631 0.0585 -0.038 0.038 0.1 10
-		glm::quat proj_quat = //glm::quat(0.002566, -0.026639, -0.017277, 0.999493);
-			glm::quat(0.999493, 0.002566, -0.026639, -0.017277);
-			//glm::angleAxis(float(M_PI/-2.), glm::vec3(1, 0, 0)) * glm::angleAxis(float(M_PI/-2.), glm::vec3(0, 0, 1));
-		//console.log("proj_quat %f %f %f %f", proj_quat.w, proj_quat.x, proj_quat.y, proj_quat.z);
-		
-		// pos of projector, in space of kinect0
-		glm::vec3 proj_pos = glm::vec3(-0.135, -0.263, 0.317);
-		
-		glm::mat4 k2proj = (glm::mat4_cast(proj_quat)) * glm::translate(-proj_pos * state->kinect2world_scale);
-		viewMat = glm::inverse(
-			glm::translate(p) * glm::mat4_cast(kro) // kinect viewpoint
-			* (k2proj)
-		);
-
-		// 
-		// 	kinect0.cloudTransform captures how the kinect space transforms into world space
-
-		// 	we want to render the world from the POV of the kinect, but at the scale of the world
-		// 	POV p we can get via transform(kinect0.cloudTransform, glm::vec3(0.f));
-		// 
-
-		// let this define the view matrix:
-		//viewMat = glm::inverse(kinect0.cloudTransform);
-
-		//viewMat = kinect0.cloudTransform * glm::translate(-proj_pos);
-		//viewMat = glm::inverse(viewMat);
+		if (i == 2 && enablers[SHOW_TIMELAPSE]) {
 			
-		projMat = glm::frustum(-0.0631f, 0.0585f, -0.038f, 0.038f, 0.1f, state->far_clip);
-				//glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
-		
-		*/
+			// timelapse wall projector:
+			int slices = gBufferProj.dim.x;//((int(t) % 3) + 3);
+			int slice = (alice.fps.count % slices);
+			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
+			float slicewidth = 1.f/slices;
+			float sliceangle = M_PI * 2./slices; 
+			// 0..1
+			float sliceoffset = slice / float(slices);
 
-		viewMat = proj.view();
-		projMat = proj.projection();
+			// want to put the forward direction in the middle
+			auto sliceRot = glm::angleAxis((centredslice/float(slices))* float(M_PI * -1.f), quat_uy(proj.orientation));
+			viewMat = glm::inverse(glm::translate(proj.location) * glm::mat4_cast(sliceRot * proj.orientation));
 
-		viewProjMat = projMat * viewMat;
-		projMatInverse = glm::inverse(projMat);
-		viewMatInverse = glm::inverse(viewMat);
-		viewProjMatInverse = glm::inverse(viewProjMat);
-		
-		// draw the scene into the GBuffer:
-		glEnable(GL_SCISSOR_TEST);
-		gBufferProj.begin();
-			glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
-			glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
-			glEnable(GL_DEPTH_TEST);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
-		gBufferProj.end();
-		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-		draw_gbuffer(fbo, gBufferProj, proj, glm::vec2(1.f), glm::vec2(0.f));
-		glDisable(GL_SCISSOR_TEST);
+			// slice frustum x depends on sliceangle:
+			float fw = proj.near_clip * tanf(sliceangle * 0.5f);
+			float f = proj.near_clip * 1.f;
+			projMat = glm::frustum(-fw, fw, -f, f, proj.near_clip, proj.far_clip);
+
+			viewProjMat = projMat * viewMat;
+			projMatInverse = glm::inverse(projMat);
+			viewMatInverse = glm::inverse(viewMat);
+			viewProjMatInverse = glm::inverse(viewProjMat);
+
+			// draw the scene into the GBuffer:
+			glEnable(GL_SCISSOR_TEST);
+			{
+				glm::vec2 viewport_scale = glm::vec2(slicewidth * 2.f, 1.f);
+				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
+
+				gBufferProj.begin();
+
+					viewport.pos = glm::ivec2(gBufferProj.dim.x * viewport_offset.x, gBufferProj.dim.y * viewport_offset.y);
+					viewport.dim = glm::ivec2(gBufferProj.dim.x * viewport_scale.x, gBufferProj.dim.y * viewport_scale.y);
+
+					glScissor(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
+					glViewport(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
+					glEnable(GL_DEPTH_TEST);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
+				gBufferProj.end();
+
+				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+				draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset);
+			}
+			glDisable(GL_SCISSOR_TEST);
+		} else {
+			// regular projection
+
+			viewMat = proj.view();
+			projMat = proj.projection();
+
+			viewProjMat = projMat * viewMat;
+			projMatInverse = glm::inverse(projMat);
+			viewMatInverse = glm::inverse(viewMat);
+			viewProjMatInverse = glm::inverse(viewProjMat);
+			
+			// draw the scene into the GBuffer:
+			glEnable(GL_SCISSOR_TEST);
+			gBufferProj.begin();
+				glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glEnable(GL_DEPTH_TEST);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
+			gBufferProj.end();
+			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+			draw_gbuffer(fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
+			glDisable(GL_SCISSOR_TEST);
+		}
 	}
 	profiler.log("render projectors", alice.fps.dt);
 	
@@ -2394,6 +2352,12 @@ void onFrame(uint32_t width, uint32_t height) {
 			glEnable(GL_SCISSOR_TEST);
 
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
+
+			// keep vr location above ground
+			auto norm = glm::vec2(vrLocation.x, vrLocation.z);
+			auto landpt = al_field2d_readnorm_interp(land_dim2, state->land, norm);
+			float newy = state->field2world_scale * landpt.w;
+			vrLocation.y = glm::mix(vrLocation.y, newy, 0.25f);
 
 			// get head position in world space:
 			headPos = vive.mTrackedPosition + vrLocation;
@@ -2439,104 +2403,33 @@ void onFrame(uint32_t width, uint32_t height) {
 				gBufferVR.end();
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
+				draw_gbuffer(fbo, gBufferVR, projectors[2], true, viewport_scale, viewport_offset);
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
-			int slices = gBufferVR.dim.x;//((int(t) % 3) + 3);
-			int slice = (alice.fps.count % slices);
-			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
-			float slicewidth = 1.f/slices;
-			float sliceangle = M_PI * 2./slices; 
-			// 0..1
-			float sliceoffset = slice / float(slices);
-				
-			switch (camMode % 2){
-				case 0: {
-					// WASD mode:
-					float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
-					float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
-
-					// move camera:
-					glm::vec3 newloc = cameraLoc + quat_rotate(cameraOri, camVel) * (camera_speed * dt);
-					// wrap to world:
-					newloc = wrap(newloc, state->world_min, state->world_max);
-					cameraLoc = glm::mix(cameraLoc, newloc, 0.25f);
-
-					// stick to floor:
-					glm::vec3 norm = transform(state->world2field, cameraLoc);
-					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-					cameraLoc = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
-					cameraLoc.y += 1.6f;
 			
-					// rotate camera:
-					glm::quat newori = safe_normalize(cameraOri * glm::angleAxis(camera_turnangle * dt, camTurn));
-					
-					// now orient to floor:
-					glm::vec3 up = glm::vec3(landpt);
-					up = glm::mix(up, glm::vec3(0,1,0), 0.5);
-					newori = align_up_to(newori, glm::normalize(up));
+			// regular projection
+			Projector& proj = projectors[2];
 
-
-					cameraOri = glm::slerp(cameraOri, newori, 0.25f);
-				
-				} break;
-				default: {
-					// orbit around
-					float a = M_PI * t / 30.;
-
-					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
-					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*4.f;
-
-					cameraLoc = glm::mix(cameraLoc, newloc, 0.05f);
-					cameraOri = glm::slerp(cameraOri, newori, 0.05f);
-				}
-			}
-
-			// want to put the forward direction in the middle
-			auto sliceRot = glm::angleAxis((centredslice/float(slices))* float(M_PI * -1.f), quat_uy(cameraOri));
-			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(sliceRot * cameraOri));
-
-			// slice frustum x depends on sliceangle:
-			float fw = projectors[2].near_clip * tanf(sliceangle * 0.5f);
-			float f = projectors[2].near_clip * 1.f;
-			projMat = glm::frustum(-fw, fw, -f, f, projectors[2].near_clip, projectors[2].far_clip);
+			viewMat = proj.view();
+			projMat = proj.projection();
 
 			viewProjMat = projMat * viewMat;
 			projMatInverse = glm::inverse(projMat);
 			viewMatInverse = glm::inverse(viewMat);
 			viewProjMatInverse = glm::inverse(viewProjMat);
-
+			
 			// draw the scene into the GBuffer:
 			glEnable(GL_SCISSOR_TEST);
-			{
-				glm::vec2 viewport_scale = glm::vec2(slicewidth * 2.f, 1.f);
-				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
-
-				gBufferVR.begin();
-
-					viewport.pos = glm::ivec2(gBufferVR.dim.x * viewport_offset.x, gBufferVR.dim.y * viewport_offset.y);
-					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x, gBufferVR.dim.y * viewport_scale.y);
-
-					glScissor(
-						viewport.pos.x, 
-						viewport.pos.y, 
-						viewport.dim.x, 
-						viewport.dim.y);
-					glViewport(
-						viewport.pos.x, 
-						viewport.pos.y, 
-						viewport.dim.x, 
-						viewport.dim.y);
-					glEnable(GL_DEPTH_TEST);
-					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
-				gBufferVR.end();
-
-				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
-			}
+			gBufferProj.begin();
+				glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glEnable(GL_DEPTH_TEST);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
+			gBufferProj.end();
+			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+			draw_gbuffer(fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
@@ -2587,7 +2480,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		projectors[0].fbo.draw(glm::vec2(0.f,  0.f),  glm::vec2(0.5f,0.5f));
 		projectors[1].fbo.draw(glm::vec2(0.5f, 0.f),  glm::vec2(1.f ,0.5f));
 		projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
-		fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.f ,1.f));
+		fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.5f ,1.f));
 	}
 #endif
 	profiler.log("draw to window", alice.fps.dt);
@@ -2623,18 +2516,18 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			}
 		}
 		break;
-		case GLFW_KEY_ENTER: {
-			if (downup && alt) {
-				if (alice.hmd->connected) {
-					alice.hmd->disconnect();
-				} else if (alice.hmd->connect()) {
-					gBufferVR.dim = alice.hmd->fbo.dim;
-					gBufferVR.dest_changed();
-					alice.hmd->dest_changed();
-					alice.fps.setFPS(90);
-				}
-			}
-		} break;
+		// case GLFW_KEY_ENTER: {
+		// 	if (downup && alt) {
+		// 		if (alice.hmd->connected) {
+		// 			alice.hmd->disconnect();
+		// 		} else if (alice.hmd->connect()) {
+		// 			gBufferVR.dim = alice.hmd->fbo.dim;
+		// 			gBufferVR.dest_changed();
+		// 			alice.hmd->dest_changed();
+		// 			alice.fps.setFPS(90);
+		// 		}
+		// 	}
+		// } break;
 
 		// ? key to switch debug modes
 		case GLFW_KEY_SLASH: {
@@ -3177,6 +3070,9 @@ extern "C" {
 			projectors[2].frustum_max = glm::vec2(1.f) * aspectfactor;
 			projectors[2].near_clip = 0.05;
 			projectors[2].far_clip = (state->world_max.z - state->world_min.z);
+
+			projectors[0].altShader = true;
+			projectors[1].altShader = true;
 		}
 
 
@@ -3190,7 +3086,7 @@ extern "C" {
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
-		enablers[SHOW_TIMELAPSE] = 0;//1;
+		enablers[SHOW_TIMELAPSE] = 1;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
@@ -3204,19 +3100,18 @@ extern "C" {
 	
 		console.log("onload fluid initialized");
 	
-		gBufferVR.dim = glm::ivec2(512, 512);
+		gBufferProj.dim = glm::ivec2(1920, 1200);
+		for (int i=0; i<3; i++) {
+			projectors[i].fbo.dim = gBufferProj.dim;
+		}
+
 		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;
-		} else if (isPlatformWindows()) {
-			gBufferVR.dim.x = 1920;
-			gBufferVR.dim.y = 1080;
-			//alice.streamer->init(gBuffer.dim);
+		} else {
+			gBufferVR.dim = glm::ivec2(512, 512);
 		}
-		console.log("gBuffer dim %d x %d", gBufferVR.dim.x, gBufferVR.dim.y);
-
-		
 
 		// allocate on GPU:
 		onReloadGPU();

@@ -77,7 +77,7 @@ void main() {
 	//color = clamp((position.y - 5.)*0.1, 0., 1.);
 
 	color = vec3(position.y, mod(position.y * 2., 1.), mod(position.y * 0.5, 1.));
-	if (position.y < 1.) discard;
+	//if (position.y < 5.) discard;
 
 /*
   	//color = vec3(1.);

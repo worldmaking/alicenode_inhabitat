@@ -88,7 +88,7 @@ void main() {
 	float tcr1 = length(tc1);
 
 	float l = length(texCoord - 0.5) / 0.2;
-	float l2 = length(texCoord - 0.3) / 0.2;
+	float l2 = length(texCoord - vec2(0.3, 0.7)) / 0.2;
 
 	if (tc.x < 0.03) {
 

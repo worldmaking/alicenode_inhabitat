@@ -8,6 +8,10 @@ focus window: why does alice disappear when fullscreen but not focused?
 
 why does fungus turn white?
 
+why no vr?
+
+why particles move like jelly?
+
 particles as eggs?
 stop to have babies
 

@@ -396,6 +396,25 @@ void fluid_update(double dt) {
 }
 
 void State::fluid_update(float dt) {
+
+	// disturb the fluid:
+	for (int y=0, i=0; y<LAND_DIM; y++) {
+		for (int x=0; x<LAND_DIM; x++, i++) {
+			glm::vec3 norm = glm::vec3(
+				x/float(LAND_DIM), 
+				human.front()[i], 
+				y/float(LAND_DIM)
+			);
+
+			glm::vec3 push = glm::vec3(
+				state->flow[i].x, 
+				0.f, 
+				state->flow[i].y); 
+			push = push * (flow_scale * dt);
+
+			al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
+		}
+	}
 	
 	const glm::ivec3 dim = fluid_velocities.dim();
 	const glm::vec3 field_dimf = glm::vec3(field_dim);
@@ -546,7 +565,7 @@ void State::fields_update(float dt) {
 			float f0 = tex.w; 
 
 			// fungus increases smoothly, but death is immediate:
-			float f1 = f; //(f <= 0) ? f : glm::mix(f0, f, 0.1f);
+			float f1 = (f <= 0) ? f : glm::mix(f0, f, 0.1f);
 
 			// other fields just clamp & decay:
 			chem = glm::clamp(chem * chemical_decay, 0.f, 1.f);
@@ -731,24 +750,6 @@ void State::sim_update(float dt) {
 			cv::Mat flow(LAND_DIM, LAND_DIM, CV_32FC(2), (void *)state->flow);
 			cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
 			
-			// now disturb the fluid:
-			for (int y=0, i=0; y<LAND_DIM; y++) {
-				for (int x=0; x<LAND_DIM; x++, i++) {
-					glm::vec3 norm = glm::vec3(
-						x/float(LAND_DIM), 
-						human.front()[i], 
-						y/float(LAND_DIM)
-					);
-
-					glm::vec3 push = glm::vec3(
-						state->flow[i].x, 
-						0.f, 
-						state->flow[i].y); 
-					push = push * (flow_scale * dt);
-
-					al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
-				}
-			}
 		}
 #endif
 
@@ -1204,7 +1205,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 		//if(i == objectSel) console.log("fungal %f", fungal);
 		float eat = glm::max(0.f, fungal) * 2.f;
 		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
-		fungus_field.front()[fungus_idx] -= eat;
+  		fungus_field.front()[fungus_idx] -= eat;
 
 		o.color = glm::vec3(o.params);
 

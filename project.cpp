@@ -668,10 +668,9 @@ void State::sim_update(float dt) {
 				float& humanpt1 = human.back()[landidx];
 
 				float h = world2field_scale * pt.y;
-				humanpt1 = glm::mix(humanpt0, h, 0.5f);
+				humanpt1 = glm::mix(humanpt0, h, 0.25f);
 
 				// in archi15 we also did spatial filtering
-
 
 			}
 

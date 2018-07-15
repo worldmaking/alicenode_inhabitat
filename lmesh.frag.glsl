@@ -19,6 +19,8 @@ layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
 layout (location = 3) out vec3 FragTexCoord;
 
+float coastline = 10.;
+
 void main() {
 	// uncomment this line for contours:
 	//if (mod(position.y*4.,1.) > 0.2) discard;
@@ -76,7 +78,9 @@ void main() {
 	color *= clamp((position.y - 5.)*0.1, 0., 1.);
 	//color = clamp((position.y - 5.)*0.1, 0., 1.);
 
-	color = vec3(mod(position.y * 0.75, 1.), mod(position.y * 0.25, 1.), mod(position.y * 0.5, 1.));
+	float h = position.y - coastline;
+
+	color = vec3(clamp(h, 0., 1.));
 	if (position.y < 10.) color *= 0.15;
 
 /*

@@ -570,17 +570,21 @@ void State::land_update(float dt) {
 			auto land_idx = al_field2d_index_nowrap(land_dim2, x, y);
 
 			float h = human.front()[land_idx];
-
-			if (h == 0.f) continue;
-
 			glm::vec4& landpt = land[land_idx];
-			if (h < landpt.w) {
-				// fall quickly:
-				landpt.w = glm::mix(landpt.w, h, land_fall_rate * dt);
-			} else {
-				// fall quickly:
-				landpt.w = glm::mix(landpt.w, h, land_rise_rate * dt);
-			}
+			landpt.w = h;
+
+			//if (h == 0.f) continue;
+
+			// glm::vec4& landpt = land[land_idx];
+			// if (h < landpt.w) {
+			// 	// fall quickly:
+			// 	landpt.w = glm::mix(landpt.w, h, land_fall_rate * dt);
+			// } else {
+			// 	// fall quickly:
+			// 	landpt.w = glm::mix(landpt.w, h, land_rise_rate * dt);
+			// }
+
+			
 		}
 	}
 
@@ -588,7 +592,7 @@ void State::land_update(float dt) {
 	
 	// next, calculate normals
 	// THIS IS TOO SLOW!!!!
-	generate_land_sdf_and_normals();
+	//generate_land_sdf_and_normals();
 }
 
 void sim_update(double dt) { 

@@ -631,7 +631,7 @@ void State::sim_update(float dt) {
 		
 		// for each Kinect
 		for (int k=0; k<2; k++) {
-			if (k == 0) continue;
+			if (k == 1) continue;
 
 			
 			const CloudFrame& cloudFrame0 = k ? kinect1.cloudFrame() : kinect0.cloudFrame();
@@ -649,6 +649,7 @@ void State::sim_update(float dt) {
 					if (k==1 && (x > cDepthWidth * 0.85
 						|| x < cDepthWidth * 0.05
 						|| y > cDepthHeight * 0.7)) continue;
+					if (k==0 && (x > cDepthWidth * 0.5)) continue;
 						
 				
 					auto pt = cloud_points0[i];

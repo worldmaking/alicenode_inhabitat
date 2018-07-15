@@ -84,13 +84,22 @@ void main() {
 	vec2 tc1 = mod(texCoord * div, 1.);
 	float tcr1 = length(tc1);
 
-	if (tc.x < 0.1) {
+	float l = length(texCoord - 0.5) / 0.2;
+
+	if (tc.x < 0.03) {
 
 		color = vec3(1.);
 
-	} else if (tcr1 < 0.2) {
+	} else if (tc.y < 0.03) {
 
-		color = vec3(mod(div.x * 3., 0.8723), mod(div.y * 3., 0.7523), mod(div.x * 3., 0.34523));
+		color = vec3(1.);
+
+	} else if (l < 1.) {
+
+		color = vec3(
+			l > 0.5 ? 1. : 0.5,
+			l > 0.75 ? 1. : 0.5, 
+			l < 0.5 ? 1. : 0.5);
 
 	} else {
 		//discard;

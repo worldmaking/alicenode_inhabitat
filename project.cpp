@@ -631,7 +631,7 @@ void State::sim_update(float dt) {
 		
 		// for each Kinect
 		for (int k=0; k<2; k++) {
-			//if (k == 0) continue;
+			if (k == 1) continue;
 
 			
 			const CloudFrame& cloudFrame0 = k ? kinect1.cloudFrame() : kinect0.cloudFrame();
@@ -646,11 +646,10 @@ void State::sim_update(float dt) {
 				for (int x=0; x < cDepthWidth; x++, i++) {
 
 					// hard masks:
-
 					if (k==1 && (x > cDepthWidth * 0.7 && y > cDepthWidth * 0.5)) continue;
 					if (k==1 && (x > cDepthWidth * 0.85)) continue;
 					if (k==0 && (y < cDepthHeight * 0.3 && x > cDepthWidth * 0.75)) continue;
-						
+					if (k==0 && glm::length(uv) > 0.5f) continue;
 				
 					auto pt = cloud_points0[i];
 					auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;

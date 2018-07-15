@@ -934,7 +934,7 @@ void State::creature_reset(int i) {
 		a.state = Creature::STATE_ALIVE;
 		a.health = rnd::uni();
 
-		//a.location = random_location_above_land(0.05f);
+		//a.location = random_location_above_land(coastline * world2field_scale);
 		a.location = island_centres[island];
 		a.scale = rnd::uni(0.5f) + 0.75f;
 		a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
@@ -3152,8 +3152,8 @@ extern "C" {
 		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
-		enablers[SHOW_OBJECTS] = 0;
-		enablers[SHOW_TIMELAPSE] = 0;//1;
+		enablers[SHOW_OBJECTS] = 1;
+		enablers[SHOW_TIMELAPSE] = 1;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;

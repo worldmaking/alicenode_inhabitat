@@ -631,7 +631,7 @@ void State::sim_update(float dt) {
 		
 		// for each Kinect
 		for (int k=0; k<2; k++) {
-			if (k == 1) continue;
+			if (k == 11) continue;
 
 			
 			const CloudFrame& cloudFrame0 = k ? kinect1.cloudFrame() : kinect0.cloudFrame();
@@ -651,7 +651,7 @@ void State::sim_update(float dt) {
 					if (k==0 && (y < cDepthHeight * 0.3 && x > cDepthWidth * 0.75)) continue;
 
 					auto uv = (uv_points0[i] - glm::vec2(0.5f, 0.5f)) * kaspectnorm;
-					if (k==0 && glm::length(uv_points0[i] - glm::vec2(0.25f, 0.75f)) < 0.1f) continue;
+					if (k==0 && glm::length(uv_points0[i] - glm::vec2(0.15f, 0.85f)) < 0.2f) continue;
 				
 					auto pt = cloud_points0[i];
 					// filter out bad depths

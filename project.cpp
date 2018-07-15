@@ -573,7 +573,7 @@ void State::land_update(float dt) {
 			glm::vec4& landpt = land[land_idx];
 			//landpt.w = h;
 
-			//if (h == 0.f) continue;
+			if (h == 0.f) continue;
 
 			// glm::vec4& landpt = land[land_idx];
 			if (h < landpt.w) {

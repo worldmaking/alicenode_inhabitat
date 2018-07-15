@@ -331,8 +331,8 @@ struct State {
 
 	// transforms:
 	glm::vec3 world_min = glm::vec3(0.f);
-	glm::vec3 world_max = glm::vec3(400.f);
-	glm::vec3 world_centre = glm::vec3(200.f);
+	glm::vec3 world_max = glm::vec3(450.f);
+	glm::vec3 world_centre = glm::vec3(225.f);
 	float field2world_scale;
 	float world2field_scale;
 	glm::mat4 world2field;

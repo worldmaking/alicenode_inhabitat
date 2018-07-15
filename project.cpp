@@ -546,7 +546,7 @@ void State::fields_update(float dt) {
 			float f0 = tex.w; 
 
 			// fungus increases smoothly, but death is immediate:
-			float f1 = (f <= 0) ? f : (f0 + 0.05f * (f - f0));
+			float f1 = f; //(f <= 0) ? f : glm::mix(f0, f, 0.1f);
 
 			// other fields just clamp & decay:
 			chem = glm::clamp(chem * chemical_decay, 0.f, 1.f);

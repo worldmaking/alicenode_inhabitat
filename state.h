@@ -330,9 +330,9 @@ struct State {
 	glm::vec3 island_centres[NUM_ISLANDS];
 
 	// transforms:
-	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
-	glm::vec3 world_max = glm::vec3(500.f, 500.f, 500.f);
-	glm::vec3 world_centre = glm::vec3(250.f, 250.f, 250.f);
+	glm::vec3 world_min = glm::vec3(0.f);
+	glm::vec3 world_max = glm::vec3(400.f);
+	glm::vec3 world_centre = glm::vec3(200.f);
 	float field2world_scale;
 	float world2field_scale;
 	glm::mat4 world2field;

@@ -45,25 +45,25 @@ void main() {
 	
 	// TODO: color += rock colour
 
-	if (fungus > 0.) {
-		// fungus:
-		float factor = fungus;
-		//factor += noise.z * 0.1;
-		color = mix(vec3(1) * min(1., position.y*0.05), color*fungus, factor);
-		//color = vec3(0,1,0) * fungus;
+	// if (fungus > 0.) {
+	// 	// fungus:
+	// 	float factor = fungus;
+	// 	//factor += noise.z * 0.1;
+	// 	color = mix(vec3(1) * min(1., position.y*0.05), color*fungus, factor);
+	// 	//color = vec3(0,1,0) * fungus;
 		
-	} else {
+	// } else {
 
-		// fungus ranges from -1 to 0 as it recovers toward life
+	// 	// fungus ranges from -1 to 0 as it recovers toward life
 
-		//color -= 0.8*(0.8-steepness);
-		//color *= 0.25;
-		// darken lowlands:
+	// 	//color -= 0.8*(0.8-steepness);
+	// 	//color *= 0.25;
+	// 	// darken lowlands:
 		
-		//color = vec3(0);
-		//color = vec3(0);//vec3(1,0,0) * -fungus;
+	// 	//color = vec3(0);
+	// 	//color = vec3(0);//vec3(1,0,0) * -fungus;
 		
-	}
+	// }
 
 	// add chems:
 	color += chem;
@@ -81,7 +81,7 @@ void main() {
 	if (position.y < coastline) discard;
 	//color *= clamp((position.y - coastline) * 0.05, 0., 1.);
 	float h = position.y;
-	color = vec3(1.) * clamp((position.y - coastline) * 0.125, 0., 1.);
+	color *= clamp((position.y - coastline) * 0.125, 0., 1.);
 /*
 	float h = position.y - coastline;
 

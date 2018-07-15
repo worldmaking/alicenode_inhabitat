@@ -571,7 +571,7 @@ void State::land_update(float dt) {
 
 			float h = human.front()[land_idx];
 			glm::vec4& landpt = land[land_idx];
-			landpt.w = h;
+			//landpt.w = h;
 
 			//if (h == 0.f) continue;
 
@@ -688,6 +688,9 @@ void State::sim_update(float dt) {
 					humanpt1 = glm::mix(humanpt0, h, 0.1f);
 
 					// in archi15 we also did spatial filtering
+
+					glm::vec4& landpt = land[land_idx];
+					landpt.w = h;
 
 				}
 			}

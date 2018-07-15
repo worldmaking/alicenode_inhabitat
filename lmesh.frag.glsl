@@ -41,32 +41,32 @@ void main() {
 	float fungus = fields1.a;
 
 
-	vec3 color = normalize(vec3(texCoord , 0.5)) * 0.5;
+	vec3 color = normalize(vec3(texCoord , 0.5));
 	
 	// TODO: color += rock colour
 
-	// if (fungus > 0.) {
-	// 	// fungus:
-	// 	float factor = fungus;
-	// 	//factor += noise.z * 0.1;
-	// 	color = mix(vec3(1) * min(1., position.y*0.05), color*fungus, factor);
-	// 	//color = vec3(0,1,0) * fungus;
+	if (fungus > 0.) {
+		// fungus:
+		float factor = fungus;
+		//factor += noise.z * 0.1;
+		color = mix(vec3(1) * min(1., position.y*0.05), color*fungus, factor);
+		//color = vec3(0,1,0) * fungus;
 		
-	// } else {
+	} else {
 
-	// 	// fungus ranges from -1 to 0 as it recovers toward life
+		// fungus ranges from -1 to 0 as it recovers toward life
 
-	// 	//color -= 0.8*(0.8-steepness);
-	// 	//color *= 0.25;
-	// 	// darken lowlands:
+		//color -= 0.8*(0.8-steepness);
+		//color *= 0.25;
+		// darken lowlands:
 		
-	// 	//color = vec3(0);
-	// 	//color = vec3(0);//vec3(1,0,0) * -fungus;
+		//color = vec3(0);
+		//color = vec3(0);//vec3(1,0,0) * -fungus;
 		
-	// }
+	}
 
 	// add chems:
-	color += chem;
+	//color += chem;
 
 	// // darken steep slopes:
 	color *= vec3(1. - steepness);

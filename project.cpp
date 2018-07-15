@@ -648,7 +648,7 @@ void State::sim_update(float dt) {
 				// skip OOB locations:
 				if (
 					depth0[i] <= 0 
-					|| glm::length(uv) > 0.5f
+					//|| glm::length(uv) > 0.5f
 					|| pt.x < world_min.x
 					|| pt.z < world_min.z
 					|| pt.x > world_max.x

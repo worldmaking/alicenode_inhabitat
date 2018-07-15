@@ -331,8 +331,8 @@ struct State {
 
 	// transforms:
 	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
-	glm::vec3 world_max = glm::vec3(300.f, 300.f, 300.f);
-	glm::vec3 world_centre = glm::vec3(150.f, 50.f, 150.f);
+	glm::vec3 world_max = glm::vec3(500.f, 500.f, 500.f);
+	glm::vec3 world_centre = glm::vec3(250.f, 250.f, 250.f);
 	float field2world_scale;
 	float world2field_scale;
 	glm::mat4 world2field;
@@ -342,7 +342,7 @@ struct State {
 	glm::mat4 leap2view;
 	glm::mat4 world2minimap;
 	float minimapScale = 0.005f;
-	float kinect2world_scale = 50.f; //50.f;
+	float kinect2world_scale = 50.f; //50.f;   // or 30?
 
 	// parameters:
 

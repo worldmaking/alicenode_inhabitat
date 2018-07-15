@@ -646,7 +646,7 @@ void State::sim_update(float dt) {
 				for (int x=0; x < cDepthWidth; x++, i++) {
 
 					// hard masks:
-					if (k==1 && (x > cDepthWidth * 0.85 && y > cDepthHeight * 0.7)) continue;
+					if (k==1 && (x > cDepthWidth * 0.85)) continue;
 					if (k==0 && (y < cDepthHeight * 0.3 && x > cDepthWidth * 0.75)) continue;
 						
 				

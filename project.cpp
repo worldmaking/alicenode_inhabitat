@@ -685,7 +685,7 @@ void State::sim_update(float dt) {
 					float& humanpt1 = human.back()[landidx];
 
 					float h = world2field_scale * pt.y;
-					humanpt1 = h; //glm::mix(humanpt0, h, 0.1f);
+					humanpt1 = glm::mix(humanpt0, h, 0.1f);
 
 					// in archi15 we also did spatial filtering
 
@@ -693,8 +693,8 @@ void State::sim_update(float dt) {
 			}
 		} // end 2 kinects
 		
-		al_field2d_diffuse(land_dim2, human.back(), human.front(), 0.5f, 3);
-		//human.swap();
+		//al_field2d_diffuse(land_dim2, human.back(), human.front(), 0.5f, 3);
+		human.swap();
 
 		// NOW FLOW
 #ifdef AL_WIN

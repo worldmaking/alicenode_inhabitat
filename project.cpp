@@ -631,6 +631,7 @@ void State::sim_update(float dt) {
 		
 		// for each Kinect
 		for (int i=0; i<2; i++) {
+			if (i == 0) continue;
 			
 			const CloudFrame& cloudFrame0 = i ? kinect1.cloudFrame() : kinect0.cloudFrame();
 			const CloudFrame& cloudFrame1 = i ? kinect1.cloudFramePrev() : kinect0.cloudFramePrev();

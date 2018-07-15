@@ -645,7 +645,7 @@ void State::sim_update(float dt) {
 			for (int i=0, y=0; y < cDepthHeight; y++) {
 				for (int x=0; x < cDepthWidth; x++, i++) {
 
-					if (i==1 && x < cDepthWidth/2) continue;
+					if (k==1 && x < cDepthWidth/2) continue;
 						
 				
 					auto pt = cloud_points0[i];

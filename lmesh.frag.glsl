@@ -19,7 +19,7 @@ layout (location = 1) out vec3 FragNormal;
 layout (location = 2) out vec3 FragPosition;
 layout (location = 3) out vec3 FragTexCoord;
 
-float coastline = 10.;
+float coastline = 11.;
 
 void main() {
 	// uncomment this line for contours:

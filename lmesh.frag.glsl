@@ -73,9 +73,11 @@ void main() {
 	//float hu = texture2D(tex4, texcoord0).z;
 	//color *= clamp((1.-4.*hu), 0., 1);
 
-	//color *= clamp((position.y - 5.)*0.1, 0., 1.);
-	color = clamp((position.y - 5.)*0.1, 0., 1.);
-  
+	color *= clamp((position.y - 5.)*0.1, 0., 1.);
+	//color = clamp((position.y - 5.)*0.1, 0., 1.);
+
+	color = vec3(position.y, mod(position.y * 10., 1.), mod(position.y * 0.1, 1.));
+
   	//color = vec3(1.);
 
 	// vec2 div = ceil(texCoord * 10.);

@@ -929,12 +929,13 @@ void State::creature_reset(int i) {
 		int island = rnd::integer(NUM_ISLANDS);
 		Creature& a = creatures[i];
 		a.idx = i;
-		a.type = (rnd::integer(2) + 1) * 2;
+		//a.type = (rnd::integer(2) + 1) * 2;
+		a.type = (rnd::integer(2) + 1);
 		//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
 		a.state = Creature::STATE_ALIVE;
 		a.health = rnd::uni();
 
-		//a.location = random_location_above_land(coastline * world2field_scale);
+		a.location = random_location_above_land(coastline_height * world2field_scale);
 		a.location = island_centres[island];
 		a.scale = rnd::uni(0.5f) + 0.75f;
 		a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));

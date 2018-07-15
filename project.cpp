@@ -2854,7 +2854,7 @@ void State::reset() {
 		}
 	}
 
-	island_centres[0] = glm::vec3(285., 0., 385.);
+	island_centres[0] = glm::vec3(120., 0., 70.);
 	island_centres[1] = glm::vec3(290., 0., 390.);
 	island_centres[2] = glm::vec3(120., 0., 345.);
 	island_centres[3] = glm::vec3(285., 0., 385.);

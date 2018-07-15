@@ -86,7 +86,7 @@ void main() {
 
 	if (tc.x < 0.1) {
 
-		color = vec3(texCoord, 1.);
+		color = vec3(texCoord.y);
 
 	} else if (tcr1 < 0.2) {
 
@@ -94,7 +94,7 @@ void main() {
 
 	} else {
 		//discard;
-		color = vec3(0.25);
+		color = vec3(0.5);
 	}
 
 	FragColor.rgb = color;

@@ -124,7 +124,7 @@ void main() {
 		
 	}*/
 
-	vec3 island = vec3(280., 0., 380.);
+	vec3 island = vec3(285., 0., 385.);
 	if (abs(island.x - position.x) < 5.
 	|| abs(island.z - position.z) < 5.) color = vec3(1, 0, 0);
 

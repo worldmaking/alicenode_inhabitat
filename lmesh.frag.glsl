@@ -37,7 +37,7 @@ void main() {
 	//float steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
 	float steepness = abs(1. - nnorm.y);
 
-	vec3 chem = fields1.rgb * 0.2;
+	vec3 chem = fields1.rgb * 0.25;
 	float fungus = fields1.a;
 
 

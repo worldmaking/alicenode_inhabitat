@@ -77,7 +77,21 @@ void main() {
   
   	//color = vec3(1.);
 
-	color = vec3(texCoord, 1.);
+	vec2 tc = mod(texCoord * 10., 1.);
+	float tcr = length(tc - 0.5);
+	float tcr1 = length(tc);
+
+	if (tcr < 0.1) {
+
+		color = vec3(texCoord, 1.);
+
+	} else if (tcr1 < 0.1) {
+
+		color = vec3(mod(texCoord * 8., 1.), 1.);
+
+	} else {
+		discard;
+	}
 
 	FragColor.rgb = color;
 	//FragColor.rgb = nnorm;

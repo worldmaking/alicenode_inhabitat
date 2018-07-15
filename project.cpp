@@ -3169,7 +3169,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
-		//alice.hmd->connect();
+		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;

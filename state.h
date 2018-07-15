@@ -342,7 +342,7 @@ struct State {
 	glm::mat4 leap2view;
 	glm::mat4 world2minimap;
 	float minimapScale = 0.005f;
-	float kinect2world_scale = 35.f; //50.f;
+	float kinect2world_scale = 50.f; //50.f;
 
 	// parameters:
 

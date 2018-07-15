@@ -389,7 +389,7 @@ struct State {
 
 	float fungus_recovery_rate = 0.02;
 	float fungus_seeding_chance = 0.00001;
-	float fungus_migration_chance = 0.01f;
+	float fungus_migration_chance = 0.1f;
 	float fungus_decay_chance = 0.05;
 
 	float ant_nestsize = 0.04f;

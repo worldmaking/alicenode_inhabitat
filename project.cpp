@@ -667,7 +667,7 @@ void State::sim_update(float dt) {
 						|| pt.z < world_min.z
 						|| pt.x > world_max.x
 						|| pt.z > world_max.z
-						|| pt.y > (3. * kinect2world_scale)
+						|| pt.y > (2. * kinect2world_scale)
 						) continue;
 
 					// find nearest land cell for this point:

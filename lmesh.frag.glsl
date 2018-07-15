@@ -77,6 +77,8 @@ void main() {
   
   	//color = vec3(1.);
 
+	color = vec3(texCoord, 1.);
+
 	FragColor.rgb = color;
 	//FragColor.rgb = nnorm;
 	//FragColor.rgb = vec3(fungus);

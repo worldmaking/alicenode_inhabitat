@@ -3131,15 +3131,15 @@ extern "C" {
 		
 
 		enablers[SHOW_LANDMESH] = 1;
-		enablers[SHOW_AS_GRID] = 0;
+		enablers[SHOW_AS_GRID] = 1;
 		enablers[SHOW_MINIMAP] = 0;//1;
-		enablers[SHOW_OBJECTS] = 1;
-		enablers[SHOW_TIMELAPSE] = 1;//1;
-		enablers[SHOW_PARTICLES] = 1;//1;
+		enablers[SHOW_OBJECTS] = 0;
+		enablers[SHOW_TIMELAPSE] = 0;//1;
+		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
-		enablers[SHOW_HUMANMESH] = 0;
-		enablers[CALIBRATE] = 0;
+		enablers[SHOW_HUMANMESH] = 1;
+		enablers[CALIBRATE] = 1;
 
 		//threads_begin();
 

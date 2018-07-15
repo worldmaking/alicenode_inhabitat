@@ -242,6 +242,8 @@ struct Projector {
 	glm::mat4 viewMat;
 	glm::mat4 projMat;
 
+	bool altShader = false;
+
 	Projector() {
 		fbo.dim.x = 1920;
 		fbo.dim.y = 1080;
@@ -273,7 +275,7 @@ Shader particleShader;
 Shader landShader;
 Shader landMeshShader;
 Shader humanMeshShader;
-Shader deferShader; 
+Shader deferShader, deferShader2; 
 Shader simpleShader;
 Shader debugShader;
 Shader flowShader;
@@ -333,14 +335,19 @@ Viewport viewport;
 glm::vec3 eyePos;
 glm::vec3 headPos; // in world space
 // the location of the VR person in the world
-glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
+glm::vec3 vrLocation;
 
 glm::vec3 nextVrLocation;
 int fadeState = 0;
+int vrIsland = 0;
+float timeToVrJump = 0;
+
+uint8_t humanchar0[LAND_TEXELS];
+uint8_t humanchar1[LAND_TEXELS];
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 1; 
+int camMode = 0; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 float camera_speed_default = 40.f;
@@ -364,6 +371,7 @@ bool enablers[10];
 #define SHOW_DEBUGDOTS 6
 #define USE_OBJECT_SHADER 7
 #define SHOW_HUMANMESH 8
+#define CALIBRATE 9
 
 Profiler profiler;
 
@@ -373,6 +381,7 @@ std::mutex sim_mutex;
 MetroThread simThread(25);
 MetroThread fieldThread(25);
 MetroThread fluidThread(10);
+MetroThread landThread(10);
 bool isRunning = 1;
 bool teleporting = false;
 
@@ -421,7 +430,7 @@ void State::fluid_update(float dt) {
 
 					// use this to sample the landscape:
 					float sdist;
-					al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+					al_field3d_readnorm_interp(sdf_dim, distance, norm, &sdist);
 					float dist = fabsf(sdist);
 
 					// TODO: what happens 'underground'?
@@ -437,13 +446,19 @@ void State::fluid_update(float dt) {
 					
 					// get a normal for the land:
 					// TODO: or read from state->land xyz?
-					glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 2.f/LAND_DIM);
-
+					glm::vec3 normal = sdf_field_normal4(sdf_dim, distance, norm, 2.f/SDF_DIM);
 					// re-orient to be orthogonal to the land normal:
 					glm::vec3 rescaled = make_orthogonal_to(vel, normal);
-
 					// update:
 					vel = mix(vel, rescaled, influence);	
+
+					// also provide an outer boundary:
+					glm::vec3 central = 0.5f-norm;
+					central.y = 0.f;
+					auto factor = glm::dot(central, central);
+					central = glm::length(vel) * safe_normalize(central);
+					// update:
+					//vel = mix(vel, central, factor);	
 				}
 			}
 		}
@@ -479,7 +494,7 @@ void State::fields_update(float dt) {
 				al_field2d_readnorm_interp(glm::ivec2(LAND_DIM, LAND_DIM), land, norm, &l);
 				float hm = l.w * field2world_scale - coastline_height;
 				float h = l.w;
-				float hu = 0.;//humanmap_array.sample(norm);
+				float hu = al_field2d_readnorm_interp(land_dim2, human.front(), norm);
 				float dst = C;
 				if (h <= 0 || hu > 0.1) {
 					// force lowlands to be vacant
@@ -507,7 +522,7 @@ void State::fields_update(float dt) {
 					// if alive, copy it
 					if (tv > 0.) { dst = tv; }
 				}
-				dst_array[i] = dst;
+				dst_array[i] = glm::clamp(dst, -1.f, 1.f);
 			}
 		}
 		fungus_field.swap();
@@ -531,10 +546,10 @@ void State::fields_update(float dt) {
 			float f0 = tex.w; 
 
 			// fungus increases smoothly, but death is immediate:
-			float f1 = (f <= 0) ? f : (f0 + 0.05f * (f - f0));
+			float f1 = f; //(f <= 0) ? f : glm::mix(f0, f, 0.1f);
 
 			// other fields just clamp & decay:
-			chem = glm::clamp(chem * chemical_decay, 0.f, 2.f);
+			chem = glm::clamp(chem * chemical_decay, 0.f, 1.f);
 
 			// now copy these modified results back to the field_texture:
 			tex = glm::vec4(chem, f1);
@@ -547,6 +562,44 @@ void State::fields_update(float dt) {
 		al_field3d_diffuse(field_dim, emission_field.back(), emission_field.front(), emission_diffuse);
 		emission_field.swap();
 	}
+}
+
+void land_update(double dt) { 
+	//if (Alice::Instance().isSimulating) state->land_update(dt); 
+	state->generate_land_sdf_and_normals();
+}
+
+void State::land_update(float dt) {
+	for (int y=0; y<LAND_DIM; y++) {
+		for (int x=0; x<LAND_DIM; x++) {
+			auto land_idx = al_field2d_index_nowrap(land_dim2, x, y);
+
+			float h = human.front()[land_idx];
+			glm::vec4& landpt = land[land_idx];
+			//landpt.w = h;
+
+			if (h == 0.f) continue;
+
+			float h1;
+
+			// glm::vec4& landpt = land[land_idx];
+			if (h <= landpt.w) {
+				// fall quickly:
+				h1 = glm::mix(landpt.w, h, land_fall_rate * dt);
+			} else {
+				// fall quickly:
+				h1 = glm::mix(landpt.w, h, land_rise_rate * dt);
+			}
+
+			landpt.w = h1;//glm::mix(landpt.w, h1, 0.2f);
+		}
+	}
+
+	// maybe diffuse too to smoothen land?
+	
+	// next, calculate normals
+	// THIS IS TOO SLOW!!!!
+	//generate_land_sdf_and_normals();
 }
 
 void sim_update(double dt) { 
@@ -580,66 +633,126 @@ void State::sim_update(float dt) {
 	if (1) {
 		// first, dampen the human field:
 		for (int i=0; i<LAND_TEXELS; i++) {
-			human[i].w *= human_height_decay;
+			human.front()[i] *= human_height_decay;
 		}
 		
 		// for each Kinect
-		for (int i=0; i<2; i++) {
+		for (int k=0; k<2; k++) {
+			//if (k == 11) continue;
+
 			
-			const CloudFrame& cloudFrame0 = i ? kinect1.cloudFrame() : kinect0.cloudFrame();
+			const CloudFrame& cloudFrame0 = k ? kinect1.cloudFrame() : kinect0.cloudFrame();
+			const CloudFrame& cloudFrame1 = k ? kinect1.cloudFramePrev() : kinect0.cloudFramePrev();
 			const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
 			const glm::vec2 * uv_points0 = cloudFrame0.uv;
 			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
 			const uint16_t * depth0 = cloudFrame0.depth;
 
 			// now update with live data:
-			for (int i=0; i<max_cloud_points; i++) {
-				auto pt = cloud_points0[i];
-				auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;
-				// filter out bad depths
-				// mask outside a circular range
-				// skip OOB locations:
-				if (
-					depth0[i] <= 0 
-					|| glm::length(uv) > 0.5f
-					|| pt.x < world_min.x
-					|| pt.z < world_min.z
-					|| pt.x > world_max.x
-					|| pt.z > world_max.z
-					//|| pt.y > 3.
-					) continue;
+			for (int i=0, y=0; y < cDepthHeight; y++) {
+				for (int x=0; x < cDepthWidth; x++, i++) {
 
-				// find nearest land cell for this point:
-				// get norm'd coordinate:
-				glm::vec3 norm = transform(world2field, pt);
-				glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
-				// get cell index for this location:
-				int landidx = al_field2d_index_norm(land_dim2, norm2);
-				
-				// set the land value accordingly:
-				glm::vec4& humanpt = human[landidx];
+					// masks:
+					if (k==1 && (x > cDepthWidth * 0.7 && y > cDepthWidth * 0.5)) continue;
+					if (k==1 && (x > cDepthWidth * 0.85)) continue;
+					if (k==0 && (y < cDepthHeight * 0.3 && x > cDepthWidth * 0.75)) continue;
 
-				// could mix toward this? though live update actually looked pretty good
-				float h = world2field_scale * pt.y;
-				//humanpt.w = glm::mix(humanpt.w, h, 0.5f);
-				humanpt.w = h;
+					auto uv = (uv_points0[i] - glm::vec2(0.5f, 0.5f)) * kaspectnorm;
+					if (k==0 && glm::length((uv_points0[i] - glm::vec2(0.17f, 0.93f))* kaspectnorm) < 0.2f) continue;
 
-				// in archi15 we also did spatial filtering
+					if (k==0 && glm::length((uv_points0[i] - glm::vec2(0.57f, 0.8f))* kaspectnorm) < 0.15f) continue;	
 
+					if (k==0 && glm::length((uv_points0[i] - glm::vec2(0.9f, 0.93f))* kaspectnorm) < 0.35f) continue;
 
-				// TODO: make land smoother
-				glm::vec4& landpt = land[landidx];
-				landpt.w = glm::mix(landpt.w, h, 0.1f);
+					auto pt = cloud_points0[i];
+					// filter out bad depths
+					// mask outside a circular range
+					// skip OOB locations:
+					uint16_t min_dist = 3000;
+					uint16_t max_dist = 6000;
+					if (
+						depth0[i] <= min_dist 
+						|| depth0[i] >= max_dist
+						|| pt.x < world_min.x
+						|| pt.z < world_min.z
+						|| pt.x > world_max.x
+						|| pt.z > world_max.z
+						|| pt.y > (2.0 * kinect2world_scale)
+						) continue;
 
+					// find nearest land cell for this point:
+					// get norm'd coordinate:
+					glm::vec3 norm = transform(world2field, pt);
+					glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+					// get cell index for this location:
+					int landidx = al_field2d_index_norm(land_dim2, norm2);
+					
+					// set the land value accordingly:
+					float& humanpt0 = human.front()[landidx];
+					float& humanpt1 = human.back()[landidx];
+
+					float h = world2field_scale * pt.y;
+					humanpt1 = glm::mix(humanpt0, h, 0.4f);
+
+					// in archi15 we also did spatial filtering
+
+				}
+			}
+		} // end 2 kinects
+		
+		//al_field2d_diffuse(land_dim2, human.back(), human.front(), 0.5f, 3);
+		human.swap();
+
+		land_update(dt);
+
+		// NOW FLOW
+#ifdef AL_WIN
+		if (1) {
+
+			// copy human to char arrays for CV:
+			for (int i=0; i<LAND_TEXELS; i++) {
+				humanchar0[i] = humanchar1[i];
+				humanchar1[i] = human.front()[i] * 255;
+			}
+			
+			int levels = 3; // default=5;
+			double pyr_scale = 0.5;
+			int winsize = 13;
+			int iterations = 3; // default = 10;
+			int poly_n = 5;
+			double poly_sigma = 1.2; // default = 1.1
+			int flags = 0;
+			
+			// create CV mat wrapper around Jitter matrix data
+			// (cv declares dim as numrows, numcols, i.e. dim1, dim0, or, height, width)
+			void * src;
+			cv::Mat prev(LAND_DIM, LAND_DIM, CV_8UC(1), (void *)humanchar0);
+			cv::Mat next(LAND_DIM, LAND_DIM, CV_8UC(1), (void *)humanchar1);
+			cv::Mat flow(LAND_DIM, LAND_DIM, CV_32FC(2), (void *)state->flow);
+			cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
+			
+			// now disturb the fluid:
+			for (int y=0, i=0; y<LAND_DIM; y++) {
+				for (int x=0; x<LAND_DIM; x++, i++) {
+					glm::vec3 norm = glm::vec3(
+						x/float(LAND_DIM), 
+						human.front()[i], 
+						y/float(LAND_DIM)
+					);
+
+					glm::vec3 push = glm::vec3(
+						state->flow[i].x, 
+						0.f, 
+						state->flow[i].y); 
+					push = push * (flow_scale * dt);
+
+					al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
+				}
 			}
 		}
+#endif
 
-		// next, calculate normals
-		// THIS IS TOO SLOW!!!!
-		//generate_land_sdf_and_normals();
-
-		// next, filter out what we think might be the land vs. the human
-		// 1. 
+		
 	}
 	if (!alice.isSimulating) return;
 
@@ -694,17 +807,26 @@ void State::sim_update(float dt) {
 
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
+			float h = al_field2d_readnorm_interp(land_dim2, land, glm::vec2(norm.x, norm.z)).w * field2world_scale;
+			
 
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(transform(world2field, o.location), &flow.x);
 			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
 
 			// noise:
-			flow += glm::sphericalRand(0.0002f);
+			flow += glm::sphericalRand(particle_noise);
 
 			o.velocity = flow * idt;
-			
-			// sometimes assign to a random creature?
+
+			if (o.location.y < h || o.location.y > world_centre.y
+				|| o.location.x < world_min.x
+				|| o.location.x > world_max.x
+				|| o.location.z < world_min.z
+				|| o.location.z > world_max.z) {
+				o.location = random_location_above_land(coastline_height);
+			}
+
 			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
 				int idx = i % NUM_CREATURES;
 				o.location = creatures[idx].location;
@@ -723,7 +845,7 @@ void State::sim_update(float dt) {
 		if (o.state == Creature::STATE_ALIVE) {
 			creature_alive_update(o, dt);
 
-			audioframe.state = float(o.type) * 0.1f;
+			audioframe.state = 0.1f;// float(o.type) * 0.1f;
 			audioframe.speaker = o.island * 0.1f;
 			audioframe.health = o.health;
 			audioframe.age = o.phase;
@@ -735,76 +857,23 @@ void State::sim_update(float dt) {
 			audioframe.state = 0;
 		}
 	}
-
-	// for (int i=0; i<NUM_SEGMENTS; i++) {
-	// 	auto &o = segments[i];
-	// 	if (i % 8 == 0) {
-	// 		// a root;
-			
-	// 		/*
-	// 		glm::vec3 fluidloc = transform(world2field, o.location);
-	// 		glm::vec3 flow;
-	// 		fluid.velocities.front().readnorm(fluidloc, &flow.x);
-	// 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-	// 		fluid.velocities.front().addnorm(fluidloc, &push.x);
-	// 		o.velocity = flow * idt;
-
-	// 		al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
-	// 		*/
-
-	// 		// get norm'd coordinate:
-	// 		glm::vec3 norm = transform(world2field, o.location);
-
-	// 		// get fluid flow:
-	// 		//glm::vec3 flow;
-	// 		//fluid.velocities.front().readnorm(norm, &flow.x);
-	// 		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
-
-	// 		// get my distance from the ground:
-	// 		float sdist; // creature's distance above the ground (or negative if below)
-	// 		al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
-
-	// 		// convert to meters per second:
-	// 		flow *= idt;
-
-	// 		// if below ground, rise up;
-	// 		// if above ground, sink down:
-	// 		float gravity = 0.1f;
-	// 		flow.y += sdist < 0.1f ? gravity : -gravity;
-
-	// 		// set my velocity, in meters per second:
-	// 		o.velocity = flow;
-	// 		//if(accel == 1) o.velocity += o.velocity;
-	// 		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
-
-	// 		// use this to sample the landscape:
-			
-	// 		// get a normal for the land:
-	// 		glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
-	// 		// re-orient relative to ground:
-	// 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
-			
-	// 	} else {
-	// 		auto& p = segments[i-1];
-	// 		o.scale = p.scale * 0.9f;
-	// 	}
-	// }
 }
 
 glm::vec3 State::random_location_above_land(float h) {
+	glm::vec3 result;
 	glm::vec2 p;
 	glm::vec4 landpt;
 	int runaway = 100;
-	bool found = false;
 	while (runaway--) {
 		p = glm::linearRand(glm::vec2(0.f), glm::vec2(1.f));
 		landpt = al_field2d_readnorm_interp(land_dim2, land, p);
-		if (landpt.w > h) {
+		result = transform(field2world, glm::vec3(p.x, landpt.w, p.y));
+		if (result.y > h) {
 			break;
 		}
 	}
 	//console.log("runaway %d", runaway);
-	return transform(field2world, glm::vec3(p.x, landpt.w, p.y));
+	return result;
 }
 
 int State::nearest_island(glm::vec3 pos) {
@@ -822,34 +891,44 @@ int State::nearest_island(glm::vec3 pos) {
 }
 
 void State::creature_reset(int i) {
-		Creature& a = creatures[i];
-		a.idx = i;
-		a.type = Creature::TYPE_BOID;//rnd::integer(4) + 1;
-		a.state = Creature::STATE_ALIVE;
-		a.health = rnd::uni();
+	int island = rnd::integer(NUM_ISLANDS);
+	Creature& a = creatures[i];
+	a.idx = i;
+	//a.type = (rnd::integer(2) + 1) * 2;
+	a.type = (rnd::integer(2) + 1);
+	//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
+	a.state = Creature::STATE_ALIVE;
+	a.health = rnd::uni();
 
-		a.location = random_location_above_land(0.05f);
-		a.scale = rnd::uni(0.5f) + 0.75f;
-		a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
-		a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
-		a.phase = rnd::uni();
-		a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
+	a.location = random_location_above_land(coastline_height * 1.2);
+	//a.location = island_centres[island];
+	a.scale = rnd::uni(0.5f) + 0.75f;
+	a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
+	a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
+	a.phase = rnd::uni();
+	a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
 
-		a.velocity = glm::vec3(0);
-		a.rot_vel = glm::quat();
-		a.island = nearest_island(a.location);
+	a.velocity = glm::vec3(0);
+	a.rot_vel = glm::quat();
+	a.island = nearest_island(a.location);
 
-		switch(a.type) {
-			case Creature::TYPE_ANT:
-				break;
-			case Creature::TYPE_BUG:
-				break;
-			case Creature::TYPE_BOID:
-				break;
-			case Creature::TYPE_PREDATOR_HEAD:
-				break;
-		}
+	switch(a.type) {
+		case Creature::TYPE_ANT:
+			a.ant.nest_idx = island;
+			a.location = island_centres[island];
+			a.ant.food = 0;
+			a.ant.nestness = 1;
+			break;
+		case Creature::TYPE_BUG:
+			break;
+		case Creature::TYPE_BOID:
+			a.scale *= 0.75f;
+			break;
+		case Creature::TYPE_PREDATOR_HEAD:
+			a.pred_head.victim = -1;
+			break;
 	}
+}
 
 void State::creatures_health_update(float dt) {
 
@@ -857,16 +936,30 @@ void State::creatures_health_update(float dt) {
 	int deathcount = 0;
 	int recyclecount = 0;
 
+	// spawn a predator?
+	// if (rnd::integer(NUM_CREATURES) < creature_pool.count/4
+	// 	&& creature_pool.count > 7) {
+
+	// 	auto idx = creature_pool.pop();
+	// 	creature_reset(idx);
+	// 	Creature& a = creatures[idx];
+	// 	a.type = Creature::TYPE_PREDATOR_HEAD;
+	// 	for (int i=0; i<6; i++) {
+	// 		auto seg = creature_pool.pop();
+	// 	}
+	// }
+
+
 	// spawn new?
 	//console.log("creature pool count %d", creature_pool.count);
-	if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {
+	if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
 		auto i = creature_pool.pop();
 		birthcount++;
 		//console.log("spawn %d", i);
 		creature_reset(i);
 		Creature& a = creatures[i];
-		a.location = glm::linearRand(world_min, world_max);
-		a.island = nearest_island(a.location);
+		//a.location = glm::linearRand(world_min, world_max);
+		//a.island = nearest_island(a.location);
 	}
 
 	// visit each creature:
@@ -888,13 +981,17 @@ void State::creatures_health_update(float dt) {
 			hashspace.move(i, glm::vec2(a.location.x, a.location.z));
 
 			// birth chance?
-			if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
+			if (rnd::uni() < a.health * reproduction_health_min * dt
+				&& rnd::integer(NUM_CREATURES) < creature_pool.count
+				&& a.type != Creature::TYPE_PREDATOR_HEAD
+				&& a.type != Creature::TYPE_PREDATOR_BODY) {
 				auto j = creature_pool.pop();
 				birthcount++;
-				//console.log("spawn %d", i);
+				//console.log("child %d", i);
 				creature_reset(j);
 				Creature& child = creatures[j];
-				child.location = a.location;
+				child.type = a.type;
+				if (child.type != Creature::TYPE_ANT) child.location = a.location;
 				child.island = nearest_island(child.location);
 				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
 				child.params = glm::mix(child.params, a.params, 0.9f);
@@ -940,6 +1037,18 @@ void State::creatures_health_update(float dt) {
 	//console.log("%d deaths, %d recycles, %d births", deathcount, recyclecount, birthcount);
 }
 
+float State::ant_sniff_turn(Creature& a, float p1, float p2) {
+		
+	//-- is there any pheromone near?
+	//-- (use random factor to avoid over-reliance on pheromone trails)
+	float pnear = p1+p2; // - rnd::uni();
+	if (pnear * rnd::uni() > ant_sniff_min) {
+		//-- turn left or right?
+		a.rot_vel = glm::angleAxis(p1 > p2 ? -ant_follow : ant_follow, quat_uf(a.orientation)) * a.rot_vel;
+	} 
+	return pnear;
+}
+
 void State::creature_alive_update(Creature& o, float dt) {
 	float idt = 1.f/dt;
 	// float daylight_factor = sin(daytime + 1.5 * a.pos.x) * 0.4 + 0.6; // 0.2 ... 1
@@ -957,6 +1066,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 	// derive from orientation:
 	glm::vec3 up = quat_uy(oq);
 	glm::vec3 uf = quat_uf(oq);
+	glm::vec3 ux = quat_ux(oq);
 	// go slower when moving uphill? 
 	// positive value means going uphill, range is -1 to 1
 	//float downhill = glm::dot(uf, glm::vec3(0.f,1.f,0.f)); 
@@ -965,7 +1075,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 
 	// SENSE LAND
 	// get a normal for the land:
-	glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
+	glm::vec3 land_normal = sdf_field_normal4(sdf_dim, distance, norm, 0.05f/SDF_DIM);
 	// 0..1 factors:
 	//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
 	float flatness = fabsf(land_normal.y);
@@ -975,7 +1085,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 	glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
 	// get my distance from the ground:
 	float sdist; // creature's distance above the ground (or negative if below)
-	al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+	al_field3d_readnorm_interp(sdf_dim, distance, norm, &sdist);
 
 	// SENSE FLUID
 	// get fluid flow:
@@ -992,7 +1102,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 	float lookahead_m = glm::length(o.velocity) * dt; 
 	glm::vec3 ahead_pos = o.location + uf * lookahead_m;
 	// maximum number of agents a spatial query can return
-	const int NEIGHBOURS_MAX = 16;
+	const int NEIGHBOURS_MAX = 8;
 	// see who's around:
 	std::vector<int32_t> neighbours;
 	float agent_range_of_view = o.scale * 10.f;
@@ -1015,55 +1125,103 @@ void State::creature_alive_update(Creature& o, float dt) {
 			// * daylight_factor*3.f
 			;
 
-	//
-		
-
 	switch (o.type) {
-		case Creature::TYPE_ANT: {
-			// add some field stuff:
-			glm::vec3 chem;
-			if (o.idx % 2 == 1) chem = food_color * 2.f * dt;
-			if (o.idx % 2 == 0) chem = nest_color * 2.f * dt;
-			// add to land, add to emission:
-			al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem);
-			al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * emission_scale);
+	case Creature::TYPE_ANT: {
+		// add some field stuff:
+		glm::vec3 chem = food_color * o.ant.food
+			+ nest_color * o.ant.nestness;
+		// add to land, add to emission:
+		al_field2d_addnorm_interp(fungus_dim, chemical_field.front(), norm2, chem * dt);
+		al_field3d_addnorm_interp(field_dim, emission_field.back(), norm, chem * dt * emission_scale);
+
+		auto nest = island_centres[o.ant.nest_idx];
+		// cheat
+		nest.y = o.location.y;
+		glm::vec3 nest_relative = nest - o.location;
+		float nestdist = glm::length(nest_relative) - ant_nestsize;
+
+		//-- my own food decays too:
+		o.ant.food *= ant_phero_decay;
+		o.ant.nestness *= ant_phero_decay;
+
+
+		// get antenna locations:
+		glm::vec3 a1 = o.location + ant_sensor_size * o.scale * (uf + ux);
+		glm::vec3 a2 = o.location + ant_sensor_size * o.scale * (uf - ux);
+		// look for nest if we have food
+		// or if we lack health
+		if (o.ant.food > ant_food_min || o.health < 0.5) {
+			//-- are we there yet?
+			if (nestdist < 0.) {
+				// TODO sounds.ant_nest(a)	
+				// drop food and search again:
+				//nestfood = nestfood + a.food
+				o.ant.food = 0;
+				o.ant.nestness = 1;
+				o.health = 1;
+			} else {
+				//-- look for nest:
+				auto normp1 = transform(world2field, a1);
+				auto normp2 = transform(world2field, a2);
+				float p1 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp1.x, normp1.z)).z;
+				float p2 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp2.x, normp2.z)).z;
+				ant_sniff_turn(o, p1, p2);
+			}
+		} else {
+			// look for food (blood)
+			float f = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), norm2).x;
+			if (f > ant_food_min) {
+				//sounds.ant_food(a)	
+				// remove it:
+				f = glm::clamp(f, 0.f, 1.f);
+				al_field2d_addnorm_interp(fungus_dim, chemical_field.back(), norm2, glm::vec3(-f, 0.f, 0.f));
+				o.ant.food += f;
+				//a.vel = -a.vel;
+				o.health = 1;
+			
+			} else {
+				// look for food:
+				auto normp1 = transform(world2field, a1);
+				auto normp2 = transform(world2field, a2);
+				float p1 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp1.x, normp1.z)).y;
+				float p2 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp2.x, normp2.z)).y;
+				
+				//DPRINT("%f %f", p1, p2);
+				
+				ant_sniff_turn(o, p1, p2);
+			}
+
+			o.color = chem;
 		}
-		break;
 
-		case Creature::TYPE_BOID: {
-			// SENSE FUNGUS
-			size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
-			//float fungal = fungus_field.front()[fungus_idx];
-			float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
-			//if(i == objectSel) console.log("fungal %f", fungal);
-			float eat = glm::max(0.f, fungal) * 2.f;
-			//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
-			fungus_field.front()[fungus_idx] -= eat;
-		} 
-		break;
+	} break;
+	case Creature::TYPE_BOID: {
 
-		case Creature::TYPE_BUG: {
+		// SENSE FUNGUS
+		size_t fungus_idx = al_field2d_index_norm(fungus_dim, norm2);
+		//float fungal = fungus_field.front()[fungus_idx];
+		float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
+		//if(i == objectSel) console.log("fungal %f", fungal);
+		float eat = glm::max(0.f, fungal) * 2.f;
+		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
+		fungus_field.front()[fungus_idx] -= eat;
 
-		} break;
+		o.color = glm::vec3(o.params);
 
-		case Creature::TYPE_PREDATOR_HEAD: {
-
-		} break;
-
-		case Creature::TYPE_PREDATOR_BODY: {
-
-		} break;
 
 		
-	}
+	} break;
+	case Creature::TYPE_BUG: {
 
-	o.velocity = speed * glm::normalize(uf);
+	} break;
+	case Creature::TYPE_PREDATOR_HEAD: {
+		speed = speed * 2.f;
 
-	
+	} break;
+	case Creature::TYPE_PREDATOR_BODY: {
 
-	
-
-	//o.color = glm::vec3(0, 1, 0);
+	} break;
+	} // end switch
 
 	glm::vec3 copy;
 	int copycount = 0;
@@ -1071,8 +1229,6 @@ void State::creature_alive_update(Creature& o, float dt) {
 	int centrecount = 0;
 	glm::vec3 avoid;
 	int avoidcount = 0;
-
-
 	//for (auto j : neighbours) {
 	for (int j=0; j<nres; j++) {
 		auto& n = creatures[neighbours[j]];
@@ -1101,7 +1257,9 @@ void State::creature_alive_update(Creature& o, float dt) {
 		o.params = glm::mix(o.params, n.params, creature_song_copy_factor*dt);
 		
 		// if too close, stop moving:
-		if (distance > 0.0000001f && distance < agent_personal_space) {
+		if (distance > 0.0000001f 
+			&& distance < agent_personal_space
+			&& (o.type != Creature::TYPE_PREDATOR_HEAD || n.type == Creature::TYPE_PREDATOR_HEAD)) {
 			// add an avoidance force:
 			//float mag = 1. - (distance / agent_personal_space);
 			//float avoid_factor = -0.5;
@@ -1131,22 +1289,22 @@ void State::creature_alive_update(Creature& o, float dt) {
 	// so need to adjust direction
 	// (though, could throttle speed to avoid collision)
 
-	o.color = glm::vec3(0,1,0);
+	//glm::vec3(0,1,0);
 	// turn away from lowlands:
 	
 	if (o.location.y < coastline_height) {
 		// instant death
-		o.health = 0.;
+		o.health = -1.;
 	} else if (o.location.y < coastline_height*2.) {
 
 		// get a very smooth normal:
 		float smooth = 0.5f;
-		glm::vec3 ln = sdf_field_normal4(land_dim, distance, norm, 0.125f/LAND_DIM);
+		glm::vec3 ln = sdf_field_normal4(sdf_dim, distance, norm, 0.125f/SDF_DIM);
 
 		auto desired_dir = safe_normalize(glm::vec3(-ln.x, 0.f, -ln.z));
 		auto q = get_forward_rotation_to(o.orientation, desired_dir);
 		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.5f);
-		o.color = glm::vec3(1,0,0);
+		//o.color = glm::vec3(1,0,0);
 
 	} else if (avoidcount > 0) {
 		auto desired_dir = safe_normalize(avoid);
@@ -1155,47 +1313,137 @@ void State::creature_alive_update(Creature& o, float dt) {
 		auto q = get_forward_rotation_to(o.orientation, desired_dir);
 		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
 		
-	} else if (centrecount > 0) {
-
-		if (copycount > 0) {
-			// average neighbour velocity
-			copy /= float(copycount);
-
-			// split into speed & direction
-			float desired_speed = glm::length(copy);
-
-			auto desired_dir = safe_normalize(copy);
-
-			auto q = get_forward_rotation_to(o.orientation, desired_dir);
-			o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
-			
-			// // get disparity
-			// auto influence_diff = desired_dir - uf;
-			// float diff_mag = glm::length(influence_diff);
-			// if (diff_mag > 0.001f && desired_speed > 0.001f) {
-			// 	// try to match speed:
-			// 	speed = glm::min(speed, desired_speed);
-			// 	// try to match orientation:
-
-			// }
-		}
-
-		center /= float(centrecount);
-
-		auto desired_dir = safe_normalize(center);
-
-		// if centre is too close, rotate away from it?
-		// centre is relative to self, but not rotated
-		auto q = get_forward_rotation_to(o.orientation, desired_dir);
-		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
-		
 	} else {
-		float range = M_PI * steepness * M_PI;
-		glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
-		float wander_factor = 0.5f * dt;
-		//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+
+		switch (o.type) {
+		case Creature::TYPE_ANT: {
+			
+			// TODO:
+			// burrow down near nest:
+			//h += 0.2*AL_MIN(0, nestdist);
+			{
+				float range = M_PI * steepness * M_PI;
+				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+				float wander_factor = 0.5f * dt;
+				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+			}
+
+		} break;
+		case Creature::TYPE_BOID: {
+
+			
+			if (copycount > 0) {
+				// average neighbour velocity
+				copy /= float(copycount);
+
+				// split into speed & direction
+				float desired_speed = glm::length(copy);
+
+				auto desired_dir = safe_normalize(copy);
+
+				auto q = get_forward_rotation_to(o.orientation, desired_dir);
+				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.125f);
+				
+				// // get disparity
+				// auto influence_diff = desired_dir - uf;
+				// float diff_mag = glm::length(influence_diff);
+				// if (diff_mag > 0.001f && desired_speed > 0.001f) {
+				// 	// try to match speed:
+				// 	speed = glm::min(speed, desired_speed);
+				// 	// try to match orientation:
+
+				// }
+			}
+			if (centrecount > 0) {
+
+				center /= float(centrecount);
+
+				auto desired_dir = safe_normalize(center);
+
+				// if centre is too close, rotate away from it?
+				// centre is relative to self, but not rotated
+				auto q = get_forward_rotation_to(o.orientation, desired_dir);
+				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.125f);
+				
+			} else {
+				float range = M_PI * steepness * M_PI;
+				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+				float wander_factor = 0.15f * dt;
+				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+			}
+		} break;
+		case Creature::TYPE_BUG: {
+
+		} break;
+		case Creature::TYPE_PREDATOR_HEAD: {
+
+			// speed varies with hunger
+			// can we eat?
+			for (int j=0; j<nres; j++) {
+				auto& n = creatures[neighbours[j]];
+				auto rel = n.location - o.location;
+				float dist = glm::length(rel) - o.scale - n.scale;
+				if (dist < o.scale * predator_eat_range) {
+
+
+					// jump:
+					o.location += rel * 0.5f;
+					float e = n.health;
+					o.health = AL_MIN(2.f, o.health + e);
+					n.health = -0.5f;
+
+					o.pred_head.victim = -1;
+					break;
+				}
+			}
+
+			if (rnd::uni() * 0.2f < dt) {
+				// change target:
+				o.pred_head.victim = -1;
+
+				if (nres) {
+					auto j = neighbours[0];
+					Creature& n = creatures[j];
+					if (n.type != Creature::TYPE_PREDATOR_HEAD
+						&& n.type != Creature::TYPE_PREDATOR_BODY) {
+						o.pred_head.victim = j;
+						}
+				}
+			}
+
+			// follow target:
+			if (o.pred_head.victim >= 0) {
+				Creature& n = creatures[o.pred_head.victim];
+				auto rel = n.location - o.location;
+
+				auto desired_dir = safe_normalize(rel);
+				// if centre is too close, rotate away from it?
+				// centre is relative to self, but not rotated
+				auto q = get_forward_rotation_to(o.orientation, desired_dir);
+				//o.orientation = glm::slerp(o.orientation, q * o.orientation, .125f);
+				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, q, 0.25f));
+			} else {
+				// wander
+				float range = M_PI;
+				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
+				float wander_factor = dt;
+				//o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
+
+			}
+
+
+			o.color = glm::mix(glm::vec3(0.7), glm::vec3(1, 0.5, 0), o.health);
+
+		} break;
+		case Creature::TYPE_PREDATOR_BODY: {
+
+		} break;
+		} // end switch
+		
 	}
 
+	// velocity
+	o.velocity = speed * glm::normalize(uf);
 
 	// let song evolve:
 	o.params = wrap(o.params + glm::linearRand(glm::vec4(-creature_song_mutate_rate*dt), glm::vec4(creature_song_mutate_rate*dt)), 1.f);
@@ -1230,6 +1478,7 @@ void onUnloadGPU() {
 	objectShader.dest_closing();
 	creatureShader.dest_closing();
 	deferShader.dest_closing();
+	deferShader2.dest_closing();
 	simpleShader.dest_closing();
 	debugShader.dest_closing();
 	flowShader.dest_closing();
@@ -1281,6 +1530,7 @@ void onReloadGPU() {
 	humanMeshShader.readFiles("hmesh.vert.glsl", "hmesh.frag.glsl");
 	landMeshShader.readFiles("lmesh.vert.glsl", "lmesh.frag.glsl");
 	deferShader.readFiles("defer.vert.glsl", "defer.frag.glsl");
+	deferShader2.readFiles("defer2.vert.glsl", "defer2.frag.glsl");
 	debugShader.readFiles("debug.vert.glsl", "debug.frag.glsl");
 	flowShader.readFiles("flow.vert.glsl", "flow.frag.glsl");
 	
@@ -1431,6 +1681,7 @@ void draw_scene(int width, int height, Projector& projector) {
 		landMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
 		landMeshShader.uniform("uLandLoD", 1.5f);
 		landMeshShader.uniform("uMapScale", 1.f);
+		landMeshShader.uniform("uHumanTex", 2);
 		landMeshShader.uniform("uNoiseTex", 3);
 		landMeshShader.uniform("uDistanceTex", 4);
 		landMeshShader.uniform("uFungusTex", 5);
@@ -1452,7 +1703,8 @@ void draw_scene(int width, int height, Projector& projector) {
 		humanMeshShader.uniform("uMapScale", 1.f);
 		humanMeshShader.uniform("uNoiseTex", 3);
 		humanMeshShader.uniform("uDistanceTex", 4);
-		humanMeshShader.uniform("uLandTex", 2);
+		humanMeshShader.uniform("uLandTex", 6);
+		humanMeshShader.uniform("uHumanTex", 2);
 
 		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
@@ -1568,7 +1820,7 @@ void draw_scene(int width, int height, Projector& projector) {
 	glDisable(GL_CULL_FACE);
 }
 
-void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
+void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, bool isVR, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
 
 	fbo.begin();
 	glScissor(
@@ -1591,32 +1843,34 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, glm::v
 		emissionTex.bind(6);
 		fluidTex.bind(7);
 
-		deferShader.use();
-		deferShader.uniform("gColor", 0);
-		deferShader.uniform("gNormal", 1);
-		deferShader.uniform("gPosition", 2);
-		deferShader.uniform("gTexCoord", 3);
-		deferShader.uniform("uDistanceTex", 4);
-		deferShader.uniform("uFungusTex", 5);
-		deferShader.uniform("uEmissionTex", 6);
-		deferShader.uniform("uFluidTex", 7);
+		Shader& shader = projector.altShader ? deferShader2 : deferShader;
 
-		deferShader.uniform("uViewMatrix", viewMat);
-		deferShader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
-		deferShader.uniform("uFluidMatrix", state->world2field);
-		deferShader.uniform("uNearClip", projector.near_clip);
-		deferShader.uniform("uFarClip", projector.far_clip);
+		shader.use();
+		shader.uniform("gColor", 0);
+		shader.uniform("gNormal", 1);
+		shader.uniform("gPosition", 2);
+		shader.uniform("gTexCoord", 3);
+		shader.uniform("uDistanceTex", 4);
+		shader.uniform("uFungusTex", 5);
+		shader.uniform("uEmissionTex", 6);
+		shader.uniform("uFluidTex", 7);
+
+		shader.uniform("uViewMatrix", viewMat);
+		shader.uniform("uViewProjectionMatrixInverse", viewProjMatInverse);
+		shader.uniform("uFluidMatrix", state->world2field);
+		shader.uniform("uNearClip", projector.near_clip);
+		shader.uniform("uFarClip", projector.far_clip);
 		
-		deferShader.uniform("time", Alice::Instance().simTime);
-		deferShader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
-		deferShader.uniform("uTexScale", viewport_scale);
-		deferShader.uniform("uTexOffset", viewport_offset);
+		shader.uniform("time", Alice::Instance().simTime);
+		shader.uniform("uDim", glm::vec2(gbuffer.dim.x, gbuffer.dim.y));
+		shader.uniform("uTexScale", viewport_scale);
+		shader.uniform("uTexOffset", viewport_offset);
 
-		deferShader.uniform("uFade", state->vrFade);
+		shader.uniform("uFade", isVR ? state->vrFade : 0.f);
 		
 		quadMesh.draw();
 
-		deferShader.unuse();
+		shader.unuse();
 		
 		distanceTex.unbind(4);
 		fungusTex.unbind(5);
@@ -1640,7 +1894,7 @@ void State::animate(float dt) {
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = particles[i];
 		o.location = o.location + o.velocity * dt;
-		o.location = wrap(o.location, world_min, world_max);
+		//o.location = glm::clamp(o.location, world_min, world_max);
 	}
 
 	for (int i=0; i<NUM_CREATURES; i++) {
@@ -1657,7 +1911,6 @@ void State::animate(float dt) {
 			// stick to land surface:
 			auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), land, norm2);
 			p1 = transform(field2world, glm::vec3(norm.x, landpt.w, norm.z));
-			p1.y += o.scale*0.5f;
 
 			float distance = glm::length(p1 - o.location);
 			o.location = p1;
@@ -1667,7 +1920,6 @@ void State::animate(float dt) {
 			o.orientation = safe_normalize(glm::slerp(o.orientation, o.rot_vel * o.orientation, dt * 1.f));
 
 			// re-align the creature to the surface normal:
-			//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
 			glm::vec3 land_normal = glm::vec3(landpt);
 			{
 				// re-orient relative to ground:
@@ -1680,7 +1932,7 @@ void State::animate(float dt) {
 		if (o.state != Creature::STATE_BARDO) {
 			// copy data into the creatureparts:
 			CreaturePart& part = creatureparts[rendercreaturecount];
-			part.id = i;
+			part.id = o.type;//i;
 			part.location = o.location;
 			part.scale = o.scale;
 			part.orientation = o.orientation;
@@ -1703,49 +1955,27 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
-	//state->projector1_rotation = t;
-	// TODO: DISABLE!!!!
-	state->update_projector_loc();
+	if (alice.simTime > 10.) {
+		state->land_rise_rate = 0.03f;
+	}
 
 	#ifdef AL_WIN
-	if (1) {
-		CloudDevice& cd = alice.cloudDeviceManager.devices[0];
-		const CloudFrame& frame0 = cd.cloudFramePrev();
-		const CloudFrame& frame1 = cd.cloudFrame();
-
-		// const glm::vec3 * cloud_points = cloudFrame.xyz;
-		// const glm::vec2 * uv_points = cloudFrame.uv;
-		// const glm::vec3 * rgb_points = cloudFrame.rgb;
-		// uint64_t max_cloud_points = sizeof(cloudFrame.xyz)/sizeof(glm::vec3);
-		
-		int levels = 3; // default=5;
-		double pyr_scale = 0.5;
-		int winsize = 13;
-		int iterations = 3; // default = 10;
-		int poly_n = 5;
-		double poly_sigma = 1.2; // default = 1.1
-		int flags = 0;
-		
-		// create CV mat wrapper around Jitter matrix data
-		// (cv declares dim as numrows, numcols, i.e. dim1, dim0, or, height, width)
-		void * src;
-		cv::Mat prev(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame0.depth);
-		cv::Mat next(cDepthHeight, cDepthWidth, CV_16UC(1), (void *)frame1.depth);
-
-		cv::Mat flow(cDepthHeight, cDepthWidth, CV_32FC(2), (void *)state->flow);
-		
-		cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
-		
+	if (alice.fps.count == 30 && !alice.window.isFullScreen) {
+		//alice.window.fullScreen(true);
+		//alice.goFullScreen = true;
 	}
 	#endif
 
+
 	if (1) {	
-		// LEAP & TELEPORTING
-		
-		//state->teleport_points[0] = glm::vec3(20., 1., 37.);
-		//state->teleport_points[1] = glm::vec3(4., 1., 13.);
-		//state->teleport_points[2] = glm::vec3(60., 2., 13.);
-		//state->teleport_points[3] = glm::vec3(34.5, 17., 33.);
+		timeToVrJump -= dt; 
+		if (timeToVrJump < 0.f) {
+			vrIsland = (vrIsland + 1) % NUM_ISLANDS;
+			nextVrLocation = state->island_centres[vrIsland];
+			fadeState = -1;
+
+			timeToVrJump = 30.;
+		}
 
 		//Teleport Fade
 		if (fadeState == -1) {
@@ -1753,6 +1983,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			if (state->vrFade >= 1) {
 				state->vrFade = 1;
 				vrLocation = nextVrLocation;
+				cameraLoc = nextVrLocation;
 				fadeState = 1;
 			}
 		} else if (fadeState == 1) {
@@ -1762,7 +1993,9 @@ void onFrame(uint32_t width, uint32_t height) {
 				state->vrFade = 0;
 			}
 		}
+	}
 
+	if (1) {
 		// later, figure out how to place teleport points in viable locations
 		
 
@@ -1779,52 +2012,28 @@ void onFrame(uint32_t width, uint32_t height) {
 			int num_ray_dots = 64;
 			int num_hand_dots = 5*4;
 
+			glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
+			glm::vec3 head2map = mapPos - headPos;
+
+			glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
+			float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
+
+			float m = 0.005f / dist2map_squared;
+			//console.log("vr location y %f", vrLocation.y);
+
+			state->minimapScale = glm::mix(state->minimapScale, m, dt*3.f);
+
+			glm::vec3 midPoint = (state->world_min + state->world_max)/2.f;
+				midPoint.y = 0;
+			state->world2minimap = 
+					glm::translate(glm::vec3(mapPos)) * 
+					glm::scale(glm::vec3(state->minimapScale)) *
+					glm::translate(-midPoint);
 
 			for (int h=0; h<2; h++) {
 		
 				int d = NUM_TELEPORT_POINTS + h * (num_hand_dots + num_ray_dots);
 				auto& hand = alice.leap->hands[h];
-				
-				glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
-				glm::vec3 head2map = mapPos - headPos;
-
-				glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
-				float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
-
-				float m = 0.005f / dist2map_squared;
-
-				state->minimapScale = glm::mix(state->minimapScale, m, dt*3.f);
-
-				glm::vec3 midPoint = (state->world_min + state->world_max)/2.f;
-					midPoint.y = 0;
-				state->world2minimap = 
-						glm::translate(glm::vec3(mapPos)) * 
-						glm::scale(glm::vec3(state->minimapScale)) *
-						glm::translate(-midPoint);
-				
-
-				// 
-				// if (h == 0) {
-				// 	if (hand.normal.y >= 0.4f) {
-
-				// 	glm::vec3 mapPos = transform(trans, hand.palmPos);
-				// 	//console.log("hand normal");
-				// 	glm::vec3 midPoint = (world_min + world_max)/2.f;
-				// 	midPoint.y = 0;
-
-				// 	world2minimap = 
-				// 		glm::translate(glm::vec3(mapPos)) * 
-				// 		glm::scale(glm::vec3(minimapScale)) *
-				// 		glm::translate(-midPoint) *
-				// 		glm::mat4(1.0f);
-				// 		console.log("%f %f %f", (mapPos.x), (mapPos.y), (mapPos.z));
-
-				// 	} else {
-				// 		//console.log("No hand normal");
-				// 		//world2minimap = glm::scale(glm::vec3(0.f));
-				// 	}
-
-				// }
 
 				//glm::vec3 col = (hand.id % 2) ?  glm::vec3(1, 0, hand.pinch) :  glm::vec3(0, 1, hand.pinch);
 				float cf = fmod(hand.id / 6.f, 1.f);
@@ -1886,56 +2095,25 @@ void onFrame(uint32_t width, uint32_t height) {
 				auto warp = glm::rotate(-0.1f, rotaxis);
 
 				glm::vec3 p = a;
-
-				
-				// for (int i=0; i<num_ray_dots; i++) {
-				// 	glm::vec3 loc = state->debugdots[d].location;
-				// 	//loc = p;
-				// 	if (hand.isVisible) state->debugdots[d].location = glm::mix(loc, p, 0.2f);
-				// 	p = loc;
-
-				// 	//handDir = safe_normalize(transform(warp, handDir));
-				// 	handDir = safe_normalize(glm::mix(handDir, glm::vec3(0, -1, 0), 0.1f));
-
-				// 	auto norm = transform(world2field, p);
-				// 	float dist = al_field3d_readnorm_interp(land_dim, state->distance, norm);
-
-				// 	// distance in world coordinates:
-				// 	//float dist_w = field2world_scale * dist;
-
-				// 	p = p + 0.01f * handDir;
-
-				// 	float c = 0.01;
-				// 	c = c / (c + dist);
-				// 	state->debugdots[d].color = glm::vec3(c, 0.5, 1. - c);
-				// 	if (dist <= 0) break;
-
-				// 	d++;
-				// }
-
-
 			}
 		}
-		//profiler.log("leap", alice.fps.dt);
 	}
 
-	// navigation
+	// navigation:
 	{
 		glm::vec3& navloc = projectors[2].location;
-		glm::quat& navquat = projectors[2].orientation;
-		
-		switch (camMode % 2){
+		glm::quat& navquat = projectors[2].orientation;	
+		switch (camMode % 3){
 			case 0: {
 				// WASD mode:
-				
 				float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
 				float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
 
 				// move camera:
 				glm::vec3 newloc = navloc + quat_rotate(navquat, camVel) * (camera_speed * dt);
 				// wrap to world:
-				navloc = glm::mix(navloc, newloc, 0.25f);
 				newloc = wrap(newloc, state->world_min, state->world_max);
+				navloc = glm::mix(navloc, newloc, 0.25f);
 
 				// stick to floor:
 				glm::vec3 norm = transform(state->world2field, navloc);
@@ -1953,13 +2131,9 @@ void onFrame(uint32_t width, uint32_t height) {
 
 
 				navquat = glm::slerp(navquat, newori, 0.25f);
-
-				// now create view matrix:
-				//viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(cameraOri) * glm::translate(boom));
-				//projMat = glm::perspective(glm::radians(110.0f), aspect, projectors[2].near_clip, projectors[2].far_clip);
-				//console.log("Cam Mode 0 Active");
+			
 			} break;
-			default: {
+			case 1: {
 				// follow a creature mode:
 				auto& o = state->creatures[objectSel % NUM_CREATURES];
 				
@@ -1975,6 +2149,16 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				navloc = glm::mix(navloc, loc, 0.1f);
 				navquat = glm::slerp(navquat, o.orientation, 0.03f);
+			}
+			default: {
+				// orbit around
+				float a = M_PI * t / 30.;
+
+				glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
+				glm::vec3 newloc = state->world_centre + (quat_uz(navquat))*4.f;
+
+				navloc = glm::mix(navloc, newloc, 0.05f);
+				navquat = glm::slerp(navquat, newori, 0.05f);
 			}
 		}
 	}
@@ -2002,8 +2186,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		fungusTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->field_texture[0]);
 		noiseTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->noise_texture[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
-		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human[0]);
-		distanceTex.submit(land_dim, (float *)&state->distance[0]);
+		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human.front()[0]);
+		distanceTex.submit(sdf_dim, (float *)&state->distance[0]);
 		flowTex.submit(glm::ivec2(512,424), &state->flow[0]);
 		
 		//if (alice.cloudDevice->use_colour) {
@@ -2022,83 +2206,86 @@ void onFrame(uint32_t width, uint32_t height) {
 		Projector& proj = projectors[i];
 		SimpleFBO& fbo = proj.fbo;
 
-		/*
-		// move K-world points to inhabitat-world points:
-		//kinect0.cloudTransform
-		glm::vec3 ksc;
-		glm::quat kro;
-		glm::vec3 ktr;
-		glm::vec3 ksk;
-		glm::vec4 kpe;
-		glm::decompose(kinect0.cloudTransform, ksc, kro, ktr, ksk, kpe);
-		kro = glm::conjugate(kro);
-
-		glm::vec3 p = ktr; //glm::vec3(kinect0.cloudTransform[3]); // translation component, ==
-		//console.log("p %f %f %f", p.x, p.y, p.z);
-
-		glm::mat3 r = glm::mat3(kinect0.cloudTransform);
-		//r = glm::normalize(r); // remove scale
-
-
-		glm::quat kq = kro;//glm::normalize(glm::quat_cast(glm::inverse(kinect0.cloudTransform)));
-		//console.log("kq %f %f %f %f", kq.w, kq.x, kq.y, kq.z);
-
-		glm::quat q = glm::quat();
-		//extraglmq = gl
-
-	//  frustum -0.0631 0.0585 -0.038 0.038 0.1 10
-		glm::quat proj_quat = //glm::quat(0.002566, -0.026639, -0.017277, 0.999493);
-			glm::quat(0.999493, 0.002566, -0.026639, -0.017277);
-			//glm::angleAxis(float(M_PI/-2.), glm::vec3(1, 0, 0)) * glm::angleAxis(float(M_PI/-2.), glm::vec3(0, 0, 1));
-		//console.log("proj_quat %f %f %f %f", proj_quat.w, proj_quat.x, proj_quat.y, proj_quat.z);
-		
-		// pos of projector, in space of kinect0
-		glm::vec3 proj_pos = glm::vec3(-0.135, -0.263, 0.317);
-		
-		glm::mat4 k2proj = (glm::mat4_cast(proj_quat)) * glm::translate(-proj_pos * state->kinect2world_scale);
-		viewMat = glm::inverse(
-			glm::translate(p) * glm::mat4_cast(kro) // kinect viewpoint
-			* (k2proj)
-		);
-
-		// 
-		// 	kinect0.cloudTransform captures how the kinect space transforms into world space
-
-		// 	we want to render the world from the POV of the kinect, but at the scale of the world
-		// 	POV p we can get via transform(kinect0.cloudTransform, glm::vec3(0.f));
-		// 
-
-		// let this define the view matrix:
-		//viewMat = glm::inverse(kinect0.cloudTransform);
-
-		//viewMat = kinect0.cloudTransform * glm::translate(-proj_pos);
-		//viewMat = glm::inverse(viewMat);
+		if (i == 2 && enablers[SHOW_TIMELAPSE]) {
 			
-		projMat = glm::frustum(-0.0631f, 0.0585f, -0.038f, 0.038f, 0.1f, state->far_clip);
-				//glm::perspective(glm::radians(60.0f), aspect, near_clip, far_clip);
-		
-		*/
+			// timelapse wall projector:
+			int slices = gBufferProj.dim.x;//((int(t) % 3) + 3);
+			int slice = (alice.fps.count % slices);
+			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
+			float slicewidth = 1.f/slices;
+			float sliceangle = M_PI * 2./slices; 
+			// 0..1
+			float sliceoffset = slice / float(slices);
 
-		viewMat = proj.view();
-		projMat = proj.projection();
+			// want to put the forward direction in the middle
+			auto sliceRot = glm::angleAxis((centredslice/float(slices))* float(M_PI * -1.f), quat_uy(proj.orientation));
+			viewMat = glm::inverse(glm::translate(proj.location) * glm::mat4_cast(sliceRot * proj.orientation));
 
-		viewProjMat = projMat * viewMat;
-		projMatInverse = glm::inverse(projMat);
-		viewMatInverse = glm::inverse(viewMat);
-		viewProjMatInverse = glm::inverse(viewProjMat);
-		
-		// draw the scene into the GBuffer:
-		glEnable(GL_SCISSOR_TEST);
-		gBufferProj.begin();
-			glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
-			glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
-			glEnable(GL_DEPTH_TEST);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
-		gBufferProj.end();
-		//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-		draw_gbuffer(fbo, gBufferProj, proj, glm::vec2(1.f), glm::vec2(0.f));
-		glDisable(GL_SCISSOR_TEST);
+			// slice frustum x depends on sliceangle:
+			float fw = proj.near_clip * tanf(sliceangle * 0.5f);
+			float f = proj.near_clip * 1.f;
+			projMat = glm::frustum(-fw, fw, -f, f, proj.near_clip, proj.far_clip);
+
+			viewProjMat = projMat * viewMat;
+			projMatInverse = glm::inverse(projMat);
+			viewMatInverse = glm::inverse(viewMat);
+			viewProjMatInverse = glm::inverse(viewProjMat);
+
+			// draw the scene into the GBuffer:
+			glEnable(GL_SCISSOR_TEST);
+			{
+				glm::vec2 viewport_scale = glm::vec2(slicewidth * 2.f, 1.f);
+				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
+
+				gBufferProj.begin();
+
+					viewport.pos = glm::ivec2(gBufferProj.dim.x * viewport_offset.x, gBufferProj.dim.y * viewport_offset.y);
+					viewport.dim = glm::ivec2(gBufferProj.dim.x * viewport_scale.x, gBufferProj.dim.y * viewport_scale.y);
+
+					glScissor(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
+					glViewport(
+						viewport.pos.x, 
+						viewport.pos.y, 
+						viewport.dim.x, 
+						viewport.dim.y);
+					glEnable(GL_DEPTH_TEST);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
+				gBufferProj.end();
+
+				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+				draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset);
+			}
+			glDisable(GL_SCISSOR_TEST);
+		} else {
+			// regular projection
+
+			viewMat = proj.view();
+			projMat = proj.projection();
+
+			viewProjMat = projMat * viewMat;
+			projMatInverse = glm::inverse(projMat);
+			viewMatInverse = glm::inverse(viewMat);
+			viewProjMatInverse = glm::inverse(viewProjMat);
+			
+			// draw the scene into the GBuffer:
+			glEnable(GL_SCISSOR_TEST);
+			gBufferProj.begin();
+				glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glEnable(GL_DEPTH_TEST);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
+			gBufferProj.end();
+			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+			draw_gbuffer(fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
+			glDisable(GL_SCISSOR_TEST);
+		}
 	}
 	profiler.log("render projectors", alice.fps.dt);
 	
@@ -2114,6 +2301,12 @@ void onFrame(uint32_t width, uint32_t height) {
 			glEnable(GL_SCISSOR_TEST);
 
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
+
+			// keep vr location above ground
+			auto norm = glm::vec2(vrLocation.x, vrLocation.z);
+			auto landpt = al_field2d_readnorm_interp(land_dim2, state->land, norm);
+			float newy = state->field2world_scale * landpt.w;
+			vrLocation.y = glm::mix(vrLocation.y, newy, 0.25f);
 
 			// get head position in world space:
 			headPos = vive.mTrackedPosition + vrLocation;
@@ -2159,104 +2352,33 @@ void onFrame(uint32_t width, uint32_t height) {
 				gBufferVR.end();
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
+				draw_gbuffer(fbo, gBufferVR, projectors[2], true, viewport_scale, viewport_offset);
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
-			int slices = gBufferVR.dim.x;//((int(t) % 3) + 3);
-			int slice = (alice.fps.count % slices);
-			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
-			float slicewidth = 1.f/slices;
-			float sliceangle = M_PI * 2./slices; 
-			// 0..1
-			float sliceoffset = slice / float(slices);
-				
-			switch (camMode % 2){
-				case 0: {
-					// WASD mode:
-					float camera_speed = camFast ? camera_speed_default * 3.f : camera_speed_default;
-					float camera_turnangle = camFast ? camera_turn_default * 3.f : camera_turn_default;
-
-					// move camera:
-					glm::vec3 newloc = cameraLoc + quat_rotate(cameraOri, camVel) * (camera_speed * dt);
-					// wrap to world:
-					newloc = wrap(newloc, state->world_min, state->world_max);
-					cameraLoc = glm::mix(cameraLoc, newloc, 0.25f);
-
-					// stick to floor:
-					glm::vec3 norm = transform(state->world2field, cameraLoc);
-					glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
-					cameraLoc = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
-					cameraLoc.y += 1.6f;
 			
-					// rotate camera:
-					glm::quat newori = safe_normalize(cameraOri * glm::angleAxis(camera_turnangle * dt, camTurn));
-					
-					// now orient to floor:
-					glm::vec3 up = glm::vec3(landpt);
-					up = glm::mix(up, glm::vec3(0,1,0), 0.5);
-					newori = align_up_to(newori, glm::normalize(up));
+			// regular projection
+			Projector& proj = projectors[2];
 
-
-					cameraOri = glm::slerp(cameraOri, newori, 0.25f);
-				
-				} break;
-				default: {
-					// orbit around
-					float a = M_PI * t / 30.;
-
-					glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
-					glm::vec3 newloc = state->world_centre + (quat_uz(cameraOri))*4.f;
-
-					cameraLoc = glm::mix(cameraLoc, newloc, 0.05f);
-					cameraOri = glm::slerp(cameraOri, newori, 0.05f);
-				}
-			}
-
-			// want to put the forward direction in the middle
-			auto sliceRot = glm::angleAxis((centredslice/float(slices))* float(M_PI * -1.f), quat_uy(cameraOri));
-			viewMat = glm::inverse(glm::translate(cameraLoc) * glm::mat4_cast(sliceRot * cameraOri));
-
-			// slice frustum x depends on sliceangle:
-			float fw = projectors[2].near_clip * tanf(sliceangle * 0.5f);
-			float f = projectors[2].near_clip * 1.f;
-			projMat = glm::frustum(-fw, fw, -f, f, projectors[2].near_clip, projectors[2].far_clip);
+			viewMat = proj.view();
+			projMat = proj.projection();
 
 			viewProjMat = projMat * viewMat;
 			projMatInverse = glm::inverse(projMat);
 			viewMatInverse = glm::inverse(viewMat);
 			viewProjMatInverse = glm::inverse(viewProjMat);
-
+			
 			// draw the scene into the GBuffer:
 			glEnable(GL_SCISSOR_TEST);
-			{
-				glm::vec2 viewport_scale = glm::vec2(slicewidth * 2.f, 1.f);
-				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
-
-				gBufferVR.begin();
-
-					viewport.pos = glm::ivec2(gBufferVR.dim.x * viewport_offset.x, gBufferVR.dim.y * viewport_offset.y);
-					viewport.dim = glm::ivec2(gBufferVR.dim.x * viewport_scale.x, gBufferVR.dim.y * viewport_scale.y);
-
-					glScissor(
-						viewport.pos.x, 
-						viewport.pos.y, 
-						viewport.dim.x, 
-						viewport.dim.y);
-					glViewport(
-						viewport.pos.x, 
-						viewport.pos.y, 
-						viewport.dim.x, 
-						viewport.dim.y);
-					glEnable(GL_DEPTH_TEST);
-					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
-				gBufferVR.end();
-
-				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferVR, projectors[2], viewport_scale, viewport_offset);
-			}
+			gBufferProj.begin();
+				glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+				glEnable(GL_DEPTH_TEST);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
+			gBufferProj.end();
+			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+			draw_gbuffer(fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
@@ -2269,6 +2391,19 @@ void onFrame(uint32_t width, uint32_t height) {
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#ifdef AL_WIN
+	float third = 1.f/3.f;
+	if (enablers[SHOW_TIMELAPSE]) {
+		fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	} else {
+	//
+		projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	}
+	
+	projectors[1].fbo.draw(glm::vec2(third, 0.f), glm::vec2(2.f*third, 1.f));
+	projectors[0].fbo.draw(glm::vec2(0.f, 0.f), glm::vec2(third, 1.f));
+#else
+
 	if (soloView) {
 		switch (soloView) {
 			case 1: projectors[0].fbo.draw(); break;
@@ -2291,33 +2426,18 @@ void onFrame(uint32_t width, uint32_t height) {
 	} else {
 		float third = 1.f/3.f;
 		float sixth = 1.f/6.f;
-		projectors[0].fbo.draw(glm::vec2(third, 1.f), glm::vec2(-2.f*third, 0.f));
-		projectors[1].fbo.draw(glm::vec2(third, 1.f), glm::vec2(0.f, 0.f));
-		//projectors[2].fbo.draw(glm::vec2(0.5f), glm::vec2(-0.5,  0.5));
-		{
-			if (!SHOW_TIMELAPSE) {
-				flowShader.use();
-				flowShader.uniform("tex", 0);
-				flowShader.uniform("uScale", glm::vec2(third, 1.f));
-				flowShader.uniform("uOffset", glm::vec2(2.f*third,  0.f));
-				texDraw.draw_no_shader(flowTex.id);
-				flowShader.unuse();
-			} else {
-				fbo.draw(glm::vec2(third, 1.f), glm::vec2(2.f*third,  0.f));
-			}
-		}
-		//
+		projectors[0].fbo.draw(glm::vec2(0.f,  0.f),  glm::vec2(0.5f,0.5f));
+		projectors[1].fbo.draw(glm::vec2(0.5f, 0.f),  glm::vec2(1.f ,0.5f));
+		projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
+		fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.5f ,1.f));
 	}
+#endif
 	profiler.log("draw to window", alice.fps.dt);
 
 	if (showFPS) {
-		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
+		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) land %f (%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, landThread.fps.fps, landThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
 		//profiler.dump();
 	}
-
-		#ifdef AL_WIN
-		//alice.window.fullScreen(true);
-		#endif
 }
 
 
@@ -2345,18 +2465,18 @@ void onKeyEvent(int keycode, int scancode, int downup, bool shift, bool ctrl, bo
 			}
 		}
 		break;
-		case GLFW_KEY_ENTER: {
-			if (downup && alt) {
-				if (alice.hmd->connected) {
-					alice.hmd->disconnect();
-				} else if (alice.hmd->connect()) {
-					gBufferVR.dim = alice.hmd->fbo.dim;
-					gBufferVR.dest_changed();
-					alice.hmd->dest_changed();
-					alice.fps.setFPS(90);
-				}
-			}
-		} break;
+		// case GLFW_KEY_ENTER: {
+		// 	if (downup && alt) {
+		// 		if (alice.hmd->connected) {
+		// 			alice.hmd->disconnect();
+		// 		} else if (alice.hmd->connect()) {
+		// 			gBufferVR.dim = alice.hmd->fbo.dim;
+		// 			gBufferVR.dest_changed();
+		// 			alice.hmd->dest_changed();
+		// 			alice.fps.setFPS(90);
+		// 		}
+		// 	}
+		// } break;
 
 		// ? key to switch debug modes
 		case GLFW_KEY_SLASH: {
@@ -2432,6 +2552,7 @@ void threads_begin() {
 	simThread.begin(sim_update);
 	fieldThread.begin(fields_update);
 	fluidThread.begin(fluid_update);
+	landThread.begin(land_update);
 	console.log("started threads");
 }
 
@@ -2442,6 +2563,7 @@ void threads_end() {
 	simThread.end();
 	fieldThread.end();
 	fluidThread.end();
+	landThread.end();
 	console.log("ended threads");
 }
 
@@ -2500,7 +2622,9 @@ void State::reset() {
 
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = particles[i];
-		o.location = world_centre+glm::ballRand(10.f);
+		auto randpt = glm::linearRand(world_min, world_max);
+		randpt.y = coastline_height * (rnd::uni() * 3.f + 1.f);
+		o.location = randpt;
 		o.color = glm::vec3(1.f);
 	}
 
@@ -2518,6 +2642,17 @@ void State::reset() {
 
 	emission_field.reset();
 
+#ifdef AL_WIN
+	{
+		int i=0;
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+		for (size_t y=0;y<dim2.y;y++) {
+			for (size_t x=0;x<dim2.x;x++, i++) {
+				land[i] = glm::vec4(0., 1., 0., 0.);
+			}
+		}
+	}
+#else
 	/*
 		Create the initial landscape:
 	*/
@@ -2569,6 +2704,7 @@ void State::reset() {
 	
 	
 	generate_land_sdf_and_normals();
+#endif
 
 	if (1) {
 		int div = sqrt(NUM_DEBUGDOTS);
@@ -2603,22 +2739,17 @@ void State::reset() {
 		}
 	}
 
+	island_centres[0] = glm::vec3(120., 20., 70.);
+	island_centres[1] = glm::vec3(70., 20., 215.);
+	island_centres[2] = glm::vec3(120., 20., 345.);
+	island_centres[3] = glm::vec3(285., 20., 385.);
+	island_centres[4] = glm::vec3(255., 20., 295.);
+
+	cameraLoc = island_centres[2];
+	vrLocation = nextVrLocation = cameraLoc;
+
 	// make up some speaker locations:
 	for (int i=0; i<NUM_ISLANDS; i++) {
-
-		
-		float phase = i/float(NUM_ISLANDS);
-		float angle = M_PI * 2. * phase;
-		float radius = (world_max.z - world_min.z) * 0.3;
-
-		island_centres[i] = glm::vec3(
-			world_centre.x + radius * sinf(angle), 
-			0.f, 
-			world_centre.z + radius * cosf(angle)
-		);
-
-		console.log("speaker i %f %f", island_centres[i].x, island_centres[i].z);
-
 		int id = NUM_DEBUGDOTS - NUM_ISLANDS - 1 + i;
 		debugdots[id].location = island_centres[i];
 		debugdots[id].color = glm::vec3(1,0,0);
@@ -2639,16 +2770,16 @@ void State::generate_land_sdf_and_normals() {
 	{
 		// generate SDF from land height:
 		int i=0;
-		glm::ivec3 dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
-		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
-		for (size_t z=0;z<dim.z;z++) {
-			for (size_t y=0;y<dim.y;y++) {
-				for (size_t x=0;x<dim.x;x++) {
+		for (size_t z=0;z<SDF_DIM;z++) {
+			for (size_t y=0;y<SDF_DIM;y++) {
+				for (size_t x=0;x<SDF_DIM;x++) {
 					glm::vec3 coord = glm::vec3(x, y, z);
-					glm::vec3 norm = coord/glm::vec3(dim);
+					glm::vec3 norm = coord/glm::vec3(SDF_DIM);
+					glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 					
-					int ii = al_field2d_index(dim2, glm::ivec2(x, z));
-					float w = land[ ii ].w;
+					//int ii = al_field2d_index(dim2, glm::ivec2(x, z));
+					//float w = land[ ii ].w;
+					float w = al_field2d_readnorm_interp(land_dim2, land, norm2).w;
 
 					distance[i] = norm.y < w ? -1. : 1.;
 					distance_binary[i] = distance[i] < 0.f ? 0.f : 1.f;
@@ -2657,9 +2788,9 @@ void State::generate_land_sdf_and_normals() {
 				}
 			}
 		}
-		sdf_from_binary(land_dim, distance_binary, distance);
+		sdf_from_binary(sdf_dim, distance_binary, distance);
 		//sdf_from_binary_deadreckoning(land_dim, distance_binary, distance);
-		al_field3d_scale(land_dim, distance, 1.f/land_dim.x);
+		al_field3d_scale(sdf_dim, distance, 1.f/(SDF_DIM));
 	}
 
 	// generate land normals:
@@ -2675,7 +2806,7 @@ void State::generate_land_sdf_and_normals() {
 
 			glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
 
-			glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm3, 1.f/LAND_DIM);
+			glm::vec3 normal = sdf_field_normal4(sdf_dim, distance, norm3, 1.f/SDF_DIM);
 			land[i] = glm::vec4(normal, w);
 		}
 	}
@@ -2870,6 +3001,7 @@ extern "C" {
 		
 		#ifdef AL_WIN
 		alice.goFullScreen = true;
+		soloView = 0;
 		#endif
 
 		onReset();
@@ -2886,6 +3018,9 @@ extern "C" {
 			projectors[2].frustum_max = glm::vec2(1.f) * aspectfactor;
 			projectors[2].near_clip = 0.05;
 			projectors[2].far_clip = (state->world_max.z - state->world_min.z);
+
+			projectors[0].altShader = true;
+			projectors[1].altShader = true;
 		}
 
 
@@ -2897,13 +3032,14 @@ extern "C" {
 
 		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
-		enablers[SHOW_MINIMAP] = 0;//1;
+		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_TIMELAPSE] = 1;//1;
-		enablers[SHOW_PARTICLES] = 0;//1;
+		enablers[SHOW_PARTICLES] = 1;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
-		enablers[SHOW_HUMANMESH] = 0;
+		enablers[SHOW_HUMANMESH] = 1;
+		enablers[CALIBRATE] = 1;
 
 		//threads_begin();
 
@@ -2912,21 +3048,18 @@ extern "C" {
 	
 		console.log("onload fluid initialized");
 	
-		gBufferVR.dim = glm::ivec2(512, 512);
+		gBufferProj.dim = glm::ivec2(1920, 1200);
+		for (int i=0; i<3; i++) {
+			projectors[i].fbo.dim = gBufferProj.dim;
+		}
+
 		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;
-		} else if (isPlatformWindows()) {
-			gBufferVR.dim.x = 1920;
-			gBufferVR.dim.y = 1080;
-			//alice.streamer->init(gBuffer.dim);
+		} else {
+			gBufferVR.dim = glm::ivec2(512, 512);
 		}
-		console.log("gBuffer dim %d x %d", gBufferVR.dim.x, gBufferVR.dim.y);
-
-		//alice.window.fullScreen(true);
-
-
 
 		// allocate on GPU:
 		onReloadGPU();
@@ -2938,7 +3071,11 @@ extern "C" {
 		alice.onReloadGPU.connect(onReloadGPU);
 		alice.onReset.connect(onReset);
 		alice.onKeyEvent.connect(onKeyEvent);
+		#ifdef AL_WIN
+		alice.window.position(4000, 200);
+		#else
 		alice.window.position(45, 45);
+		#endif
       
 
 		return 0;

@@ -188,7 +188,7 @@ void main() {
 	// emissive:
 	//color.rgb = envcolor;
 	//color.rgb = envcolor_ref;
-	color.rgb += envcolor_ref * 0.25;
+	//color.rgb += envcolor_ref * 0.25;
 	
 
 	// uv grid viz:
@@ -297,7 +297,7 @@ void main() {
 	//FragColor.rgb += vec3(texCoord, 0.);
 
 	float gamma = 0.9;
-	color = pow(color, vec3(gamma));
+	//color = pow(color, vec3(gamma));
 
 	FragColor.rgb = mix(color, vec3(0.), uFade);
 }

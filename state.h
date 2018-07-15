@@ -133,6 +133,10 @@ struct Field2DPod {
 #define LAND_TEXELS (LAND_DIM*LAND_DIM)
 #define LAND_VOXELS (LAND_DIM*LAND_DIM*LAND_DIM)
 
+#define SDF_DIM (64)
+#define SDF_TEXELS (SDF_DIM*SDF_DIM)
+#define SDF_VOXELS (SDF_DIM*SDF_DIM*SDF_DIM)
+
 //#define FLOW_DIM 128
 #define FLOW_TEXELS (512*424)
 
@@ -147,6 +151,7 @@ struct Field2DPod {
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+static const glm::ivec3 sdf_dim = glm::ivec3(SDF_DIM, SDF_DIM, SDF_DIM);
 
 static const glm::ivec2 field_dim2 = glm::ivec2(FIELD_DIM, FIELD_DIM);
 static const glm::ivec2 land_dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
@@ -197,13 +202,13 @@ struct Creature {
 			int64_t nest_idx;
 		} ant;
 		struct {
-			glm::vec2 influence = glm::vec2(0);
-			glm::vec2 copy = glm::vec2(0);
-			glm::vec2 avoid = glm::vec2(0);
-			glm::vec2 center = glm::vec2(0);
-			glm::vec3 song = glm::vec3(0);
-			float speed;
-			int64_t eating;
+			// glm::vec2 influence = glm::vec2(0);
+			// glm::vec2 copy = glm::vec2(0);
+			// glm::vec2 avoid = glm::vec2(0);
+			// glm::vec2 center = glm::vec2(0);
+			// glm::vec3 song = glm::vec3(0);
+			// float speed;
+			// int64_t eating;
 		} boid;
 		struct {
 			float rate;
@@ -213,6 +218,7 @@ struct Creature {
 		} bug;
 		struct {
 			float full_size;
+			int32_t victim;
 			glm::vec2 vel;
 			int64_t carried = 0;
 		} pred_head;
@@ -295,20 +301,20 @@ struct State {
 	// .w represents the height
 	glm::vec4 land[LAND_TEXELS];
 
-	glm::vec4 human[LAND_TEXELS];
+	Field2DPod<LAND_DIM, float> human;
 
 	// the flow field (hopefully this isn't too high res)
 	// Paris ran at 128 x 64, for example
-	glm::vec2 flow[FLOW_TEXELS];
+	glm::vec2 flow[LAND_TEXELS];
 
 	// signed distance field representing the landscape
 	// the distance to the nearest land surface, as a 3D SDF
 	// scaled such that the distance across the entire space == 1
 	// distances are normalized over the LAND_DIM as 0..1
-	float distance[LAND_VOXELS];
+	float distance[SDF_VOXELS];
 	// the boolean field that is used to generate the distance field
 	// surface edges are marked by unequal neighbour values
-	float distance_binary[LAND_VOXELS];
+	float distance_binary[SDF_VOXELS];
 
 	// the state of the lichen CA over the world
 	Field2DPod<FUNGUS_DIM> fungus_field;
@@ -329,9 +335,9 @@ struct State {
 	glm::vec3 island_centres[NUM_ISLANDS];
 
 	// transforms:
-	glm::vec3 world_min = glm::vec3(0.f, 0.f, 0.f);
-	glm::vec3 world_max = glm::vec3(300.f, 300.f, 300.f);
-	glm::vec3 world_centre = glm::vec3(150.f, 50.f, 150.f);
+	glm::vec3 world_min = glm::vec3(0.f);
+	glm::vec3 world_max = glm::vec3(450.f);
+	glm::vec3 world_centre = glm::vec3(225.f);
 	float field2world_scale;
 	float world2field_scale;
 	glm::mat4 world2field;
@@ -341,7 +347,7 @@ struct State {
 	glm::mat4 leap2view;
 	glm::mat4 world2minimap;
 	float minimapScale = 0.005f;
-	float kinect2world_scale = 50.f;
+	float kinect2world_scale = 50.f; //50.f;   // or 30?
 
 	// parameters:
 
@@ -352,44 +358,62 @@ struct State {
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
 
-	float emission_decay = 0.98f;
+	// how much the optical flow impacts the fluid:
+	float flow_scale = 1.f;
+
+	float emission_decay = 0.9f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
 	float emission_scale = 0.9;
 
-	glm::vec3 chemical_decay = glm::vec3(0.999f);
-	glm::vec3 chemical_diffuse = glm::vec3(0.001);
+	glm::vec3 chemical_decay = glm::vec3(0.98f);
+	glm::vec3 chemical_diffuse = glm::vec3(0.0001);
 
 	glm::vec3 blood_color = glm::vec3(1., 0.461, 0.272) * 4.f; 
 	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
 	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
 
-	float projector1_location_x = 2.;
-	float projector1_location_y = 2.;
+	float projector1_location_x = 4.35;
+	float projector1_location_y = 6.95;
 	float projector1_rotation = 0.f;
-	float projector2_location_x = 3.;
-	float projector2_location_y = 3.;
-	float projector2_rotation = 0.f;
+	float projector2_location_x = 2.2;
+	float projector2_location_y = 3.1;
+	float projector2_rotation = M_PI * 0.508;
+
+	float land_fall_rate = 20.f;
+	float land_rise_rate = 1.f;
 
 	float vrFade = 0.f;
 	float creature_speed = 2.f; // in object-size per second
-
+	float reproduction_health_min = 0.5;
 	// per-second:
 	float creature_song_copy_factor = 1.25f;
 	float creature_song_mutate_rate = 0.25f;
 
-	float particleSize = 0.005;
+	float particleSize = 0.1;
+	float particle_noise = 0.01f;
+
 	float creature_fluid_push = 0.25f;
 
 	float fungus_recovery_rate = 0.02;
 	float fungus_seeding_chance = 0.00001;
-	float fungus_migration_chance = 1.f;
-	float fungus_decay_chance = 0.05;
+	float fungus_migration_chance = 0.1f;
+	float fungus_decay_chance = 0.1;
 
-	float alive_lifespan_decay = 0.01;
+	float ant_nestsize = 0.04f;
+	float ant_phero_decay = 0.999f;
+	float ant_sensor_size = 0.5;
+	float ant_food_min = 0.02;
+	float ant_sniff_min = 0.001;
+	float ant_follow = 0.05;
+
+	float predator_eat_range = 0.125f;
+	float predator_view_range = 8.f;
+
+	float alive_lifespan_decay = 0.003;
 	float dead_lifespan_decay = 0.25;
 
-	float human_height_decay = 0.95;
-	float coastline_height = 5.f;
+	float human_height_decay = 0.99;
+	float coastline_height = 10.f;
 
 	// main thread:
 	void animate(float dt);
@@ -399,6 +423,7 @@ struct State {
 	void fluid_update(float dt);
 	void fields_update(float dt);
 	void sim_update(float dt);
+	void land_update(float dt);
 
 	void generate_land_sdf_and_normals();
 
@@ -412,6 +437,8 @@ struct State {
 	glm::vec3 random_location_above_land(float h=0.1f);
 
 	void update_projector_loc();
+
+	float ant_sniff_turn(Creature& a, float p1, float p2);
 };
 
 #endif

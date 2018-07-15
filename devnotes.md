@@ -1,60 +1,38 @@
 # urgency
 
-hide mouse
-fs on windows
 
-why does alice disappear when fullscreen but not focused?
+fs mouse away
+test boot launch
+focus window: why does alice disappear when fullscreen but not focused?
 
-generating normals/SDF is waaay to slow, needs to be distributed somehow.
 
-land should be infered from human, not from kinect data
+why does fungus turn white?
 
+particles as eggs?
+stop to have babies
+
+FPS
+- only render projectors at 30fps
+- timelapse could be even slower
+
+Could we increase the land/chem dim but decrease the SDF dim?
+
+antialias fbo?
+
+X vr fade should only affect vr world
+X separate lighting for sand vs vr
+X auto teleport islands
 
 # Bring in the inhabitat species behaviours!!
 
-onFrame -> animate():
-- particle movement
-- creature anim (if alive):
-      - add vel, stay on land, twist, orient to land, add phase
-sim_update:
-- land, particles
-- creatures_health_update():
-      - spawn new?
-      - hashspace/deadspace move/remove
-      - death check
-      - reproduction check
-      - decay process
-- creatures_alive_update
-      - get local status (fungus, land,  etc.)
-      - find neighbours
-      - navigate
-      - evolve song, push fluid
-
 TODO: 
-      - turn away from island borders (steepness)
       - human carry
 
-- BOIDS
-      - speed boid-specific, depends on 'daylight'
-      - slower when eating
-      - velocity approximates "influence" 
-      - grab neighbours for avoid, copy, center forces
-            - viz limited by dot > -0.5
-            - viewrange boid-specific
-            - copy songs of in-range
-            - if distance < boids_closerange, avoid
-            - else center + copy
-            - avoiding coastline takes precedence over flocking
-            - otherwise smooth avoid/copy/center factors & add them to get influence (a direction)
-            - otherwise if no neighbours, wander
-      - then eat food
+- BUGS
+- PREDATORS
 
 
-
-<<<<<<< HEAD
-=======
 # TODO list
->>>>>>> 694d6728e4ecc04a0ecfa5f112e036999bc8fd91
 
 Bring in the inhabitat species behaviours!!
 
@@ -68,13 +46,6 @@ Land generation from kinect data;
 - old human method:
       - also 4-point blur, but ignoring points lower than central point
 - also need to project human back onto land (from projector POV) for accurate fungus-killing
-
-Do we really need normals for human field?
-
-Flow for carrying
-- cv routine data is being generated, but looks quite noisy
-- perhaps run it on the human field, which is already smoothed?
-- test by applying to particles (instead of fluid)?
 
 
 creatures shouldn't wander off to lands below the min height; they should turn away

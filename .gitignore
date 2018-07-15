@@ -4,6 +4,11 @@
 state.bin
 audio/audiostate.bin
 
+undefined
+
+webterminal.bat
+webterminal.js
+
 #worktrees
 +*
 worktrees.js

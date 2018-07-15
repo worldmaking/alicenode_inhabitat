@@ -86,7 +86,7 @@ void main() {
 
 	if (tc.x < 0.1) {
 
-		color = vec3(texCoord.y);
+		color = vec3(1.);
 
 	} else if (tcr1 < 0.2) {
 

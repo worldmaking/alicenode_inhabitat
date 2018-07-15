@@ -88,6 +88,7 @@ void main() {
 	float tcr1 = length(tc1);
 
 	float l = length(texCoord - 0.5) / 0.2;
+	float l2 = length(texCoord - 0.3) / 0.2;
 
 	if (tc.x < 0.03) {
 
@@ -104,9 +105,16 @@ void main() {
 			l > 0.75 ? 1. : 0.5, 
 			l < 0.5 ? 1. : 0.5);
 
+	} else if (l2 < 1.) {
+
+		color = vec3(,
+			l2 > 0.75 ? 1. : 0.5,
+			l2 > 0.5 ? 1. : 0.5, 
+			l2 < 0.5 ? 1. : 0.5);
+
 	} else {
-		//discard;
-		color = vec3(0.5);
+		discard;
+		
 	}
 
 	FragColor.rgb = color;

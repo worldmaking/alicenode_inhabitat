@@ -561,7 +561,7 @@ void State::fields_update(float dt) {
 }
 
 void land_update(double dt) { 
-	if (Alice::Instance().isSimulating) state->land_update(dt); 
+	//if (Alice::Instance().isSimulating) state->land_update(dt); 
 }
 
 void State::land_update(float dt) {
@@ -571,7 +571,7 @@ void State::land_update(float dt) {
 
 			float h = human.front()[land_idx];
 			glm::vec4& landpt = land[land_idx];
-			//landpt.w = h;
+			landpt.w = h;
 
 			//if (h == 0.f) continue;
 
@@ -689,15 +689,14 @@ void State::sim_update(float dt) {
 
 					// in archi15 we also did spatial filtering
 
-					glm::vec4& landpt = land[land_idx];
-					landpt.w = h;
-
 				}
 			}
 		} // end 2 kinects
 		
 		//al_field2d_diffuse(land_dim2, human.back(), human.front(), 0.5f, 3);
 		human.swap();
+
+		land_update(dt);
 
 		// NOW FLOW
 #ifdef AL_WIN

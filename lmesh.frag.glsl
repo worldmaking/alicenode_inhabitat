@@ -80,7 +80,7 @@ void main() {
 
 	float h = position.y - coastline;
 
-	color = vec3(clamp(h, 0., 1.));
+	color = vec3(clamp(h * 0.2, 0., 1.));
 	if (position.y < 10.) color *= 0.15;
 
 /*

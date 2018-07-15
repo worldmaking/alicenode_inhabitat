@@ -649,10 +649,10 @@ void State::sim_update(float dt) {
 				if (
 					depth0[i] <= 0 
 					//|| glm::length(uv) > 0.5f
-					//|| pt.x < world_min.x
-					//|| pt.z < world_min.z
-					//|| pt.x > world_max.x
-					//|| pt.z > world_max.z
+					|| pt.x < world_min.x
+					|| pt.z < world_min.z
+					|| pt.x > world_max.x
+					|| pt.z > world_max.z
 					//|| pt.y > 3.
 					) continue;
 

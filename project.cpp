@@ -333,7 +333,7 @@ Viewport viewport;
 glm::vec3 eyePos;
 glm::vec3 headPos; // in world space
 // the location of the VR person in the world
-glm::vec3 vrLocation = glm::vec3(34.5, 17., 33.);
+glm::vec3 vrLocation;
 
 glm::vec3 nextVrLocation;
 int fadeState = 0;
@@ -343,7 +343,7 @@ uint8_t humanchar1[LAND_TEXELS];
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 1; 
+int camMode = 0; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 float camera_speed_default = 40.f;
@@ -562,6 +562,7 @@ void State::fields_update(float dt) {
 
 void land_update(double dt) { 
 	//if (Alice::Instance().isSimulating) state->land_update(dt); 
+	state->generate_land_sdf_and_normals();
 }
 
 void State::land_update(float dt) {
@@ -827,7 +828,7 @@ void State::sim_update(float dt) {
 		if (o.state == Creature::STATE_ALIVE) {
 			creature_alive_update(o, dt);
 
-			audioframe.state = float(o.type) * 0.1f;
+			audioframe.state = 0.1f;// float(o.type) * 0.1f;
 			audioframe.speaker = o.island * 0.1f;
 			audioframe.health = o.health;
 			audioframe.age = o.phase;
@@ -896,19 +897,20 @@ void State::sim_update(float dt) {
 }
 
 glm::vec3 State::random_location_above_land(float h) {
+	glm::vec3 result;
 	glm::vec2 p;
 	glm::vec4 landpt;
 	int runaway = 100;
-	bool found = false;
 	while (runaway--) {
 		p = glm::linearRand(glm::vec2(0.f), glm::vec2(1.f));
 		landpt = al_field2d_readnorm_interp(land_dim2, land, p);
-		if (landpt.w > h) {
+		result = transform(field2world, glm::vec3(p.x, landpt.w, p.y));
+		if (result.y > h) {
 			break;
 		}
 	}
 	//console.log("runaway %d", runaway);
-	return transform(field2world, glm::vec3(p.x, landpt.w, p.y));
+	return result;
 }
 
 int State::nearest_island(glm::vec3 pos) {
@@ -926,43 +928,44 @@ int State::nearest_island(glm::vec3 pos) {
 }
 
 void State::creature_reset(int i) {
-		int island = rnd::integer(NUM_ISLANDS);
-		Creature& a = creatures[i];
-		a.idx = i;
-		//a.type = (rnd::integer(2) + 1) * 2;
-		a.type = Creature::TYPE_BOID; //(rnd::integer(2) + 1);
-		//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
-		a.state = Creature::STATE_ALIVE;
-		a.health = rnd::uni();
+	int island = rnd::integer(NUM_ISLANDS);
+	Creature& a = creatures[i];
+	a.idx = i;
+	//a.type = (rnd::integer(2) + 1) * 2;
+	a.type = Creature::TYPE_ANT; //(rnd::integer(2) + 1);
+	//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
+	a.state = Creature::STATE_ALIVE;
+	a.health = rnd::uni();
 
-		a.location = random_location_above_land(coastline_height * world2field_scale);
-		a.location = island_centres[island];
-		a.scale = rnd::uni(0.5f) + 0.75f;
-		a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
-		a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
-		a.phase = rnd::uni();
-		a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
+	a.location = random_location_above_land(coastline_height * 1.2);
+	//a.location = island_centres[island];
+	a.scale = rnd::uni(0.5f) + 0.75f;
+	a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
+	a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
+	a.phase = rnd::uni();
+	a.params = glm::linearRand(glm::vec4(0), glm::vec4(1));
 
-		a.velocity = glm::vec3(0);
-		a.rot_vel = glm::quat();
-		a.island = nearest_island(a.location);
+	a.velocity = glm::vec3(0);
+	a.rot_vel = glm::quat();
+	a.island = nearest_island(a.location);
 
-		switch(a.type) {
-			case Creature::TYPE_ANT:
-				a.ant.nest_idx = island;
-				a.location = island_centres[island];
-				a.ant.food = 0;
-				a.ant.nestness = 1;
-				break;
-			case Creature::TYPE_BUG:
-				break;
-			case Creature::TYPE_BOID:
-				break;
-			case Creature::TYPE_PREDATOR_HEAD:
-				a.pred_head.victim = -1;
-				break;
-		}
+	switch(a.type) {
+		case Creature::TYPE_ANT:
+			a.ant.nest_idx = island;
+			a.location = island_centres[island];
+			a.ant.food = 0;
+			a.ant.nestness = 1;
+			break;
+		case Creature::TYPE_BUG:
+			break;
+		case Creature::TYPE_BOID:
+			a.scale *= 0.75f;
+			break;
+		case Creature::TYPE_PREDATOR_HEAD:
+			a.pred_head.victim = -1;
+			break;
 	}
+}
 
 void State::creatures_health_update(float dt) {
 
@@ -971,17 +974,17 @@ void State::creatures_health_update(float dt) {
 	int recyclecount = 0;
 
 	// spawn a predator?
-	if (rnd::integer(NUM_CREATURES) < creature_pool.count/4
-		&& creature_pool.count > 7) {
+	// if (rnd::integer(NUM_CREATURES) < creature_pool.count/4
+	// 	&& creature_pool.count > 7) {
 
-		auto idx = creature_pool.pop();
-		creature_reset(idx);
-		Creature& a = creatures[idx];
-		a.type = Creature::TYPE_PREDATOR_HEAD;
-		for (int i=0; i<6; i++) {
-			auto seg = creature_pool.pop();
-		}
-	}
+	// 	auto idx = creature_pool.pop();
+	// 	creature_reset(idx);
+	// 	Creature& a = creatures[idx];
+	// 	a.type = Creature::TYPE_PREDATOR_HEAD;
+	// 	for (int i=0; i<6; i++) {
+	// 		auto seg = creature_pool.pop();
+	// 	}
+	// }
 
 
 	// spawn new?
@@ -1015,7 +1018,8 @@ void State::creatures_health_update(float dt) {
 			hashspace.move(i, glm::vec2(a.location.x, a.location.z));
 
 			// birth chance?
-			if (rnd::integer(NUM_CREATURES) < creature_pool.count
+			if (rnd::uni() < a.health * reproduction_health_min * dt
+				&& rnd::integer(NUM_CREATURES) < creature_pool.count
 				&& a.type != Creature::TYPE_PREDATOR_HEAD
 				&& a.type != Creature::TYPE_PREDATOR_BODY) {
 				auto j = creature_pool.pop();
@@ -1375,7 +1379,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 				auto desired_dir = safe_normalize(copy);
 
 				auto q = get_forward_rotation_to(o.orientation, desired_dir);
-				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
+				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.125f);
 				
 				// // get disparity
 				// auto influence_diff = desired_dir - uf;
@@ -1396,12 +1400,12 @@ void State::creature_alive_update(Creature& o, float dt) {
 				// if centre is too close, rotate away from it?
 				// centre is relative to self, but not rotated
 				auto q = get_forward_rotation_to(o.orientation, desired_dir);
-				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.25f);
+				o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.125f);
 				
 			} else {
 				float range = M_PI * steepness * M_PI;
 				glm::quat wander = glm::angleAxis(glm::linearRand(-range, range), up);
-				float wander_factor = 0.5f * dt;
+				float wander_factor = 0.15f * dt;
 				o.rot_vel = safe_normalize(glm::slerp(o.rot_vel, wander, wander_factor));
 			}
 		} break;
@@ -1926,7 +1930,7 @@ void State::animate(float dt) {
 		if (o.location.y < h || o.location.y > world_centre.y) {
 			o.location.y += dt * 0.1f * (h - o.location.y);
 		}
-		o.location = wrap(o.location, world_min, world_max);
+		o.location = glm::clamp(o.location, world_min, world_max);
 	}
 
 	for (int i=0; i<NUM_CREATURES; i++) {
@@ -1991,13 +1995,18 @@ void onFrame(uint32_t width, uint32_t height) {
 	#ifdef AL_WIN
 	if (alice.fps.count == 30 && !alice.window.isFullScreen) {
 		//alice.window.fullScreen(true);
-		alice.goFullScreen = true;
+		//alice.goFullScreen = true;
 	}
 	#endif
 
 
 	if (1) {	
 		// LEAP & TELEPORTING
+		if (nextVrLocation.y < state->coastline_height) {
+			nextVrLocation = state->random_location_above_land(state->coastline_height * 1.2);
+			fadeState = -1;
+			cameraLoc = nextVrLocation;
+		}
 		
 		//state->teleport_points[0] = glm::vec3(20., 1., 37.);
 		//state->teleport_points[1] = glm::vec3(4., 1., 13.);
@@ -2528,7 +2537,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #ifdef AL_WIN
 	float third = 1.f/3.f;
-	fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	//fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	
 	projectors[1].fbo.draw(glm::vec2(third, 0.f), glm::vec2(2.f*third, 1.f));
 	projectors[0].fbo.draw(glm::vec2(0.f, 0.f), glm::vec2(third, 1.f));
 #else
@@ -2772,6 +2783,17 @@ void State::reset() {
 
 	emission_field.reset();
 
+#ifdef AL_WIN
+	{
+		int i=0;
+		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
+		for (size_t y=0;y<dim2.y;y++) {
+			for (size_t x=0;x<dim2.x;x++, i++) {
+				land[i] = glm::vec4(0., 1., 0., 0.);
+			}
+		}
+	}
+#else
 	/*
 		Create the initial landscape:
 	*/
@@ -2823,6 +2845,7 @@ void State::reset() {
 	
 	
 	generate_land_sdf_and_normals();
+#endif
 
 	if (1) {
 		int div = sqrt(NUM_DEBUGDOTS);
@@ -2857,11 +2880,11 @@ void State::reset() {
 		}
 	}
 
-	island_centres[0] = glm::vec3(120., 0., 70.);
-	island_centres[1] = glm::vec3(70., 0., 215.);
-	island_centres[2] = glm::vec3(120., 0., 345.);
-	island_centres[3] = glm::vec3(285., 0., 385.);
-	island_centres[4] = glm::vec3(255., 0., 295.);
+	island_centres[0] = glm::vec3(120., 20., 70.);
+	island_centres[1] = glm::vec3(70., 20., 215.);
+	island_centres[2] = glm::vec3(120., 20., 345.);
+	island_centres[3] = glm::vec3(285., 20., 385.);
+	island_centres[4] = glm::vec3(255., 20., 295.);
 
 	// make up some speaker locations:
 	for (int i=0; i<NUM_ISLANDS; i++) {
@@ -3145,7 +3168,7 @@ extern "C" {
 		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
-		enablers[SHOW_OBJECTS] = 0;
+		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_TIMELAPSE] = 1;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
@@ -3185,7 +3208,7 @@ extern "C" {
 		alice.onReset.connect(onReset);
 		alice.onKeyEvent.connect(onKeyEvent);
 		#ifdef AL_WIN
-		alice.window.position(0, 4000);
+		alice.window.position(4000, 200);
 		#else
 		alice.window.position(45, 45);
 		#endif

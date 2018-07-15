@@ -37,7 +37,7 @@ void main() {
 	//float steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
 	float steepness = abs(1. - nnorm.y);
 
-	vec3 chem = fields1.rgb;
+	vec3 chem = fields1.rgb * 0.2;
 	float fungus = fields1.a;
 
 
@@ -66,7 +66,7 @@ void main() {
 	}
 
 	// add chems:
-	//color += chem;
+	color += chem;
 
 	// // darken steep slopes:
 	color *= vec3(1. - steepness);

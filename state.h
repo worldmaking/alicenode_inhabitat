@@ -379,7 +379,7 @@ struct State {
 
 	float vrFade = 0.f;
 	float creature_speed = 2.f; // in object-size per second
-
+	float reproduction_health_min = 0.5;
 	// per-second:
 	float creature_song_copy_factor = 1.25f;
 	float creature_song_mutate_rate = 0.25f;
@@ -406,7 +406,7 @@ struct State {
 	float dead_lifespan_decay = 0.25;
 
 	float human_height_decay = 0.95;
-	float coastline_height = 5.f;
+	float coastline_height = 10.f;
 
 	// main thread:
 	void animate(float dt);

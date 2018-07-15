@@ -631,7 +631,7 @@ void State::sim_update(float dt) {
 		
 		// for each Kinect
 		for (int k=0; k<2; k++) {
-			if (k == 11) continue;
+			//if (k == 11) continue;
 
 			
 			const CloudFrame& cloudFrame0 = k ? kinect1.cloudFrame() : kinect0.cloudFrame();
@@ -663,12 +663,11 @@ void State::sim_update(float dt) {
 					// skip OOB locations:
 					if (
 						depth0[i] <= 0 
-						//|| glm::length(uv) > 0.5f
 						|| pt.x < world_min.x
 						|| pt.z < world_min.z
 						|| pt.x > world_max.x
 						|| pt.z > world_max.z
-						//|| pt.y > 3.
+						|| pt.y > (3. * kinect2world_scale)
 						) continue;
 
 					// find nearest land cell for this point:

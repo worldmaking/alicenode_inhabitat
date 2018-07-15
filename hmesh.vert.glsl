@@ -4,6 +4,7 @@ uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix, u
 uniform float uMapScale;
 uniform float uLandLoD;
 uniform sampler2D uLandTex;
+uniform sampler2D uHumanTex;
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
@@ -28,13 +29,19 @@ void main() {
 
 
 	// get the landscape data (normal + height) from the texture:
-	vec4 land = texture(uLandTex, texCoord.xy);
+	float human = texture(uHumanTex, texCoord.xy).r;
+	float land = texture(uLandTex, texCoord.xy).w;
 	//vec4 land = textureLod(uLandTex, texCoord.xy, uLandLoD);
 
 	// height (land.w) needs to be scaled to the world
-	vec3 deform = (uLandMatrixInverse * vec4(0., land.w, 0., 1.)).xyz;
+	vec3 deform = (uLandMatrixInverse * vec4(0., human, 0., 1.)).xyz;
+	// push human below land:
+	
+
 	position += deform * uMapScale;
-	normal = land.xyz;
+	normal = vec3(0,1,0);
+
+	if ((human - land) < 0.02) position.y *= 0.5;
 	
 	gl_Position = uViewProjectionMatrix * vec4(position, 1.);
 }

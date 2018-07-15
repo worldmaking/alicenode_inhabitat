@@ -296,7 +296,7 @@ struct State {
 	// .w represents the height
 	glm::vec4 land[LAND_TEXELS];
 
-	Field2DPod<LAND_DIM> human;
+	Field2DPod<LAND_DIM, float> human;
 
 	// the flow field (hopefully this isn't too high res)
 	// Paris ran at 128 x 64, for example
@@ -356,12 +356,12 @@ struct State {
 	// how much the optical flow impacts the fluid:
 	float flow_scale = 1.f;
 
-	float emission_decay = 0.98f;
+	float emission_decay = 0.9f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
 	float emission_scale = 0.9;
 
-	glm::vec3 chemical_decay = glm::vec3(0.999f);
-	glm::vec3 chemical_diffuse = glm::vec3(0.001);
+	glm::vec3 chemical_decay = glm::vec3(0.98f);
+	glm::vec3 chemical_diffuse = glm::vec3(0.0001);
 
 	glm::vec3 blood_color = glm::vec3(1., 0.461, 0.272) * 4.f; 
 	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
@@ -374,7 +374,7 @@ struct State {
 	float projector2_location_y = 3.1;
 	float projector2_rotation = M_PI * 0.508;
 
-	float land_fall_rate = 10.f;
+	float land_fall_rate = 20.f;
 	float land_rise_rate = 1.f;
 
 	float vrFade = 0.f;
@@ -390,7 +390,7 @@ struct State {
 	float fungus_recovery_rate = 0.02;
 	float fungus_seeding_chance = 0.00001;
 	float fungus_migration_chance = 0.1f;
-	float fungus_decay_chance = 0.05;
+	float fungus_decay_chance = 0.1;
 
 	float ant_nestsize = 0.04f;
 	float ant_phero_decay = 0.999f;
@@ -402,10 +402,10 @@ struct State {
 	float predator_eat_range = 0.125f;
 	float predator_view_range = 8.f;
 
-	float alive_lifespan_decay = 0.01;
+	float alive_lifespan_decay = 0.003;
 	float dead_lifespan_decay = 0.25;
 
-	float human_height_decay = 0.95;
+	float human_height_decay = 0.99;
 	float coastline_height = 10.f;
 
 	// main thread:

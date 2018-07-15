@@ -1,6 +1,7 @@
 #version 330 core
 
 uniform sampler2D uFungusTex;
+uniform sampler2D uHumanTex;
 uniform sampler2D uNoiseTex;
 
 /*
@@ -13,6 +14,7 @@ uniform sampler2D uNoiseTex;
 
 in vec2 texCoord;
 in vec3 normal, position;
+in float hu;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -37,19 +39,25 @@ void main() {
 	//float steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
 	float steepness = abs(1. - nnorm.y);
 
-	vec3 chem = fields1.rgb * 0.25;
+	vec3 chem = fields1.rgb;
 	float fungus = fields1.a;
 
 
-	vec3 color = normalize(vec3(texCoord , 0.5));
+	vec3 color = normalize(vec3(texCoord , 0.5).xzy) * vec3(1.2, 0.8, 1.2);
+
+	// // darken steep slopes:
+	color *= vec3(1. - steepness);
+	color *= clamp(position.y*0.04, 0., 1.);
 	
 	// TODO: color += rock colour
 
 	if (fungus > 0.) {
 		// fungus:
-		float factor = fungus;
+		float factor = clamp(fungus * 0.8, 0., 1.);// * 0.7;
 		//factor += noise.z * 0.1;
-		color = mix(vec3(1) * min(1., position.y*0.05), color*fungus, factor);
+		//color = vec3(clamp(1.-fungus, 0., 1.));
+		color = mix(vec3(1.), color*fungus, factor);
+		//mix(color, vec3(1), fungus)*fungus;//mix(vec3(1.), color*fungus, factor);
 		//color = vec3(0,1,0) * fungus;
 		
 	} else {
@@ -66,22 +74,27 @@ void main() {
 	}
 
 	// add chems:
-	color += chem;
+	//color += chem;
 
-	// // darken steep slopes:
-	color *= vec3(1. - steepness);
+	color += chem;
 
 	// humanshadow:
 	//float hu = texture2D(tex4, texcoord0).z;
 	//color *= clamp((1.-4.*hu), 0., 1);
 
-	//color = clamp((position.y - 5.)*0.1, 0., 1.);
-
 	
-	if (position.y < coastline) discard;
+	if (position.y < coastline) {
+		//discard;
+		color = vec3(0);
+	}
 	//color *= clamp((position.y - coastline) * 0.05, 0., 1.);
 	float h = position.y;
 	color *= clamp((position.y - coastline) * 0.125, 0., 1.);
+
+	color = mix(color, vec3(0), clamp((hu * 100.)-0.3, 0., 1.));
+
+	
+
 /*
 	float h = position.y - coastline;
 

@@ -545,7 +545,7 @@ void State::fields_update(float dt) {
 			float f1 = (f <= 0) ? f : (f0 + 0.05f * (f - f0));
 
 			// other fields just clamp & decay:
-			chem = glm::clamp(chem * chemical_decay, 0.f, 2.f);
+			chem = glm::clamp(chem * chemical_decay, 0.f, 1.f);
 
 			// now copy these modified results back to the field_texture:
 			tex = glm::vec4(chem, f1);
@@ -576,14 +576,18 @@ void State::land_update(float dt) {
 
 			if (h == 0.f) continue;
 
+			float h1;
+
 			// glm::vec4& landpt = land[land_idx];
-			if (h < landpt.w) {
+			if (h <= landpt.w) {
 				// fall quickly:
-				landpt.w = glm::mix(landpt.w, h, land_fall_rate * dt);
+				h1 = glm::mix(landpt.w, h, land_fall_rate * dt);
 			} else {
 				// fall quickly:
-				landpt.w = glm::mix(landpt.w, h, land_rise_rate * dt);
+				h1 = glm::mix(landpt.w, h, land_rise_rate * dt);
 			}
+
+			landpt.w = h1;//glm::mix(landpt.w, h1, 0.2f);
 		}
 	}
 
@@ -644,7 +648,7 @@ void State::sim_update(float dt) {
 			for (int i=0, y=0; y < cDepthHeight; y++) {
 				for (int x=0; x < cDepthWidth; x++, i++) {
 
-					// hard masks:
+					// masks:
 					if (k==1 && (x > cDepthWidth * 0.7 && y > cDepthWidth * 0.5)) continue;
 					if (k==1 && (x > cDepthWidth * 0.85)) continue;
 					if (k==0 && (y < cDepthHeight * 0.3 && x > cDepthWidth * 0.75)) continue;
@@ -669,7 +673,7 @@ void State::sim_update(float dt) {
 						|| pt.z < world_min.z
 						|| pt.x > world_max.x
 						|| pt.z > world_max.z
-						|| pt.y > (1.5 * kinect2world_scale)
+						|| pt.y > (2.0 * kinect2world_scale)
 						) continue;
 
 					// find nearest land cell for this point:
@@ -684,7 +688,7 @@ void State::sim_update(float dt) {
 					float& humanpt1 = human.back()[landidx];
 
 					float h = world2field_scale * pt.y;
-					humanpt1 = glm::mix(humanpt0, h, 0.1f);
+					humanpt1 = glm::mix(humanpt0, h, 0.4f);
 
 					// in archi15 we also did spatial filtering
 
@@ -932,7 +936,7 @@ void State::creature_reset(int i) {
 	Creature& a = creatures[i];
 	a.idx = i;
 	//a.type = (rnd::integer(2) + 1) * 2;
-	a.type = Creature::TYPE_ANT; //(rnd::integer(2) + 1);
+	a.type = (rnd::integer(2) + 1);
 	//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
 	a.state = Creature::STATE_ALIVE;
 	a.health = rnd::uni();
@@ -989,7 +993,7 @@ void State::creatures_health_update(float dt) {
 
 	// spawn new?
 	//console.log("creature pool count %d", creature_pool.count);
-	if (rnd::integer(NUM_CREATURES) < creature_pool.count/4) {
+	if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
 		auto i = creature_pool.pop();
 		birthcount++;
 		//console.log("spawn %d", i);
@@ -1024,7 +1028,7 @@ void State::creatures_health_update(float dt) {
 				&& a.type != Creature::TYPE_PREDATOR_BODY) {
 				auto j = creature_pool.pop();
 				birthcount++;
-				//console.log("spawn %d", i);
+				//console.log("child %d", i);
 				creature_reset(j);
 				Creature& child = creatures[j];
 				child.type = a.type;
@@ -1716,6 +1720,7 @@ void draw_scene(int width, int height, Projector& projector) {
 		landMeshShader.uniform("uWorld2Map", glm::mat4(1.f));
 		landMeshShader.uniform("uLandLoD", 1.5f);
 		landMeshShader.uniform("uMapScale", 1.f);
+		landMeshShader.uniform("uHumanTex", 2);
 		landMeshShader.uniform("uNoiseTex", 3);
 		landMeshShader.uniform("uDistanceTex", 4);
 		landMeshShader.uniform("uFungusTex", 5);
@@ -1737,7 +1742,8 @@ void draw_scene(int width, int height, Projector& projector) {
 		humanMeshShader.uniform("uMapScale", 1.f);
 		humanMeshShader.uniform("uNoiseTex", 3);
 		humanMeshShader.uniform("uDistanceTex", 4);
-		humanMeshShader.uniform("uLandTex", 2);
+		humanMeshShader.uniform("uLandTex", 6);
+		humanMeshShader.uniform("uHumanTex", 2);
 
 		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
@@ -1992,6 +1998,10 @@ void onFrame(uint32_t width, uint32_t height) {
 	CloudDevice& kinect0 = alice.cloudDeviceManager.devices[0];
 	CloudDevice& kinect1 = alice.cloudDeviceManager.devices[1];
 
+	if (alice.simTime > 10.) {
+		state->land_rise_rate = 0.03f;
+	}
+
 	#ifdef AL_WIN
 	if (alice.fps.count == 30 && !alice.window.isFullScreen) {
 		//alice.window.fullScreen(true);
@@ -2002,13 +2012,14 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	if (1) {	
 		// LEAP & TELEPORTING
-		if (nextVrLocation.y < state->coastline_height) {
-			nextVrLocation = state->random_location_above_land(state->coastline_height * 1.2);
+		if (fadeState == 0 && nextVrLocation.y < state->coastline_height) {
+			nextVrLocation = state->random_location_above_land(state->coastline_height * 2);
 			fadeState = -1;
 			cameraLoc = nextVrLocation;
 		}
 		
 		//state->teleport_points[0] = glm::vec3(20., 1., 37.);
+
 		//state->teleport_points[1] = glm::vec3(4., 1., 13.);
 		//state->teleport_points[2] = glm::vec3(60., 2., 13.);
 		//state->teleport_points[3] = glm::vec3(34.5, 17., 33.);
@@ -2045,29 +2056,32 @@ void onFrame(uint32_t width, uint32_t height) {
 			int num_ray_dots = 64;
 			int num_hand_dots = 5*4;
 
+			glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
+			glm::vec3 head2map = mapPos - headPos;
+
+			glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
+			float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
+
+			float m = 0.005f / dist2map_squared;
+			//console.log("vr location y %f", vrLocation.y);
+
+			state->minimapScale = glm::mix(state->minimapScale, m, dt*3.f);
+
+			glm::vec3 midPoint = (state->world_min + state->world_max)/2.f;
+				midPoint.y = 0;
+			state->world2minimap = 
+					glm::translate(glm::vec3(mapPos)) * 
+					glm::scale(glm::vec3(state->minimapScale)) *
+					glm::translate(-midPoint);
+			
+
 
 			for (int h=0; h<2; h++) {
 		
 				int d = NUM_TELEPORT_POINTS + h * (num_hand_dots + num_ray_dots);
 				auto& hand = alice.leap->hands[h];
 				
-				glm::vec3 mapPos = vrLocation + glm::vec3(0., 1., 0.);
-				glm::vec3 head2map = mapPos - headPos;
 
-				glm::vec2 head2map_horiz = glm::vec2(head2map.x, head2map.z);
-				float dist2map_squared = glm::dot(head2map_horiz, head2map_horiz);
-
-				float m = 0.005f / dist2map_squared;
-
-				state->minimapScale = glm::mix(state->minimapScale, m, dt*3.f);
-
-				glm::vec3 midPoint = (state->world_min + state->world_max)/2.f;
-					midPoint.y = 0;
-				state->world2minimap = 
-						glm::translate(glm::vec3(mapPos)) * 
-						glm::scale(glm::vec3(state->minimapScale)) *
-						glm::translate(-midPoint);
-				
 
 				// 
 				// if (h == 0) {
@@ -2537,8 +2551,12 @@ void onFrame(uint32_t width, uint32_t height) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #ifdef AL_WIN
 	float third = 1.f/3.f;
-	//fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
-	projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	if (enablers[SHOW_TIMELAPSE]) {
+		fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	} else {
+	//
+		projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	}
 	
 	projectors[1].fbo.draw(glm::vec2(third, 0.f), glm::vec2(2.f*third, 1.f));
 	projectors[0].fbo.draw(glm::vec2(0.f, 0.f), glm::vec2(third, 1.f));
@@ -2886,6 +2904,9 @@ void State::reset() {
 	island_centres[3] = glm::vec3(285., 20., 385.);
 	island_centres[4] = glm::vec3(255., 20., 295.);
 
+	cameraLoc = island_centres[2];
+	vrLocation = nextVrLocation = cameraLoc;
+
 	// make up some speaker locations:
 	for (int i=0; i<NUM_ISLANDS; i++) {
 		int id = NUM_DEBUGDOTS - NUM_ISLANDS - 1 + i;
@@ -3167,13 +3188,13 @@ extern "C" {
 
 		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
-		enablers[SHOW_MINIMAP] = 0;//1;
+		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
-		enablers[SHOW_TIMELAPSE] = 1;//1;
+		enablers[SHOW_TIMELAPSE] = 0;//1;
 		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
-		enablers[SHOW_HUMANMESH] = 0;
+		enablers[SHOW_HUMANMESH] = 1;
 		enablers[CALIBRATE] = 1;
 
 		//threads_begin();
@@ -3184,7 +3205,7 @@ extern "C" {
 		console.log("onload fluid initialized");
 	
 		gBufferVR.dim = glm::ivec2(512, 512);
-		alice.hmd->connect();
+		//alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;

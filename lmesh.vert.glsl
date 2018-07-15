@@ -3,7 +3,7 @@
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix, uLandMatrix, uLandMatrixInverse, uWorld2Map;
 uniform float uMapScale;
 uniform float uLandLoD;
-uniform sampler2D uLandTex;
+uniform sampler2D uLandTex, uHumanTex;
 uniform sampler2D uFungusTex;
 uniform sampler2D uNoiseTex;
 
@@ -14,6 +14,7 @@ layout (location = 2) in vec2 aTexCoord;
 
 out vec2 texCoord;
 out vec3 normal, position;
+out float hu;
 
 void main() {
 	texCoord = aTexCoord;
@@ -23,6 +24,8 @@ void main() {
 	vec2 texCoord1 = texCoord + (noise.xy - 0.5) * 0.003;
 	vec4 fields1 = texture(uFungusTex, texCoord1);
 	float fungus = fields1.a;
+
+	float human = texture(uHumanTex, texCoord).r;
 	
 
 	mat4 landMat = uWorld2Map * uLandMatrixInverse;
@@ -34,10 +37,12 @@ void main() {
 	vec4 land = texture(uLandTex, texCoord.xy);
 	//vec4 land = textureLod(uLandTex, texCoord.xy, uLandLoD);
 
+	hu = human - land.w;
+
 	// height (land.w) needs to be scaled to the world
 	vec3 deform = (uLandMatrixInverse * vec4(0., land.w, 0., 1.)).xyz;
 	position += deform * uMapScale;
-	position.y += min(0., fungus);
+	//position.y += min(0., fungus);
 	normal = land.xyz;
 	
 	gl_Position = uViewProjectionMatrix * vec4(position, 1.);

@@ -73,7 +73,8 @@ void main() {
 	//float hu = texture2D(tex4, texcoord0).z;
 	//color *= clamp((1.-4.*hu), 0., 1);
 
-	color *= clamp((position.y - 5.)*0.1, 0., 1.);
+	//color *= clamp((position.y - 5.)*0.1, 0., 1.);
+	color = clamp((position.y - 5.)*0.1, 0., 1.);
   
   	//color = vec3(1.);
 

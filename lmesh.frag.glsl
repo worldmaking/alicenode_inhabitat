@@ -124,7 +124,7 @@ void main() {
 		
 	}*/
 
-	vec2 island = vec2(400., 400.);
+	vec2 island = vec2(250., 250.);
 	if (length(island - position.xz) < 5) color = vec3(1, 0, 0);
 
 	FragColor.rgb = color;

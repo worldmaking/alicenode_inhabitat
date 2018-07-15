@@ -372,7 +372,7 @@ struct State {
 	float projector1_rotation = 0.f;
 	float projector2_location_x = 3.;
 	float projector2_location_y = 3.;
-	float projector2_rotation = M_PI * 0.495;
+	float projector2_rotation = M_PI * 0.51;
 
 	float land_fall_rate = 10.f;
 	float land_rise_rate = 1.f;

@@ -645,7 +645,8 @@ void State::sim_update(float dt) {
 			for (int i=0, y=0; y < cDepthHeight; y++) {
 				for (int x=0; x < cDepthWidth; x++, i++) {
 
-					if (k==1 && x < cDepthWidth/2) continue;
+					// hard masks:
+					if (k==1 && x > cDepthWidth * 0.1) continue;
 						
 				
 					auto pt = cloud_points0[i];

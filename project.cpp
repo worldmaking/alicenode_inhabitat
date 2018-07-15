@@ -430,7 +430,7 @@ void State::fluid_update(float dt) {
 
 					// use this to sample the landscape:
 					float sdist;
-					al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+					al_field3d_readnorm_interp(sdf_dim, distance, norm, &sdist);
 					float dist = fabsf(sdist);
 
 					// TODO: what happens 'underground'?
@@ -446,7 +446,7 @@ void State::fluid_update(float dt) {
 					
 					// get a normal for the land:
 					// TODO: or read from state->land xyz?
-					glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm, 2.f/LAND_DIM);
+					glm::vec3 normal = sdf_field_normal4(sdf_dim, distance, norm, 2.f/SDF_DIM);
 					// re-orient to be orthogonal to the land normal:
 					glm::vec3 rescaled = make_orthogonal_to(vel, normal);
 					// update:
@@ -807,17 +807,26 @@ void State::sim_update(float dt) {
 
 			// get norm'd coordinate:
 			glm::vec3 norm = transform(world2field, o.location);
+			float h = al_field2d_readnorm_interp(land_dim2, land, glm::vec2(norm.x, norm.z)).w * field2world_scale;
+			
 
 			//glm::vec3 flow;
 			//fluid.velocities.front().readnorm(transform(world2field, o.location), &flow.x);
 			glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
 
 			// noise:
-			flow += glm::sphericalRand(0.0002f);
+			flow += glm::sphericalRand(particle_noise);
 
 			o.velocity = flow * idt;
-			
-			// sometimes assign to a random creature?
+
+			if (o.location.y < h || o.location.y > world_centre.y
+				|| o.location.x < world_min.x
+				|| o.location.x > world_max.x
+				|| o.location.z < world_min.z
+				|| o.location.z > world_max.z) {
+				o.location = random_location_above_land(coastline_height);
+			}
+
 			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
 				int idx = i % NUM_CREATURES;
 				o.location = creatures[idx].location;
@@ -848,60 +857,6 @@ void State::sim_update(float dt) {
 			audioframe.state = 0;
 		}
 	}
-
-	// for (int i=0; i<NUM_SEGMENTS; i++) {
-	// 	auto &o = segments[i];
-	// 	if (i % 8 == 0) {
-	// 		// a root;
-			
-	// 		/*
-	// 		glm::vec3 fluidloc = transform(world2field, o.location);
-	// 		glm::vec3 flow;
-	// 		fluid.velocities.front().readnorm(fluidloc, &flow.x);
-	// 		glm::vec3 push = quat_uf(o.orientation) * (creature_fluid_push * (float)dt);
-	// 		fluid.velocities.front().addnorm(fluidloc, &push.x);
-	// 		o.velocity = flow * idt;
-
-	// 		al_field3d_addnorm_interp(field_dim, emission, fluidloc, o.color * emission_scale * 0.02f);
-	// 		*/
-
-	// 		// get norm'd coordinate:
-	// 		glm::vec3 norm = transform(world2field, o.location);
-
-	// 		// get fluid flow:
-	// 		//glm::vec3 flow;
-	// 		//fluid.velocities.front().readnorm(norm, &flow.x);
-	// 		glm::vec3 flow = al_field3d_readnorm_interp(field_dim, fluid_velocities.front(), norm);
-
-	// 		// get my distance from the ground:
-	// 		float sdist; // creature's distance above the ground (or negative if below)
-	// 		al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
-
-	// 		// convert to meters per second:
-	// 		flow *= idt;
-
-	// 		// if below ground, rise up;
-	// 		// if above ground, sink down:d_dim, distance, norm, 0.05f/LAND_DIM);
-	// 		// re-orient relative to ground:
-	// 		o.orientation = glm::slerp(o.orientation, align_up_to(o.orientation, normal), 0.2f);
-			
-	// 	} else {
-	// 		auto& p = segments[i-1];
-	// 		o.scale = p.scale * 0.9f;
-	// 		float gravity = 0.1f;
-	// 		flow.y += sdist < 0.1f ? gravity : -gravity;
-
-	// 		// set my velocity, in meters per second:
-	// 		o.velocity = flow;
-	// 		//if(accel == 1) o.velocity += o.velocity;
-	// 		//else if (decel == 1) o.velocity -= o.velocity * glm::vec3(2.);
-
-	// 		// use this to sample the landscape:
-			
-	// 		// get a normal for the land:
-	// 		glm::vec3 normal = sdf_field_normal4(lan
-	// 	}
-	// }
 }
 
 glm::vec3 State::random_location_above_land(float h) {
@@ -1120,7 +1075,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 
 	// SENSE LAND
 	// get a normal for the land:
-	glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.05f/LAND_DIM);
+	glm::vec3 land_normal = sdf_field_normal4(sdf_dim, distance, norm, 0.05f/SDF_DIM);
 	// 0..1 factors:
 	//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
 	float flatness = fabsf(land_normal.y);
@@ -1130,7 +1085,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 	glm::vec3 flataxis = safe_normalize(glm::vec3(-land_normal.z, 0.f, land_normal.x));
 	// get my distance from the ground:
 	float sdist; // creature's distance above the ground (or negative if below)
-	al_field3d_readnorm_interp(land_dim, distance, norm, &sdist);
+	al_field3d_readnorm_interp(sdf_dim, distance, norm, &sdist);
 
 	// SENSE FLUID
 	// get fluid flow:
@@ -1344,7 +1299,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 
 		// get a very smooth normal:
 		float smooth = 0.5f;
-		glm::vec3 ln = sdf_field_normal4(land_dim, distance, norm, 0.125f/LAND_DIM);
+		glm::vec3 ln = sdf_field_normal4(sdf_dim, distance, norm, 0.125f/SDF_DIM);
 
 		auto desired_dir = safe_normalize(glm::vec3(-ln.x, 0.f, -ln.z));
 		auto q = get_forward_rotation_to(o.orientation, desired_dir);
@@ -1939,12 +1894,7 @@ void State::animate(float dt) {
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = particles[i];
 		o.location = o.location + o.velocity * dt;
-		auto norm = transform(world2field, o.location);
-		float h = al_field2d_readnorm_interp(land_dim2, land, glm::vec2(norm.x, norm.z)).w * field2world_scale;
-		if (o.location.y < h || o.location.y > world_centre.y) {
-			o.location.y += dt * 0.1f * (h - o.location.y);
-		}
-		o.location = glm::clamp(o.location, world_min, world_max);
+		//o.location = glm::clamp(o.location, world_min, world_max);
 	}
 
 	for (int i=0; i<NUM_CREATURES; i++) {
@@ -1970,7 +1920,6 @@ void State::animate(float dt) {
 			o.orientation = safe_normalize(glm::slerp(o.orientation, o.rot_vel * o.orientation, dt * 1.f));
 
 			// re-align the creature to the surface normal:
-			//glm::vec3 land_normal = sdf_field_normal4(land_dim, distance, norm, 0.5f/LAND_DIM);
 			glm::vec3 land_normal = glm::vec3(landpt);
 			{
 				// re-orient relative to ground:
@@ -2238,7 +2187,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		noiseTex.submit(glm::ivec2(FUNGUS_DIM, FUNGUS_DIM), &state->noise_texture[0]);
 		landTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->land[0]);
 		humanTex.submit(glm::ivec2(LAND_DIM, LAND_DIM), &state->human.front()[0]);
-		distanceTex.submit(land_dim, (float *)&state->distance[0]);
+		distanceTex.submit(sdf_dim, (float *)&state->distance[0]);
 		flowTex.submit(glm::ivec2(512,424), &state->flow[0]);
 		
 		//if (alice.cloudDevice->use_colour) {
@@ -2674,9 +2623,8 @@ void State::reset() {
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		auto& o = particles[i];
 		auto randpt = glm::linearRand(world_min, world_max);
-		auto norm = transform(world2field, randpt);
-		auto landpt = al_field2d_readnorm_interp(land_dim2, land, glm::vec2(norm.x, norm.z));
-		o.location = transform(field2world, glm::vec3(randpt.x, landpt.w, randpt.z));
+		randpt.y = coastline_height * (rnd::uni() * 3.f + 1.f);
+		o.location = randpt;
 		o.color = glm::vec3(1.f);
 	}
 
@@ -2822,16 +2770,16 @@ void State::generate_land_sdf_and_normals() {
 	{
 		// generate SDF from land height:
 		int i=0;
-		glm::ivec3 dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
-		glm::ivec2 dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
-		for (size_t z=0;z<dim.z;z++) {
-			for (size_t y=0;y<dim.y;y++) {
-				for (size_t x=0;x<dim.x;x++) {
+		for (size_t z=0;z<SDF_DIM;z++) {
+			for (size_t y=0;y<SDF_DIM;y++) {
+				for (size_t x=0;x<SDF_DIM;x++) {
 					glm::vec3 coord = glm::vec3(x, y, z);
-					glm::vec3 norm = coord/glm::vec3(dim);
+					glm::vec3 norm = coord/glm::vec3(SDF_DIM);
+					glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 					
-					int ii = al_field2d_index(dim2, glm::ivec2(x, z));
-					float w = land[ ii ].w;
+					//int ii = al_field2d_index(dim2, glm::ivec2(x, z));
+					//float w = land[ ii ].w;
+					float w = al_field2d_readnorm_interp(land_dim2, land, norm2).w;
 
 					distance[i] = norm.y < w ? -1. : 1.;
 					distance_binary[i] = distance[i] < 0.f ? 0.f : 1.f;
@@ -2840,9 +2788,9 @@ void State::generate_land_sdf_and_normals() {
 				}
 			}
 		}
-		sdf_from_binary(land_dim, distance_binary, distance);
+		sdf_from_binary(sdf_dim, distance_binary, distance);
 		//sdf_from_binary_deadreckoning(land_dim, distance_binary, distance);
-		al_field3d_scale(land_dim, distance, 1.f/land_dim.x);
+		al_field3d_scale(sdf_dim, distance, 1.f/(SDF_DIM));
 	}
 
 	// generate land normals:
@@ -2858,7 +2806,7 @@ void State::generate_land_sdf_and_normals() {
 
 			glm::vec3 norm3 = glm::vec3(norm.x, w, norm.y);
 
-			glm::vec3 normal = sdf_field_normal4(land_dim, distance, norm3, 1.f/LAND_DIM);
+			glm::vec3 normal = sdf_field_normal4(sdf_dim, distance, norm3, 1.f/SDF_DIM);
 			land[i] = glm::vec4(normal, w);
 		}
 	}
@@ -3087,7 +3035,7 @@ extern "C" {
 		enablers[SHOW_MINIMAP] = 1;//1;
 		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_TIMELAPSE] = 1;//1;
-		enablers[SHOW_PARTICLES] = 0;//1;
+		enablers[SHOW_PARTICLES] = 1;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 		enablers[SHOW_HUMANMESH] = 1;

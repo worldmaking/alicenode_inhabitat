@@ -133,6 +133,10 @@ struct Field2DPod {
 #define LAND_TEXELS (LAND_DIM*LAND_DIM)
 #define LAND_VOXELS (LAND_DIM*LAND_DIM*LAND_DIM)
 
+#define SDF_DIM (64)
+#define SDF_TEXELS (SDF_DIM*SDF_DIM)
+#define SDF_VOXELS (SDF_DIM*SDF_DIM*SDF_DIM)
+
 //#define FLOW_DIM 128
 #define FLOW_TEXELS (512*424)
 
@@ -147,6 +151,7 @@ struct Field2DPod {
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
+static const glm::ivec3 sdf_dim = glm::ivec3(SDF_DIM, SDF_DIM, SDF_DIM);
 
 static const glm::ivec2 field_dim2 = glm::ivec2(FIELD_DIM, FIELD_DIM);
 static const glm::ivec2 land_dim2 = glm::ivec2(LAND_DIM, LAND_DIM);
@@ -306,10 +311,10 @@ struct State {
 	// the distance to the nearest land surface, as a 3D SDF
 	// scaled such that the distance across the entire space == 1
 	// distances are normalized over the LAND_DIM as 0..1
-	float distance[LAND_VOXELS];
+	float distance[SDF_VOXELS];
 	// the boolean field that is used to generate the distance field
 	// surface edges are marked by unequal neighbour values
-	float distance_binary[LAND_VOXELS];
+	float distance_binary[SDF_VOXELS];
 
 	// the state of the lichen CA over the world
 	Field2DPod<FUNGUS_DIM> fungus_field;
@@ -384,7 +389,9 @@ struct State {
 	float creature_song_copy_factor = 1.25f;
 	float creature_song_mutate_rate = 0.25f;
 
-	float particleSize = 0.005;
+	float particleSize = 0.1;
+	float particle_noise = 0.01f;
+
 	float creature_fluid_push = 0.25f;
 
 	float fungus_recovery_rate = 0.02;

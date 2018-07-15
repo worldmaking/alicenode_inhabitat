@@ -1,15 +1,15 @@
 # urgency
 
-stop to have babies
 
 fs mouse away
-
 test boot launch
+focus window: why does alice disappear when fullscreen but not focused?
 
-focus window
 
-why does alice disappear when fullscreen but not focused?
+why does fungus turn white?
 
+particles as eggs?
+stop to have babies
 
 FPS
 - only render projectors at 30fps
@@ -17,7 +17,7 @@ FPS
 
 Could we increase the land/chem dim but decrease the SDF dim?
 
-antialias fbo
+antialias fbo?
 
 X vr fade should only affect vr world
 X separate lighting for sand vs vr

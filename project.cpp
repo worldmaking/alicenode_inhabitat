@@ -693,7 +693,8 @@ void State::sim_update(float dt) {
 			}
 		} // end 2 kinects
 		
-		human.swap();
+		al_field2d_diffuse(land_dim2, human.back(), human.front(), 0.5f, 3);
+		//human.swap();
 
 		// NOW FLOW
 #ifdef AL_WIN

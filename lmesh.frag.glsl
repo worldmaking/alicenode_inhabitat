@@ -107,7 +107,7 @@ void main() {
 
 	} else if (l2 < 1.) {
 
-		color = vec3(,
+		color = vec3(
 			l2 > 0.75 ? 1. : 0.5,
 			l2 > 0.5 ? 1. : 0.5, 
 			l2 < 0.5 ? 1. : 0.5);

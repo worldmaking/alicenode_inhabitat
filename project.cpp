@@ -665,7 +665,7 @@ void State::sim_update(float dt) {
 					uint16_t max_dist = 6000;
 					if (
 						depth0[i] <= min_dist 
-						|| depth[i] >= max_dist
+						|| depth0[i] >= max_dist
 						|| pt.x < world_min.x
 						|| pt.z < world_min.z
 						|| pt.x > world_max.x

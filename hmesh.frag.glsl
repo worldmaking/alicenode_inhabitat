@@ -18,7 +18,7 @@ void main() {
 	float mask = clamp(h * 0.1, 0., 1.);
 
 
-	FragColor.rgb = vec3(h * 0.05,h * 0.025, h * 0.01) * mask + 0.025;
+	FragColor.rgb = vec3(0);//vec3(h * 0.05,h * 0.025, h * 0.01) * mask + 0.025;
 	FragNormal.xyz = nnorm;
 	FragPosition.xyz = position;
 	FragTexCoord.xy = texCoord;

@@ -571,20 +571,18 @@ void State::land_update(float dt) {
 
 			float h = human.front()[land_idx];
 			glm::vec4& landpt = land[land_idx];
-			landpt.w = h;
+			//landpt.w = h;
 
 			//if (h == 0.f) continue;
 
 			// glm::vec4& landpt = land[land_idx];
-			// if (h < landpt.w) {
-			// 	// fall quickly:
-			// 	landpt.w = glm::mix(landpt.w, h, land_fall_rate * dt);
-			// } else {
-			// 	// fall quickly:
-			// 	landpt.w = glm::mix(landpt.w, h, land_rise_rate * dt);
-			// }
-
-			
+			if (h < landpt.w) {
+				// fall quickly:
+				landpt.w = glm::mix(landpt.w, h, land_fall_rate * dt);
+			} else {
+				// fall quickly:
+				landpt.w = glm::mix(landpt.w, h, land_rise_rate * dt);
+			}
 		}
 	}
 

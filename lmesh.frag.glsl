@@ -75,9 +75,13 @@ void main() {
 	//float hu = texture2D(tex4, texcoord0).z;
 	//color *= clamp((1.-4.*hu), 0., 1);
 
-	color *= clamp((position.y - coastline.)*0.5, 0., 1.);
 	//color = clamp((position.y - 5.)*0.1, 0., 1.);
 
+	
+	//if (position.y < coastline) discard;
+	//color *= clamp((position.y - coastline) * 0.05, 0., 1.);
+	float h = position.y;
+	color = vec3(h * 0.01);
 /*
 	float h = position.y - coastline;
 

@@ -1967,7 +1967,16 @@ void onFrame(uint32_t width, uint32_t height) {
 	#endif
 
 
-	if (1) {	
+	if (1) {
+
+		// keep vr location above ground
+		auto norm = glm::vec2(vrLocation.x, vrLocation.z);
+		auto landpt = al_field2d_readnorm_interp(land_dim2, state->land, norm);
+		float newy = state->field2world_scale * landpt.w;
+		vrLocation.y = newy;//glm::mix(vrLocation.y, newy, 0.25f);
+		
+		console.log("vrLocation %f %f %f", vrLocation.x, vrLocation.y, vrLocation.z);
+
 		timeToVrJump -= dt; 
 		if (timeToVrJump < 0.f) {
 			vrIsland = (vrIsland + 1) % NUM_ISLANDS;
@@ -2291,7 +2300,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	
 	// render the VR viewpoint:
 	Hmd& vive = *alice.hmd;
-	SimpleFBO& fbo = vive.fbo;
+	//SimpleFBO& fbo = vive.fbo;
 	if (width && height) {
 		if (vive.connected) {	
 				
@@ -2301,12 +2310,6 @@ void onFrame(uint32_t width, uint32_t height) {
 			glEnable(GL_SCISSOR_TEST);
 
 			//vrLocation = state->objects[1].location + glm::vec3(0., 1., 0.);
-
-			// keep vr location above ground
-			auto norm = glm::vec2(vrLocation.x, vrLocation.z);
-			auto landpt = al_field2d_readnorm_interp(land_dim2, state->land, norm);
-			float newy = state->field2world_scale * landpt.w;
-			vrLocation.y = glm::mix(vrLocation.y, newy, 0.25f);
 
 			// get head position in world space:
 			headPos = vive.mTrackedPosition + vrLocation;
@@ -2352,7 +2355,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				gBufferVR.end();
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferVR, projectors[2], true, viewport_scale, viewport_offset);
+				draw_gbuffer(vive.fbo, gBufferVR, projectors[2], true, viewport_scale, viewport_offset);
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
@@ -2378,7 +2381,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
 			gBufferProj.end();
 			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-			draw_gbuffer(fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
+			draw_gbuffer(vive.fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
 			glDisable(GL_SCISSOR_TEST);
 		}
 	} 
@@ -2394,9 +2397,8 @@ void onFrame(uint32_t width, uint32_t height) {
 #ifdef AL_WIN
 	float third = 1.f/3.f;
 	if (enablers[SHOW_TIMELAPSE]) {
-		fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+		vive.fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
 	} else {
-	//
 		projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
 	}
 	
@@ -2418,7 +2420,7 @@ void onFrame(uint32_t width, uint32_t height) {
 					texDraw.draw_no_shader(flowTex.id);
 					flowShader.unuse();
 				} else {
-					fbo.draw(); break;
+					vive.fbo.draw(); break;
 				}
 			} break;
 			default: soloView = 0;
@@ -2429,7 +2431,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		projectors[0].fbo.draw(glm::vec2(0.f,  0.f),  glm::vec2(0.5f,0.5f));
 		projectors[1].fbo.draw(glm::vec2(0.5f, 0.f),  glm::vec2(1.f ,0.5f));
 		projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
-		fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.5f ,1.f));
+		vive.fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.5f ,1.f));
 	}
 #endif
 	profiler.log("draw to window", alice.fps.dt);
@@ -3053,7 +3055,7 @@ extern "C" {
 			projectors[i].fbo.dim = gBufferProj.dim;
 		}
 
-		//alice.hmd->connect();
+		alice.hmd->connect();
 		if (alice.hmd->connected) {
 			alice.fps.setFPS(90);
 			gBufferVR.dim = alice.hmd->fbo.dim;

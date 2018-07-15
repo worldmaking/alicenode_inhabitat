@@ -3131,7 +3131,7 @@ extern "C" {
 		
 
 		enablers[SHOW_LANDMESH] = 1;
-		enablers[SHOW_AS_GRID] = 0;
+		enablers[SHOW_AS_GRID] = 1;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 0;
 		enablers[SHOW_TIMELAPSE] = 0;//1;

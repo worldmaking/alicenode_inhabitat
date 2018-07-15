@@ -93,7 +93,8 @@ void main() {
 		color = vec3(mod(div.x * 3., 0.8723), mod(div.y * 3., 0.7523), mod(div.x * 3., 0.34523));
 
 	} else {
-		discard;
+		//discard;
+		color = vec3(0.25);
 	}
 
 	FragColor.rgb = color;

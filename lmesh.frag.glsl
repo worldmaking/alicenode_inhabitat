@@ -81,7 +81,7 @@ void main() {
 	if (position.y < coastline) discard;
 	//color *= clamp((position.y - coastline) * 0.05, 0., 1.);
 	float h = position.y;
-	color = vec3(1.) * clamp((position.y - coastline) * 0.25, 0., 1.);
+	color = vec3(1.) * clamp((position.y - coastline) * 0.125, 0., 1.);
 /*
 	float h = position.y - coastline;
 

@@ -630,12 +630,12 @@ void State::sim_update(float dt) {
 		}
 		
 		// for each Kinect
-		for (int i=0; i<2; i++) {
-			if (i == 0) continue;
+		for (int k=0; k<2; k++) {
+			if (k == 0) continue;
 
 			
-			const CloudFrame& cloudFrame0 = i ? kinect1.cloudFrame() : kinect0.cloudFrame();
-			const CloudFrame& cloudFrame1 = i ? kinect1.cloudFramePrev() : kinect0.cloudFramePrev();
+			const CloudFrame& cloudFrame0 = k ? kinect1.cloudFrame() : kinect0.cloudFrame();
+			const CloudFrame& cloudFrame1 = k ? kinect1.cloudFramePrev() : kinect0.cloudFramePrev();
 			const glm::vec3 * cloud_points0 = cloudFrame0.xyz;
 			const glm::vec2 * uv_points0 = cloudFrame0.uv;
 			const glm::vec3 * rgb_points0 = cloudFrame0.rgb;
@@ -645,7 +645,7 @@ void State::sim_update(float dt) {
 			for (int i=0, y=0; y < cDepthHeight; y++) {
 				for (int x=0; x < cDepthWidth; x++, i++) {
 
-					if (i==1 && x < 200) continue;
+					if (i==1 && x < cDepthWidth/2) continue;
 						
 				
 					auto pt = cloud_points0[i];

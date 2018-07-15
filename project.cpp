@@ -1973,7 +1973,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		alice.goFullScreen = true;
 	}
 	#endif
-	if (enablers[CALIBRATE]) state->update_projector_loc();
+	//if (enablers[CALIBRATE]) state->update_projector_loc();
 
 
 	if (1) {	
@@ -3131,7 +3131,7 @@ extern "C" {
 		
 
 		enablers[SHOW_LANDMESH] = 1;
-		enablers[SHOW_AS_GRID] = 0;
+		enablers[SHOW_AS_GRID] = 1;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 0;
 		enablers[SHOW_TIMELAPSE] = 0;//1;

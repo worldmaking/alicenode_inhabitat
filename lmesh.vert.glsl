@@ -36,8 +36,8 @@ void main() {
 
 	// height (land.w) needs to be scaled to the world
 	vec3 deform = (uLandMatrixInverse * vec4(0., land.w, 0., 1.)).xyz;
-//position += deform * uMapScale;
-//position.y += min(0., fungus);
+	position += deform * uMapScale;
+	position.y += min(0., fungus);
 	normal = land.xyz;
 	
 	gl_Position = uViewProjectionMatrix * vec4(position, 1.);

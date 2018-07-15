@@ -651,7 +651,7 @@ void State::sim_update(float dt) {
 					if (k==0 && (y < cDepthHeight * 0.3 && x > cDepthWidth * 0.75)) continue;
 
 					auto uv = (uv_points0[i] - glm::vec2(0.5f, 0.5f)) * kaspectnorm;
-					if (k==0 && glm::length((uv_points0[i] - glm::vec2(0.17f, 0.9f))* kaspectnorm) < 0.2f) continue;
+					if (k==0 && glm::length((uv_points0[i] - glm::vec2(0.17f, 0.93f))* kaspectnorm) < 0.2f) continue;
 
 					//if (k==0 && glm::length((uv_points0[i] - glm::vec2(0.17f, 0.87f))* kaspectnorm) < 0.2f) continue;	
 

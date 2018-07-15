@@ -926,6 +926,7 @@ int State::nearest_island(glm::vec3 pos) {
 }
 
 void State::creature_reset(int i) {
+		int island = rnd::integer(NUM_ISLANDS);
 		Creature& a = creatures[i];
 		a.idx = i;
 		a.type = (rnd::integer(2) + 1) * 2;
@@ -933,7 +934,8 @@ void State::creature_reset(int i) {
 		a.state = Creature::STATE_ALIVE;
 		a.health = rnd::uni();
 
-		a.location = random_location_above_land(0.05f);
+		//a.location = random_location_above_land(0.05f);
+		a.location = island_centres[island];
 		a.scale = rnd::uni(0.5f) + 0.75f;
 		a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
 		a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
@@ -946,8 +948,8 @@ void State::creature_reset(int i) {
 
 		switch(a.type) {
 			case Creature::TYPE_ANT:
-				a.ant.nest_idx = rnd::integer(NUM_ISLANDS);
-				a.location = island_centres[rnd::integer(NUM_ISLANDS)];
+				a.ant.nest_idx = island;
+				a.location = island_centres[island];
 				a.ant.food = 0;
 				a.ant.nestness = 1;
 				break;

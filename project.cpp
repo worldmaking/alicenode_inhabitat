@@ -650,8 +650,8 @@ void State::sim_update(float dt) {
 					if (k==1 && (x > cDepthWidth * 0.85)) continue;
 					if (k==0 && (y < cDepthHeight * 0.3 && x > cDepthWidth * 0.75)) continue;
 
-					auto uv = (uv_points0[i] - 0.5f) * kaspectnorm;
-					if (k==0 && glm::length(uv) > 0.5f) continue;
+					auto uv = (uv_points0[i] - glm::vec2(0.5f, 0.5f)) * kaspectnorm;
+					if (k==0 && glm::length(uv) > 0.6f) continue;
 				
 					auto pt = cloud_points0[i];
 					// filter out bad depths

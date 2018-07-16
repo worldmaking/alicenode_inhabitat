@@ -25,7 +25,7 @@ antialias fbo?
 
 X vr fade should only affect vr world
 X separate lighting for sand vs vr
-X auto teleport islands
+Y auto teleport islands
 
 # Bring in the inhabitat species behaviours!!
 

@@ -12,6 +12,8 @@ out vec3 world_position, eye_position;
 out float world_scale;
 out vec3 color;
 
+float brightline = 15.;
+
 void main() {
 
 	world_scale = uPointSize;
@@ -38,5 +40,9 @@ void main() {
 
 
 	color = vertex_color;
+
+	float dy = (world_position.y - brightline) / brightline;
+	color *= clamp(abs(dy), 0., 1.);
+
 	//color = texture(uColorTex, vertex_color.xy).rgb;
 }  

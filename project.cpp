@@ -398,23 +398,23 @@ void fluid_update(double dt) {
 void State::fluid_update(float dt) {
 
 	// disturb the fluid:
-	for (int y=0, i=0; y<LAND_DIM; y++) {
-		for (int x=0; x<LAND_DIM; x++, i++) {
-			glm::vec3 norm = glm::vec3(
-				x/float(LAND_DIM), 
-				human.front()[i], 
-				y/float(LAND_DIM)
-			);
+	// for (int y=0, i=0; y<LAND_DIM; y++) {
+	// 	for (int x=0; x<LAND_DIM; x++, i++) {
+	// 		glm::vec3 norm = glm::vec3(
+	// 			x/float(LAND_DIM), 
+	// 			human.front()[i], 
+	// 			y/float(LAND_DIM)
+	// 		);
 
-			glm::vec3 push = glm::vec3(
-				state->flow[i].x, 
-				0.f, 
-				state->flow[i].y); 
-			push = push * (flow_scale * dt);
+	// 		glm::vec3 push = glm::vec3(
+	// 			state->flow[i].x, 
+	// 			0.f, 
+	// 			state->flow[i].y); 
+	// 		push = push * (flow_scale * dt);
 
-			al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
-		}
-	}
+	// 		al_field3d_addnorm_interp(field_dim, fluid_velocities.front(), norm, push);
+	// 	}
+	// }
 	
 	const glm::ivec3 dim = fluid_velocities.dim();
 	const glm::vec3 field_dimf = glm::vec3(field_dim);
@@ -422,19 +422,7 @@ void State::fluid_update(float dt) {
 	fluid_velocities.swap();
 	al_field3d_diffuse(dim, fluid_velocities.back(), fluid_velocities.front(), glm::vec3(fluid_viscosity), fluid_passes);
 
-	// stabilize:
-	// prepare new gradient data:
-	al_field3d_zero(dim, fluid_gradient.back());
-	al_field3d_derive_gradient(dim, fluid_velocities.back(), fluid_gradient.back()); 
-	// diffuse it:
-	al_field3d_diffuse(dim, fluid_gradient.back(), fluid_gradient.front(), 0.5f, fluid_passes / 2);
-	// subtract from current velocities:
-	al_field3d_subtract_gradient(dim, fluid_gradient.front(), fluid_velocities.front());
 	
-	// advect:
-	fluid_velocities.swap(); 
-	al_field3d_advect(dim, fluid_velocities.front(), fluid_velocities.back(), fluid_velocities.front(), fluid_advection);
-
 	// apply boundary effect to the velocity field
 	// boundary effect is the landscape, forcing the fluid to align to it when near
 	{
@@ -446,6 +434,12 @@ void State::fluid_update(float dt) {
 					
 					// get norm'd coordinate:
 					glm::vec3 norm = glm::vec3(x,y,z) / field_dimf;
+					glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+
+					// sample flow field:
+					auto flo = al_field2d_readnorm_interp(land_dim2, flow, norm2);
+
+
 
 					// use this to sample the landscape:
 					float sdist;
@@ -463,6 +457,9 @@ void State::fluid_update(float dt) {
 
 
 					glm::vec3& vel = velocities[i];
+
+					vel.x += flo.x * flow_scale;
+					vel.z += flo.y * flow_scale;
 					
 					// get a normal for the land:
 					// TODO: or read from state->land xyz?
@@ -483,6 +480,20 @@ void State::fluid_update(float dt) {
 			}
 		}
 	}
+
+
+	// stabilize:
+	// prepare new gradient data:
+	al_field3d_zero(dim, fluid_gradient.back());
+	al_field3d_derive_gradient(dim, fluid_velocities.back(), fluid_gradient.back()); 
+	// diffuse it:
+	al_field3d_diffuse(dim, fluid_gradient.back(), fluid_gradient.front(), 0.5f, fluid_passes / 2);
+	// subtract from current velocities:
+	al_field3d_subtract_gradient(dim, fluid_gradient.front(), fluid_velocities.front());
+	
+	// advect:
+	fluid_velocities.swap(); 
+	al_field3d_advect(dim, fluid_velocities.front(), fluid_velocities.back(), fluid_velocities.front(), fluid_advection);
 
 	// friction:
 	al_field3d_scale(dim, fluid_velocities.front(), glm::vec3(fluid_decay));
@@ -533,7 +544,8 @@ void State::fields_update(float dt) {
 				} else if (rnd::uni() < fungus_decay_chance * dt / hm) {
 					// if land lower than vitality, decrease vitality
 					// also random chance of decay for any living cell
-					dst *= rnd::uni();
+					//dst = C * rnd::uni(); //- dt*fungus_recovery_rate;
+					dst = glm::max(C, rnd::uni());
 				} else if (rnd::uni() < hm * fungus_migration_chance * dt) {
 					// migration chance increases with altitude
 					// pick a neighbour cell:
@@ -585,7 +597,7 @@ void State::fields_update(float dt) {
 }
 
 void land_update(double dt) { 
-	//if (Alice::Instance().isSimulating) state->land_update(dt); 
+	if (Alice::Instance().isSimulating) state->land_update(dt); 
 	state->generate_land_sdf_and_normals();
 }
 
@@ -722,9 +734,6 @@ void State::sim_update(float dt) {
 		
 		//al_field2d_diffuse(land_dim2, human.back(), human.front(), 0.5f, 3);
 		human.swap();
-
-		land_update(dt);
-
 		// NOW FLOW
 #ifdef AL_WIN
 		if (1) {
@@ -2167,7 +2176,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				float a = M_PI * t / 30.;
 
 				glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
-				glm::vec3 newloc = state->world_centre + (quat_uz(navquat))*4.f;
+				glm::vec3 newloc = vrLocation + (quat_uz(navquat))*4.f;
 
 				navloc = glm::mix(navloc, newloc, 0.05f);
 				navquat = glm::slerp(navquat, newori, 0.05f);
@@ -2630,7 +2639,7 @@ void State::reset() {
 		auto randpt = glm::linearRand(world_min, world_max);
 		randpt.y = coastline_height * (rnd::uni() * 3.f + 1.f);
 		o.location = randpt;
-		o.color = glm::vec3(1.f);
+		o.color = glm::vec3(rnd::uni());
 	}
 
 

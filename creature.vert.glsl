@@ -72,7 +72,7 @@ void main() {
 	id = int(iID);
 
 	// converting vertex into world space:
-	vec3 scaledpos = aPos * world_scale;
+	vec3 scaledpos = (aPos + vec3(0., 0.5, 0.)) * world_scale;
 	vertexpos = world_position + quat_rotate(world_orientation, scaledpos);
 	// calculate gl_Position the usual way
 	gl_Position = uViewProjectionMatrix * vec4(vertexpos, 1.0); 

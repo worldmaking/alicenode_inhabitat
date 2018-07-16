@@ -128,8 +128,7 @@ struct Field2DPod {
 #define FIELD_VOXELS (FIELD_DIM*FIELD_DIM*FIELD_DIM)
 
 
-
-#define LAND_DIM 200
+#define LAND_DIM 256
 #define LAND_TEXELS (LAND_DIM*LAND_DIM)
 #define LAND_VOXELS (LAND_DIM*LAND_DIM*LAND_DIM)
 
@@ -353,17 +352,17 @@ struct State {
 
 	int fluid_passes = 14;
 	int fluid_noise_count = 32;
-	float fluid_decay = 0.999999f;
+	float fluid_decay = 0.9; //0.999999f;
 	double fluid_viscosity = 0.00001;
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
-	float fluid_advection = 1.;
+	float fluid_advection = 0.05;
 	float fluid_contour_follow =  0.001f;
 
-	float creature_fluid_push = 1.f;
+	float creature_fluid_push = 2.f;
 
 	// how much the optical flow impacts the fluid:
-	float flow_scale = 0.f;
+	float flow_scale = 0.5f;
 
 	float emission_decay = 0.9f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
@@ -396,10 +395,10 @@ struct State {
 	float particleSize = 0.03;
 	float particle_noise = 0.0001f;
 
-	float fungus_recovery_rate = 0.02;
+	float fungus_recovery_rate = 0.002;
 	float fungus_seeding_chance = 0.00001;
 	float fungus_migration_chance = 0.1f;
-	float fungus_decay_chance = 0.1;
+	float fungus_decay_chance = 0.002;
 
 	float ant_nestsize = 0.04f;
 	float ant_phero_decay = 0.999f;

@@ -188,7 +188,7 @@ void main() {
 	// emissive:
 	//color.rgb = envcolor;
 	//color.rgb = envcolor_ref;
-	color.rgb = mix(color.rgb, envcolor_ref, 0.25);
+	//color.rgb = mix(color.rgb, envcolor_ref, 0.25);
 	
 
 	// uv grid viz:

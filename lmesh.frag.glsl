@@ -43,7 +43,7 @@ void main() {
 	float fungus = fields1.a;
 
 
-	vec3 color = normalize(vec3(texCoord , 0.5).xzy) * vec3(1.2, 0.8, 1.2);
+	vec3 color = normalize(vec3(texCoord , 0.5).xzy) * vec3(.8, 0.5, .8);
 
 	// // darken steep slopes:
 	color *= vec3(1. - steepness);
@@ -75,6 +75,9 @@ void main() {
 
 	// add chems:
 	//color += chem;
+	
+	float h = position.y;
+	color *= clamp((position.y - coastline) * 0.06, 0., 1.);
 
 	color += chem;
 
@@ -84,12 +87,11 @@ void main() {
 
 	
 	if (position.y < coastline) {
-		//discard;
+		discard;
 		color = vec3(0);
 	}
 	//color *= clamp((position.y - coastline) * 0.05, 0., 1.);
-	float h = position.y;
-	color *= clamp((position.y - coastline) * 0.125, 0., 1.);
+	
 
 	color = mix(color, vec3(0), clamp((hu * 100.)-0.3, 0., 1.));
 

@@ -461,6 +461,7 @@ void State::fluid_update(float dt) {
 					float s = fluid_contour_follow;
 					float influence = s / (s + dist);
 
+
 					glm::vec3& vel = velocities[i];
 					
 					// get a normal for the land:

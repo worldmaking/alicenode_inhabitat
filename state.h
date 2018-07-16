@@ -353,12 +353,14 @@ struct State {
 
 	int fluid_passes = 14;
 	int fluid_noise_count = 32;
-	float fluid_decay = 0.9999f;
-	double fluid_viscosity = 0.00000001; //0.00001;
+	float fluid_decay = 0.999999f;
+	double fluid_viscosity = 0.00001;
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
 	float fluid_advection = 1.;
-	float fluid_contour_follow =  0.01f;
+	float fluid_contour_follow =  0.001f;
+
+	float creature_fluid_push = 1.f;
 
 	// how much the optical flow impacts the fluid:
 	float flow_scale = 0.f;
@@ -392,9 +394,7 @@ struct State {
 	float creature_song_mutate_rate = 0.25f;
 
 	float particleSize = 0.03;
-	float particle_noise = 0.01f;
-
-	float creature_fluid_push = 0.25f;
+	float particle_noise = 0.0001f;
 
 	float fungus_recovery_rate = 0.02;
 	float fungus_seeding_chance = 0.00001;

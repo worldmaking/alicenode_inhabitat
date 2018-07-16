@@ -43,7 +43,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 2,
 					"outlettype" : [ "bang", "bang" ],
-					"patching_rect" : [ 73.0, 240.0, 81.0, 22.0 ],
+					"patching_rect" : [ 73.0, 240.0, 99.0, 22.0 ],
 					"style" : "",
 					"text" : "reanimate #2"
 				}
@@ -53,11 +53,11 @@
 				"box" : 				{
 					"comment" : "",
 					"id" : "obj-1",
-					"index" : 0,
+					"index" : 1,
 					"maxclass" : "inlet",
 					"numinlets" : 0,
 					"numoutlets" : 1,
-					"outlettype" : [ "" ],
+					"outlettype" : [ "signal" ],
 					"patching_rect" : [ 50.0, 54.0, 30.0, 30.0 ],
 					"style" : ""
 				}
@@ -73,19 +73,6 @@
 					"patching_rect" : [ 73.0, 334.0, 96.0, 22.0 ],
 					"style" : "",
 					"text" : "t \"audio spiking\""
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-47",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 1,
-					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 171.0, 334.0, 115.0, 22.0 ],
-					"style" : "",
-					"text" : "metro 50 @active 1"
 				}
 
 			}
@@ -184,7 +171,7 @@
 				"box" : 				{
 					"comment" : "",
 					"id" : "obj-12",
-					"index" : 0,
+					"index" : 1,
 					"maxclass" : "outlet",
 					"numinlets" : 1,
 					"numoutlets" : 0,
@@ -282,23 +269,7 @@
 				}
 
 			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-12", 0 ],
-					"source" : [ "obj-47", 0 ]
-				}
-
-			}
- ],
-		"dependency_cache" : [ 			{
-				"name" : "reanimate.maxpat",
-				"bootpath" : "~/alicenode_inhabitat/audio",
-				"patcherrelativepath" : ".",
-				"type" : "JSON",
-				"implicit" : 1
-			}
- ],
-		"autosave" : 0
+ ]
 	}
 
 }

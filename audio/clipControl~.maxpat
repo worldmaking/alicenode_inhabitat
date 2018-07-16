@@ -4,8 +4,8 @@
 		"appversion" : 		{
 			"major" : 7,
 			"minor" : 3,
-			"revision" : 4,
-			"architecture" : "x64",
+			"revision" : 5,
+			"architecture" : "x86",
 			"modernui" : 1
 		}
 ,
@@ -43,9 +43,9 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 102.0, 238.0, 156.0, 22.0 ],
+					"patching_rect" : [ 102.0, 238.0, 164.0, 22.0 ],
 					"style" : "",
-					"text" : "audioSpikeCheck~ #1 #2"
+					"text" : "audioSpikeCheck~ 100 5000"
 				}
 
 			}
@@ -56,9 +56,9 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 86.0, 211.0, 156.0, 22.0 ],
+					"patching_rect" : [ 86.0, 211.0, 164.0, 22.0 ],
 					"style" : "",
-					"text" : "audioSpikeCheck~ #1 #2"
+					"text" : "audioSpikeCheck~ 100 5000"
 				}
 
 			}
@@ -69,9 +69,9 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 70.0, 184.0, 156.0, 22.0 ],
+					"patching_rect" : [ 70.0, 184.0, 164.0, 22.0 ],
 					"style" : "",
-					"text" : "audioSpikeCheck~ #1 #2"
+					"text" : "audioSpikeCheck~ 100 5000"
 				}
 
 			}
@@ -82,9 +82,9 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 54.0, 157.0, 156.0, 22.0 ],
+					"patching_rect" : [ 54.0, 157.0, 164.0, 22.0 ],
 					"style" : "",
-					"text" : "audioSpikeCheck~ #1 #2"
+					"text" : "audioSpikeCheck~ 100 5000"
 				}
 
 			}
@@ -280,9 +280,9 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 38.0, 130.0, 156.0, 22.0 ],
+					"patching_rect" : [ 38.0, 130.0, 164.0, 22.0 ],
 					"style" : "",
-					"text" : "audioSpikeCheck~ #1 #2"
+					"text" : "audioSpikeCheck~ 100 5000"
 				}
 
 			}

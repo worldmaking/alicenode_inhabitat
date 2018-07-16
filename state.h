@@ -357,9 +357,11 @@ struct State {
 	double fluid_viscosity = 0.00000001; //0.00001;
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
+	float fluid_advection = 1.;
+	float fluid_contour_follow =  0.01f;
 
 	// how much the optical flow impacts the fluid:
-	float flow_scale = 1.f;
+	float flow_scale = 0.f;
 
 	float emission_decay = 0.9f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
@@ -389,8 +391,8 @@ struct State {
 	float creature_song_copy_factor = 1.25f;
 	float creature_song_mutate_rate = 0.25f;
 
-	float particleSize = 0.1;
-	float particle_noise = 0.003f;
+	float particleSize = 0.03;
+	float particle_noise = 0.01f;
 
 	float creature_fluid_push = 0.25f;
 

@@ -433,7 +433,7 @@ void State::fluid_update(float dt) {
 	
 	// advect:
 	fluid_velocities.swap(); 
-	al_field3d_advect(dim, fluid_velocities.front(), fluid_velocities.back(), fluid_velocities.front(), 1.);
+	al_field3d_advect(dim, fluid_velocities.front(), fluid_velocities.back(), fluid_velocities.front(), fluid_advection);
 
 	// apply boundary effect to the velocity field
 	// boundary effect is the landscape, forcing the fluid to align to it when near
@@ -458,14 +458,14 @@ void State::fluid_update(float dt) {
 					// generate a normalized influence factor -- the closer we are to the surface, the greater this is
 					//float influence = glm::smoothstep(0.05f, 0.f, dist);
 					// s is the amount of dist where the influence is 50%
-					float s = 0.01f;
+					float s = fluid_contour_follow;
 					float influence = s / (s + dist);
 
 					glm::vec3& vel = velocities[i];
 					
 					// get a normal for the land:
 					// TODO: or read from state->land xyz?
-					glm::vec3 normal = sdf_field_normal4(sdf_dim, distance, norm, 2.f/SDF_DIM);
+					glm::vec3 normal = sdf_field_normal4(sdf_dim, distance, norm, 1.f/SDF_DIM);
 					// re-orient to be orthogonal to the land normal:
 					glm::vec3 rescaled = make_orthogonal_to(vel, normal);
 					// update:
@@ -1725,7 +1725,7 @@ void draw_scene(int width, int height, Projector& projector) {
 		landMeshShader.uniform("uFungusTex", 5);
 		landMeshShader.uniform("uLandTex", 6);
 
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
@@ -1971,12 +1971,13 @@ void onFrame(uint32_t width, uint32_t height) {
 	if (1) {
 
 		// keep vr location above ground
-		auto norm = glm::vec2(vrLocation.x, vrLocation.z);
-		auto landpt = al_field2d_readnorm_interp(land_dim2, state->land, norm);
+		auto norm = transform(state->world2field, vrLocation);
+		auto norm2 = glm::vec2(norm.x, norm.z);
+		auto landpt = al_field2d_readnorm_interp(land_dim2, state->land, norm2);
 		float newy = state->field2world_scale * landpt.w;
-		vrLocation.y = newy;//glm::mix(vrLocation.y, newy, 0.25f);
+		vrLocation.y = glm::mix(vrLocation.y, newy, 0.25f);
 		
-		console.log("vrLocation %f %f %f", vrLocation.x, vrLocation.y, vrLocation.z);
+		//console.log("vrLocation %f %f %f == %f", vrLocation.x, vrLocation.y, vrLocation.z, landpt.w);
 
 		timeToVrJump -= dt; 
 		if (timeToVrJump < 0.f) {

@@ -347,7 +347,7 @@ uint8_t humanchar1[LAND_TEXELS];
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 0; 
+int camMode = 2; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 float camera_speed_default = 40.f;
@@ -857,6 +857,7 @@ void State::sim_update(float dt) {
 			creature_alive_update(o, dt);
 
 			audioframe.state = float(o.type) * 0.1f;
+			audioframe.state = float(rnd::integer(4) + 1) * 0.1f;
 			audioframe.speaker = o.island * 0.1f;
 			audioframe.health = o.health;
 			audioframe.age = o.phase;
@@ -1990,13 +1991,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		//console.log("vrLocation %f %f %f == %f", vrLocation.x, vrLocation.y, vrLocation.z, landpt.w);
 
 		timeToVrJump -= dt; 
-		if (timeToVrJump < 0.f) {
-			vrIsland = (vrIsland + 1) % NUM_ISLANDS;
-			nextVrLocation = state->island_centres[vrIsland];
-			fadeState = -1;
-
-			timeToVrJump = 30.;
-		}
+		
 
 		//Teleport Fade
 		if (fadeState == -1) {
@@ -2176,9 +2171,17 @@ void onFrame(uint32_t width, uint32_t height) {
 				float a = M_PI * t / 30.;
 
 				glm::quat newori = glm::angleAxis(a, glm::vec3(0,1,0));
-				glm::vec3 newloc = vrLocation + (quat_uz(navquat))*4.f;
+				glm::vec3 newloc = vrLocation + glm::vec3(0., 2., 0.) + (quat_uz(navquat))*30.f;
+				
+				navloc = glm::mix(navloc, newloc, 0.01f);
+				
+				// keep this above ground:
+				glm::vec3 norm = transform(state->world2field, navloc);
+				auto landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+				navloc = transform(state->field2world, glm::vec3(norm.x, glm::max(norm.y, landpt.w+0.01f), norm.z));
 
-				navloc = glm::mix(navloc, newloc, 0.05f);
+				navloc = glm::mix(navloc, newloc, 0.1f);
+				
 				navquat = glm::slerp(navquat, newori, 0.05f);
 			}
 		}
@@ -2232,6 +2235,15 @@ void onFrame(uint32_t width, uint32_t height) {
 			// timelapse wall projector:
 			int slices = gBufferProj.dim.x;//((int(t) % 3) + 3);
 			int slice = (alice.fps.count % slices);
+
+			if (slice == 0) {//timeToVrJump < 0.f) {
+				vrIsland = (vrIsland + 1) % NUM_ISLANDS;
+				nextVrLocation = state->island_centres[vrIsland];
+				fadeState = -1;
+
+				timeToVrJump = 30.;
+			}
+
 			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
 			float slicewidth = 1.f/slices;
 			float sliceangle = M_PI * 2./slices; 
@@ -2261,7 +2273,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				gBufferProj.begin();
 
 					viewport.pos = glm::ivec2(gBufferProj.dim.x * viewport_offset.x, gBufferProj.dim.y * viewport_offset.y);
-					viewport.dim = glm::ivec2(gBufferProj.dim.x * viewport_scale.x, gBufferProj.dim.y * viewport_scale.y);
+					viewport.dim = glm::ivec2(gBufferProj.dim.x * viewport_scale.x + 2., gBufferProj.dim.y * viewport_scale.y);
 
 					glScissor(
 						viewport.pos.x, 
@@ -2409,9 +2421,9 @@ void onFrame(uint32_t width, uint32_t height) {
 #ifdef AL_WIN
 	float third = 1.f/3.f;
 	if (enablers[SHOW_TIMELAPSE]) {
-		vive.fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
-	} else {
 		projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+	} else {
+		vive.fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
 	}
 	
 	projectors[1].fbo.draw(glm::vec2(third, 0.f), glm::vec2(2.f*third, 1.f));

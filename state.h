@@ -114,7 +114,7 @@ struct Field2DPod {
 };
 #endif
 
-#define NUM_CREATURES 512
+#define NUM_CREATURES 1024
 #define NUM_CREATURE_PARTS NUM_CREATURES
 
 #define NUM_PARTICLES 1024*256
@@ -387,7 +387,7 @@ struct State {
 
 	float vrFade = 0.f;
 	float creature_speed = 2.f; // in object-size per second
-	float reproduction_health_min = 0.5;
+	float reproduction_health_min = 0.25;
 	// per-second:
 	float creature_song_copy_factor = 1.25f;
 	float creature_song_mutate_rate = 0.25f;

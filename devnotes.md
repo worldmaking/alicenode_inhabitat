@@ -5,10 +5,11 @@ fs mouse away
 test boot launch
 focus window: why does alice disappear when fullscreen but not focused?
 
+set farclips for vr etc.
 
 why does fungus turn white?
 
-why no vr?
+why does enabling 4 creatures kill the main screen?
 
 why particles move like jelly?
 

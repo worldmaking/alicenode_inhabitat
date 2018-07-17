@@ -1254,13 +1254,13 @@ vec3 fScene_tex_z(vec3 p) {
 		case 2: return fScene_tex_z_old(p);
 		case 3: return fScene_tex_z_cashew(p);
 		case 4: return fScene_tex_z_quadpod(p);
-		case 5: return fScene_tex_oldsegment(p);
-		case 6: return fScene_tex_z_nick_cashew(p, false);
-		case 7: return fScene_tex_z_nick_bulbworm(p);
-		case 8: return fScene_tex_z_nick_squidlike(p);
-		case 9: return fScene_tex_z_nick_walkTest(p, false);
-		case 10: return fScene_tex_z_wingtest(p, false);
-		case 11:
+		// case 5: return fScene_tex_oldsegment(p);
+		// case 6: return fScene_tex_z_nick_cashew(p, false);
+		// case 7: return fScene_tex_z_nick_bulbworm(p);
+		// case 8: return fScene_tex_z_nick_squidlike(p);
+		// case 9: return fScene_tex_z_nick_walkTest(p, false);
+		// case 10: return fScene_tex_z_wingtest(p, false);
+		// case 11:
 		default: return fScene_tex_z_graham(p);
 	}
 	//return fScene_tex_z_old(p);

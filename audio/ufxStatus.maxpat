@@ -9,7 +9,7 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 104.0, 243.0, 504.0, 672.0 ],
+		"rect" : [ 4468.0, 434.0, 504.0, 672.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -37,6 +37,19 @@
 		"style" : "",
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-7",
+					"linecount" : 2,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 221.0, 7.0, 150.0, 34.0 ],
+					"style" : "",
+					"text" : "this was causing audio dropouts"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"comment" : "",
 					"id" : "obj-47",
@@ -395,14 +408,6 @@
 					"destination" : [ "obj-4", 0 ],
 					"midpoints" : [ 67.0, 255.0, 163.0, 255.0, 163.0, 348.0, 56.0, 348.0 ],
 					"source" : [ "obj-26", 1 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-19", 0 ],
-					"midpoints" : [ 93.5, 33.5, 15.5, 33.5 ],
-					"source" : [ "obj-28", 0 ]
 				}
 
 			}

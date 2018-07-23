@@ -456,7 +456,7 @@ void State::fluid_update(float dt) {
 					maxspeed = glm::max(flospd, maxspeed);
 					avgspeed += flospd;
 
-					flo = flospd > fluid_flow_min_threshold ? flo : glm::vec3(0.f);
+					flo = flospd > fluid_flow_min_threshold ? flo : glm::vec2(0.f);
 
 					// use this to sample the landscape:
 					float sdist;

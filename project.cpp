@@ -936,7 +936,7 @@ void State::creature_reset(int i) {
 			a.location = island_centres[island];
 			a.ant.food = 0;
 			a.ant.nestness = 1;
-			a.scale *= 0.5f;
+			a.scale *= 0.75f;
 			break;
 		case Creature::TYPE_BUG:
 			break;
@@ -1002,7 +1002,7 @@ void State::creatures_health_update(float dt) {
 			// birth chance?
 			if (rnd::uni() < a.health * reproduction_health_min * dt
 				&& rnd::integer(NUM_CREATURES) < creature_pool.count
-				&& a.type == Creature::TYPE_BOID) {
+				&& (a.type == Creature::TYPE_BOID || a.type == Creature::TYPE_ANT)) {
 				auto j = creature_pool.pop();
 				birthcount++;
 				//console.log("child %d", i);
@@ -1198,7 +1198,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 				//nestfood = nestfood + a.food
 				o.ant.food = 0;
 				o.ant.nestness = 1;
-				o.health = 1;
+				o.health = o.ant.food;
 			} else {
 				//-- look for nest:
 				auto normp1 = transform(world2field, a1);
@@ -1246,9 +1246,9 @@ void State::creature_alive_update(Creature& o, float dt) {
 		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
   		fungus_field.front()[fungus_idx] -= eat;
 
-		//o.color = glm::vec3(o.params);
+		o.color = glm::vec3(o.params);
 
-		o.color = glm::vec3(0, 1, 0);
+		//o.color = glm::vec3(0, 1, 0);
 		
 	} break;
 	case Creature::TYPE_BUG: {
@@ -1347,7 +1347,6 @@ void State::creature_alive_update(Creature& o, float dt) {
 		auto q = get_forward_rotation_to(o.orientation, desired_dir);
 		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.5f);
 
-		o.color = glm::vec3(1, 0, 0);
 
 	} else if (o.location.y < coastline_height*2.) {
 

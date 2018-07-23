@@ -1249,7 +1249,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
   		fungus_field.front()[fungus_idx] -= eat;
 
-		o.color = glm::vec3(o.params);
+		o.color = glm::vec3(o.params) * 0.5f + 0.5f;
 
 		//o.color = glm::vec3(0, 1, 0);
 		

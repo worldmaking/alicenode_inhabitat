@@ -3163,6 +3163,7 @@ extern "C" {
 		#ifdef AL_WIN
 		alice.goFullScreen = true;
 		soloView = 0;
+		ShowCursor(FALSE);
 		#endif
 
 		onReset();

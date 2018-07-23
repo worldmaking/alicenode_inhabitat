@@ -279,6 +279,7 @@ Shader deferShader, deferShader2;
 Shader simpleShader;
 Shader debugShader;
 Shader flowShader;
+Shader blendShader;
 
 QuadMesh quadMesh;
 GLuint colorTex;
@@ -324,6 +325,7 @@ Projector projectors[NUM_PROJECTORS];
 
 GBuffer gBufferVR;
 GBuffer gBufferProj;
+SimpleFBO slowFbo;
 
 glm::mat4 viewMat;
 glm::mat4 projMat;
@@ -1494,6 +1496,7 @@ void onUnloadGPU() {
 	simpleShader.dest_closing();
 	debugShader.dest_closing();
 	flowShader.dest_closing();
+	blendShader.dest_closing();
 
 	quadMesh.dest_closing();
 	cubeVBO.dest_closing();
@@ -1520,6 +1523,7 @@ void onUnloadGPU() {
 	gBufferVR.dest_closing();
 	gBufferProj.dest_closing();
 	Alice::Instance().hmd->dest_closing();
+	slowFbo.dest_closing();
 
 	if (colorTex) {
 		glDeleteTextures(1, &colorTex);
@@ -1545,8 +1549,10 @@ void onReloadGPU() {
 	deferShader2.readFiles("defer2.vert.glsl", "defer2.frag.glsl");
 	debugShader.readFiles("debug.vert.glsl", "debug.frag.glsl");
 	flowShader.readFiles("flow.vert.glsl", "flow.frag.glsl");
+	blendShader.readFiles("blend.vert.glsl", "blend.frag.glsl");
 	
 	quadMesh.dest_changed();
+	slowFbo.dest_changed();
 
 	tableVAO.bind();
 	tableVBO.bind();
@@ -2294,6 +2300,21 @@ void onFrame(uint32_t width, uint32_t height) {
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
 				draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset);
+
+				// blend in:
+
+				slowFbo.begin();
+				glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+				glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, fbo.tex);
+				blendShader.use();
+				blendShader.uniform("uSourceTex", 0);
+				quadMesh.draw();
+				blendShader.unuse();
+				glBindTexture(GL_TEXTURE_2D, 0);
+				slowFbo.end();
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
@@ -2437,6 +2458,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	float third = 1.f/3.f;
 	if (enablers[SHOW_TIMELAPSE]) {
 		projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+		slowFbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
 	} else {
 		vive.fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
 	}
@@ -2449,7 +2471,7 @@ void onFrame(uint32_t width, uint32_t height) {
 		switch (soloView) {
 			case 1: projectors[0].fbo.draw(); break;
 			case 2: projectors[1].fbo.draw(); break;
-			case 3: projectors[2].fbo.draw(); break;
+			case 3: slowFbo.draw(); break; //projectors[2].fbo.draw(); break;
 			case 4: {
 				if (!SHOW_TIMELAPSE) {
 					flowShader.use();
@@ -2469,7 +2491,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		float sixth = 1.f/6.f;
 		projectors[0].fbo.draw(glm::vec2(0.f,  0.f),  glm::vec2(0.5f,0.5f));
 		projectors[1].fbo.draw(glm::vec2(0.5f, 0.f),  glm::vec2(1.f ,0.5f));
-		projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
+		//projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
+		slowFbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
 		vive.fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.5f ,1.f));
 	}
 #endif
@@ -3093,6 +3116,7 @@ extern "C" {
 		for (int i=0; i<3; i++) {
 			projectors[i].fbo.dim = gBufferProj.dim;
 		}
+		slowFbo.dim = gBufferProj.dim;
 
 		alice.hmd->connect();
 		if (alice.hmd->connected) {

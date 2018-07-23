@@ -2047,6 +2047,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	profiler.reset();
 	
 
+
 	Alice& alice = Alice::Instance();
 	double t = alice.simTime;
 	float dt = alice.fps.dt;
@@ -2311,6 +2312,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		//}
 		profiler.log("gpu upload", alice.fps.dt);
 	}
+
+	glEnable(GL_MULTISAMPLE);  
 
 	// render the projectors:
 	for (int i=0; i<NUM_PROJECTORS; i++) {

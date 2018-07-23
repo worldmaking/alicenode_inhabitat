@@ -913,7 +913,7 @@ void State::creature_reset(int i) {
 	Creature& a = creatures[i];
 	a.idx = i;
 	//a.type = (rnd::integer(2) + 1) * 2;
-	a.type = Creature::TYPE_BOID;//(rnd::integer(2) + 1);
+	a.type = (rnd::integer(2) + 1);
 	//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
 	a.state = Creature::STATE_ALIVE;
 	a.health = rnd::uni();

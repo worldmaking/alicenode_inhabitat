@@ -6,8 +6,7 @@ out vec4 FragColor;
 
 void main() {
 	vec4 basecolor = texture(uSourceTex, texCoord);
-	vec3 color = basecolor.rgb;
-
-	FragColor.rgb = color;
-	FragColor.a = 0.5;
+	
+	FragColor.rgb = basecolor.rgr;
+	FragColor.a = 0.01;
 }

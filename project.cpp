@@ -360,7 +360,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 0;
+int soloView = 3;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -2309,7 +2309,8 @@ void onFrame(uint32_t width, uint32_t height) {
 				glEnablei(GL_BLEND, 0);
 				glBlendEquation(GL_FUNC_ADD);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				if (alice.fps.count == 0) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				else glClear(GL_DEPTH_BUFFER_BIT);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, fbo.tex);
 				blendShader.use();

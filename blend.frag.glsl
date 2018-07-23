@@ -12,7 +12,7 @@ void main() {
 	float gamma = 0.5;
 	color = pow(color, vec3(gamma));
 
-	FragColor = vec4(color, 0.01);
+	FragColor = vec4(color, 1.);
 
 	//FragColor.a = 1.;
 }

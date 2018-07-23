@@ -2337,8 +2337,8 @@ void onFrame(uint32_t width, uint32_t height) {
 			}
 
 			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
-			float slicewidth = 40.f/slices;
-			float sliceangle = M_PI * -40./slices; 
+			float slicewidth = 4.f/slices;
+			float sliceangle = M_PI * 2./slices; 
 			// 0..1
 			float sliceoffset = slice / float(slices);
 
@@ -2389,10 +2389,12 @@ void onFrame(uint32_t width, uint32_t height) {
 				slowFbo.begin();
 					glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
 					glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+			
 					glDisable(GL_DEPTH_TEST);
 					glEnable(GL_BLEND);
 					glBlendEquation(GL_FUNC_ADD);
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D, fbo.tex);
 					blendShader.use();
@@ -3205,11 +3207,10 @@ extern "C" {
 			projectors[i].fbo.dim = gBufferProj.dim;
 		}
 		slowFbo.dim = gBufferProj.dim;
-		slowFbo.useFloatTexture = true;
+		//slowFbo.useFloatTexture = true;
 
 		alice.hmd->connect();
 		if (alice.hmd->connected) {
-			
 			gBufferVR.dim = alice.hmd->fbo.dim;
 		} else {
 			gBufferVR.dim = glm::ivec2(512, 512);

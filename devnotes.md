@@ -3,6 +3,9 @@
 X land projectors don't really use defer shading for anything, just pass the color texture through. could save a bit on the two-pass maybe?
 
 soften the timelapse: an additional pass that gradually mixes current & existing buffers.
+ROLL BACK THIS SHIT, DIDN"T WORK.
+
+
 
 
 # urgency

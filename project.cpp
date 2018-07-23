@@ -532,8 +532,10 @@ void State::fields_update(float dt) {
 				float hm = l.w * field2world_scale - coastline_height;
 				float h = l.w;
 				float hu = al_field2d_readnorm_interp(land_dim2, human.front(), norm);
+				float hum = hu * field2world_scale - coastline_height;
+				float hlm = hum - hm;
 				float dst = C;
-				if (h <= 0 || hu > 0.1) {
+				if (hm <= 0 || hlm > 0.2) {
 					// force lowlands to be vacant
 					// (note, human will also do this)
 					dst = 0;

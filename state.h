@@ -387,6 +387,7 @@ struct State {
 
 	float vrFade = 0.f;
 	float creature_speed = 5.f; // in object-size per second
+	float creature_flatness_min = 0.5; // slope at which creature won't go
 	float reproduction_health_min = 0.25;
 	// per-second:
 	float creature_song_copy_factor = 1.25f;

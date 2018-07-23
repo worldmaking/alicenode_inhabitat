@@ -1002,8 +1002,7 @@ void State::creatures_health_update(float dt) {
 			// birth chance?
 			if (rnd::uni() < a.health * reproduction_health_min * dt
 				&& rnd::integer(NUM_CREATURES) < creature_pool.count
-				&& a.type != Creature::TYPE_PREDATOR_HEAD
-				&& a.type != Creature::TYPE_PREDATOR_BODY) {
+				&& a.type == Creature::TYPE_BOID) {
 				auto j = creature_pool.pop();
 				birthcount++;
 				//console.log("child %d", i);
@@ -1165,6 +1164,9 @@ void State::creature_alive_update(Creature& o, float dt) {
 
 	switch (o.type) {
 	case Creature::TYPE_ANT: {
+
+		speed *= ant_speed;
+
 		// add some field stuff:
 		glm::vec3 chem = food_color * o.ant.food
 			+ nest_color * o.ant.nestness;

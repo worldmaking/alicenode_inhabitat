@@ -1559,8 +1559,27 @@ void onReloadGPU() {
 	blendShader.readFiles("blend.vert.glsl", "blend.frag.glsl");
 	
 	quadMesh.dest_changed();
-	if (!slowFbo.dest_changed()) {
-		console.error("FBO attachement error for slowFbo");
+	
+
+	for (int i=0; i<NUM_PROJECTORS; i++) {
+		if (!projectors[i].fbo.dest_changed()) {
+			console.error("FBO attachement error for projector %d", i);
+		} else {
+			projectors[i].fbo.begin(); 
+			glClearColor(0.f, 0.f, 0.f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			projectors[i].fbo.end(); 
+		}
+	}
+	{
+		if (!slowFbo.dest_changed()) {
+			console.error("FBO attachement error for slowFbo");
+		} else {
+			slowFbo.begin(); 
+			glClearColor(0.f, 0.f, 0.f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			slowFbo.end(); 
+		}
 	}
 
 	tableVAO.bind();
@@ -1669,10 +1688,6 @@ void onReloadGPU() {
 		//glTexParameteri( GL_TEXTURE_3D, GL_GENERATE_MIPMAP, GL_TRUE ); 
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-
-	projectors[0].fbo.dest_changed();
-	projectors[1].fbo.dest_changed();
-	projectors[2].fbo.dest_changed();
 
 	gBufferVR.dest_changed();
 	gBufferProj.dest_changed();
@@ -1847,7 +1862,7 @@ void draw_scene(int width, int height, Projector& projector) {
 	glDisable(GL_CULL_FACE);
 }
 
-void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, bool isVR, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f)) {
+void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, bool isVR, glm::vec2 viewport_scale=glm::vec2(1.f), glm::vec2 viewport_offset=glm::vec2(0.f), bool blend=false) {
 
 	fbo.begin();
 	glScissor(
@@ -1860,9 +1875,17 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, bool i
 		fbo.dim.y*viewport_offset.y, 
 		fbo.dim.x*viewport_scale.x, 
 		fbo.dim.y*viewport_scale.y);
-	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (blend) {
+		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	} else {
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
 	{
 		gbuffer.bindTextures(); // 0,1,2
 		distanceTex.bind(4);
@@ -1905,6 +1928,12 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, bool i
 		emissionTex.unbind(6);
 		fluidTex.unbind(7);
 		gbuffer.unbindTextures();
+	}
+	if (blend) {
+		glDisable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+	} else {
+		
 	}
 	fbo.end();
 }
@@ -2271,7 +2300,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			}
 
 			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
-			float slicewidth = 1.f/slices;
+			float slicewidth = 4.f/slices;
 			float sliceangle = M_PI * 2./slices; 
 			// 0..1
 			float sliceoffset = slice / float(slices);
@@ -2297,7 +2326,6 @@ void onFrame(uint32_t width, uint32_t height) {
 				glm::vec2 viewport_offset = glm::vec2(sliceoffset, 0.f);
 
 				gBufferProj.begin();
-
 					viewport.pos = glm::ivec2(gBufferProj.dim.x * viewport_offset.x, gBufferProj.dim.y * viewport_offset.y);
 					viewport.dim = glm::ivec2(gBufferProj.dim.x * viewport_scale.x + 2., gBufferProj.dim.y * viewport_scale.y);
 
@@ -2311,43 +2339,32 @@ void onFrame(uint32_t width, uint32_t height) {
 						viewport.pos.y, 
 						viewport.dim.x, 
 						viewport.dim.y);
-					
-					glEnable(GL_DEPTH_TEST);
-					glEnablei(GL_BLEND, 0);
-					glBlendEquation(GL_FUNC_ADD);
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					if (alice.fps.count < 10) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-					else glClear(GL_DEPTH_BUFFER_BIT);
-					
-					//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
-					glDisablei(GL_BLEND, 0);
 				gBufferProj.end();
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset);
+				bool useblend = true;
+				draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset, useblend);
 
 				// blend in:
 
 				slowFbo.begin();
-				glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
-				glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
-				glDisable(GL_DEPTH_TEST);
-				glEnablei(GL_BLEND, 0);
-				glBlendEquation(GL_FUNC_ADD);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				if (alice.fps.count == 0) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				else glClear(GL_DEPTH_BUFFER_BIT);
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, fbo.tex);
-				blendShader.use();
-				blendShader.uniform("uSourceTex", 0);
-				quadMesh.draw();
-				blendShader.unuse();
-				glBindTexture(GL_TEXTURE_2D, 0);
-				glDisablei(GL_BLEND, 0);
-				glEnable(GL_DEPTH_TEST);
+					glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+					glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+					glDisable(GL_DEPTH_TEST);
+					glEnable(GL_BLEND);
+					glBlendEquation(GL_FUNC_ADD);
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, fbo.tex);
+					blendShader.use();
+					blendShader.uniform("uSourceTex", 0);
+					quadMesh.draw();
+					blendShader.unuse();
+					glBindTexture(GL_TEXTURE_2D, 0);
+					glDisable(GL_BLEND);
+					glEnable(GL_DEPTH_TEST);
 				slowFbo.end();
 			}
 			glDisable(GL_SCISSOR_TEST);

@@ -300,4 +300,5 @@ void main() {
 	//color = pow(color, vec3(gamma));
 
 	FragColor.rgb = mix(color, vec3(0.), uFade);
+	FragColor.a = 0.1; //0.25;//0.05;
 }

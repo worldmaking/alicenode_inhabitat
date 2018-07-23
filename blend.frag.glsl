@@ -9,6 +9,5 @@ void main() {
 	
 	FragColor.rgb = basecolor.rgb;
 	FragColor.a = 0.01;
-	//FragColor.a = 0.01;
-	//FragColor.rg = texCoord;
+	//FragColor.a = 1.;
 }

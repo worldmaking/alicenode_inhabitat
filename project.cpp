@@ -936,6 +936,7 @@ void State::creature_reset(int i) {
 			a.location = island_centres[island];
 			a.ant.food = 0;
 			a.ant.nestness = 1;
+			a.scale *= 0.5f;
 			break;
 		case Creature::TYPE_BUG:
 			break;
@@ -1076,9 +1077,6 @@ void State::creature_alive_update(Creature& o, float dt) {
 
 
 	// SENSE LOCATION & ORIENTATION
-	// get norm'd coordinate:
-	glm::vec3 norm = transform(world2field, o.location);
-	glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 	// get orientation:
 	glm::quat& oq = o.orientation;
 	// derive from orientation:
@@ -1091,12 +1089,34 @@ void State::creature_alive_update(Creature& o, float dt) {
 	float uphill = uf.y;  
 	float downhill = -uphill;
 
+	// get norm'd coordinate:
+	glm::vec3 norm = transform(world2field, o.location);
+	glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
+
+
+	// look ahead to where we will be in 1 sim frame
+	float lookahead_m = glm::length(o.velocity) * dt; 
+	glm::vec3 ahead_pos = o.location + uf * lookahead_m;
+	glm::vec3 norm_ahead = transform(world2field, ahead_pos);
+	glm::vec2 norm_ahead2 = glm::vec2(norm_ahead.x, norm_ahead.z);
+
+	
+
 	// SENSE LAND
 	// get a normal for the land:
-	glm::vec3 land_normal = sdf_field_normal4(sdf_dim, distance, norm, 0.05f/SDF_DIM);
+	//glm::vec3 land_normal = sdf_field_normal4(sdf_dim, distance, norm, 0.05f/SDF_DIM);
+
+	auto landpt = al_field2d_readnorm_interp(land_dim2, land, norm2);
+	auto landpt_ahead = al_field2d_readnorm_interp(land_dim2, land, norm_ahead2);
+	glm::vec3 land_normal = safe_normalize(glm::vec3(landpt));
+	glm::vec3 land_normal_ahead = safe_normalize(glm::vec3(landpt_ahead));
+
+
+
 	// 0..1 factors:
 	//float flatness = fabsf(glm::dot(land_normal, glm::vec3(0.f,1.f,0.f)));
 	float flatness = fabsf(land_normal.y);
+	float flatness_ahead = fabsf(land_normal_ahead.y);
 	float steepness = 1.f-flatness;
 	// a direction along which the ground is horizontal (contour)
 	//glm::vec3 flataxis = safe_normalize(glm::cross(land_normal, glm::vec3(0.f,1.f,0.f)));
@@ -1116,9 +1136,6 @@ void State::creature_alive_update(Creature& o, float dt) {
 
 	// NEIGHBOUR SEARCH:
 	// how far in the future want to focus attention?
-	// look ahead to where we will be in 1 sim frame
-	float lookahead_m = glm::length(o.velocity) * dt; 
-	glm::vec3 ahead_pos = o.location + uf * lookahead_m;
 	// maximum number of agents a spatial query can return
 	const int NEIGHBOURS_MAX = 8;
 	// see who's around:
@@ -1135,7 +1152,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 	o.rot_vel = glm::quat();
 
 	// set my speed in meters per second:
-	float speed = creature_speed 
+	float speed = o.scale * creature_speed 
 			// modify by params:
 			* (0.5f + o.params.x)
 			//* (1. + downhill*0.5f)		// tends to make them stay downhill
@@ -1227,9 +1244,9 @@ void State::creature_alive_update(Creature& o, float dt) {
 		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
   		fungus_field.front()[fungus_idx] -= eat;
 
-		o.color = glm::vec3(o.params);
+		//o.color = glm::vec3(o.params);
 
-
+		o.color = glm::vec3(0, 1, 0);
 		
 	} break;
 	case Creature::TYPE_BUG: {
@@ -1316,6 +1333,18 @@ void State::creature_alive_update(Creature& o, float dt) {
 	if (o.location.y < coastline_height) {
 		// instant death
 		o.health = -1.;
+	} else if (flatness_ahead < creature_flatness_min) {
+		// turn away to the nearest flat axis
+		// get a very smooth normal:
+		float smooth = 0.5f;
+		glm::vec3 ln = sdf_field_normal4(sdf_dim, distance, norm, 0.125f/SDF_DIM);
+
+		auto desired_dir = safe_normalize(glm::vec3(-ln.x, 0.f, -ln.z));
+		auto q = get_forward_rotation_to(o.orientation, desired_dir);
+		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.5f);
+
+		o.color = glm::vec3(1, 0, 0);
+
 	} else if (o.location.y < coastline_height*2.) {
 
 		// get a very smooth normal:

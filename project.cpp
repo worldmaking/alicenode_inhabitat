@@ -364,7 +364,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 4;
+int soloView = 0;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -535,7 +535,7 @@ void State::fields_update(float dt) {
 				float hum = hu * field2world_scale - coastline_height;
 				float hlm = hum - hm;
 				float dst = C;
-				if (hm <= 0 || hlm > 1.5) {
+				if (hm <= 0 || hlm > 2.) {
 					// force lowlands to be vacant
 					// (note, human will also do this)
 					dst = 0;

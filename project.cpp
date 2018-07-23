@@ -1855,6 +1855,7 @@ void draw_gbuffer(SimpleFBO& fbo, GBuffer& gbuffer, Projector& projector, bool i
 		emissionTex.bind(6);
 		fluidTex.bind(7);
 
+		// altshader == true for the top-down projectors
 		Shader& shader = projector.altShader ? deferShader2 : deferShader;
 
 		shader.use();
@@ -2236,7 +2237,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			int slices = gBufferProj.dim.x;//((int(t) % 3) + 3);
 			int slice = (alice.fps.count % slices);
 
-			if (slice == 0) {//timeToVrJump < 0.f) {
+			if (alice.fps.count == 0 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
 				vrIsland = (vrIsland + 1) % NUM_ISLANDS;
 				nextVrLocation = state->island_centres[vrIsland];
 				fadeState = -1;
@@ -2306,18 +2307,32 @@ void onFrame(uint32_t width, uint32_t height) {
 			viewMatInverse = glm::inverse(viewMat);
 			viewProjMatInverse = glm::inverse(viewProjMat);
 			
-			// draw the scene into the GBuffer:
-			glEnable(GL_SCISSOR_TEST);
-			gBufferProj.begin();
-				glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
-				glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+			if (1) {
+				// don't use gbuffer:
+				fbo.begin();
+
+				glScissor(0, 0, fbo.dim.x, fbo.dim.y);
+				glViewport(0, 0, fbo.dim.x, fbo.dim.y);
 				glEnable(GL_DEPTH_TEST);
+				glClearColor(0.f, 0.f, 0.f, 1.0f);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
-			gBufferProj.end();
-			//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-			draw_gbuffer(fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
-			glDisable(GL_SCISSOR_TEST);
+				draw_scene(fbo.dim.x, fbo.dim.y, proj);
+				fbo.end();
+			} else {
+
+				// draw the scene into the GBuffer:
+				glEnable(GL_SCISSOR_TEST);
+				gBufferProj.begin();
+					glScissor(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+					glViewport(0, 0, gBufferProj.dim.x, gBufferProj.dim.y);
+					glEnable(GL_DEPTH_TEST);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					draw_scene(gBufferProj.dim.x, gBufferProj.dim.y, proj);
+				gBufferProj.end();
+				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+				draw_gbuffer(fbo, gBufferProj, proj, false, glm::vec2(1.f), glm::vec2(0.f));
+				glDisable(GL_SCISSOR_TEST);
+			}
 		}
 	}
 	profiler.log("render projectors", alice.fps.dt);

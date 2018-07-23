@@ -1,3 +1,10 @@
+# updates
+
+land projectors don't really use defer shading for anything, just pass the color texture through
+could save a bit on the two-pass maybe?
+
+
+
 # urgency
 
 

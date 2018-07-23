@@ -1337,8 +1337,10 @@ void State::creature_alive_update(Creature& o, float dt) {
 		// turn away to the nearest flat axis
 		// get a very smooth normal:
 		float smooth = 0.5f;
-		glm::vec3 ln = sdf_field_normal4(sdf_dim, distance, norm, 0.125f/SDF_DIM);
-
+		
+		// the normal tells us which way we don't want to go
+		auto ln = land_normal_ahead;
+		
 		auto desired_dir = safe_normalize(glm::vec3(-ln.x, 0.f, -ln.z));
 		auto q = get_forward_rotation_to(o.orientation, desired_dir);
 		o.orientation = glm::slerp(o.orientation, q * o.orientation, 0.5f);

@@ -2316,7 +2316,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	glEnable(GL_MULTISAMPLE);  
 
 	// render the projectors:
-	for (int i=0; i<NUM_PROJECTORS; i++) {
+	int i = alice.fps.count % 3;
+	{
+	//for (int i=0; i<NUM_PROJECTORS; i++) {
 		Projector& proj = projectors[i];
 		SimpleFBO& fbo = proj.fbo;
 
@@ -3207,11 +3209,15 @@ extern "C" {
 
 		alice.hmd->connect();
 		if (alice.hmd->connected) {
-			alice.fps.setFPS(90);
+			
 			gBufferVR.dim = alice.hmd->fbo.dim;
 		} else {
 			gBufferVR.dim = glm::ivec2(512, 512);
 		}
+
+		#ifdef AL_WIN
+		alice.fps.setFPS(90);
+		#endif
 
 		// allocate on GPU:
 		onReloadGPU();

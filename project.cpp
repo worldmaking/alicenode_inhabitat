@@ -1223,7 +1223,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 		//float fungal = fungus_field.front()[fungus_idx];
 		float fungal = al_field2d_readnorm_interp(fungus_dim, fungus_field.front(), norm2);
 		//if(i == objectSel) console.log("fungal %f", fungal);
-		float eat = glm::max(0.f, fungal) * 2.f;
+		float eat = glm::max(0.f, fungal) * fungus_to_boid_transfer;
 		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
   		fungus_field.front()[fungus_idx] -= eat;
 
@@ -3145,7 +3145,7 @@ extern "C" {
 		flowTex.generateMipMap = true;
 		
 
-		enablers[SHOW_LANDMESH] = 0;
+		enablers[SHOW_LANDMESH] = 1;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;

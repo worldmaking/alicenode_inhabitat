@@ -413,8 +413,8 @@ struct State {
 	float predator_eat_range = 0.125f;
 	float predator_view_range = 8.f;
 
-	float alive_lifespan_decay = 0.003;
-	float dead_lifespan_decay = 0.25;
+	float alive_lifespan_decay = 0.01;
+	float dead_lifespan_decay = 0.1;
 
 	float human_height_decay = 0.99;
 	float coastline_height = 10.f;

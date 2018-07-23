@@ -386,7 +386,7 @@ struct State {
 	float land_rise_rate = 1.f;
 
 	float vrFade = 0.f;
-	float creature_speed = 2.f; // in object-size per second
+	float creature_speed = 5.f; // in object-size per second
 	float reproduction_health_min = 0.25;
 	// per-second:
 	float creature_song_copy_factor = 1.25f;

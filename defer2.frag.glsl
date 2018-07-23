@@ -63,4 +63,5 @@ void main() {
 
 	color *= vec3(edgefade);
 	FragColor.rgb = color; //mix(color, vec3(0.), uFade);
+	FragColor.a = 0.01;
 }

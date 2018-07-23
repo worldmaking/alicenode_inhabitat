@@ -319,6 +319,10 @@ VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
 int rendercreaturecount = 0;
+int livingcreaturecount = 0;
+int numants = 0;
+int numboids = 0;
+
 
 #define NUM_PROJECTORS 3
 Projector projectors[NUM_PROJECTORS];
@@ -360,7 +364,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
-int soloView = 3;
+int soloView = 4;
 bool showFPS = 0;
 
 bool enablers[10];
@@ -1131,13 +1135,16 @@ void State::creature_alive_update(Creature& o, float dt) {
 	o.rot_vel = glm::quat();
 
 	// set my speed in meters per second:
-	float speed = o.scale;
-	speed *= creature_speed 
+	float speed = creature_speed 
+			// modify by params:
+			* (0.5f + o.params.x)
 			//* (1. + downhill*0.5f)		// tends to make them stay downhill
 			// * (1.f + 0.1f*rnd::bi()) 
 			// * glm::min(1.f, a.health * 10.f)
 			// * daylight_factor*3.f
 			;
+	
+	
 
 	switch (o.type) {
 	case Creature::TYPE_ANT: {
@@ -1552,7 +1559,9 @@ void onReloadGPU() {
 	blendShader.readFiles("blend.vert.glsl", "blend.frag.glsl");
 	
 	quadMesh.dest_changed();
-	slowFbo.dest_changed();
+	if (!slowFbo.dest_changed()) {
+		console.error("FBO attachement error for slowFbo");
+	}
 
 	tableVAO.bind();
 	tableVBO.bind();
@@ -1909,6 +1918,9 @@ void State::animate(float dt) {
 
 	// reset how many creature parts we will render:
 	rendercreaturecount = 0;
+	livingcreaturecount = 0;
+	numants = 0;
+	numboids = 0;
 
 	for (int i=0; i<NUM_PARTICLES; i++) {
 		Particle &o = particles[i];
@@ -1920,6 +1932,13 @@ void State::animate(float dt) {
 		auto &o = creatures[i];
 		
 		if (o.state == Creature::STATE_ALIVE) {
+			livingcreaturecount++;
+
+			switch(o.type) {
+				case Creature::TYPE_ANT: numants++; break;
+				case Creature::TYPE_BOID: numboids++; break;
+			}
+
 			// update location
 			glm::vec3 p1 = wrap(o.location + o.velocity * dt, world_min, world_max);
 
@@ -2243,7 +2262,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			int slices = gBufferProj.dim.x;//((int(t) % 3) + 3);
 			int slice = (alice.fps.count % slices);
 
-			if (alice.fps.count == 0 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
+			if (alice.fps.count == 5 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
 				vrIsland = (vrIsland + 1) % NUM_ISLANDS;
 				nextVrLocation = state->island_centres[vrIsland];
 				fadeState = -1;
@@ -2292,10 +2311,18 @@ void onFrame(uint32_t width, uint32_t height) {
 						viewport.pos.y, 
 						viewport.dim.x, 
 						viewport.dim.y);
+					
 					glEnable(GL_DEPTH_TEST);
-					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					glEnablei(GL_BLEND, 0);
+					glBlendEquation(GL_FUNC_ADD);
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					if (alice.fps.count < 10) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					else glClear(GL_DEPTH_BUFFER_BIT);
+					
+					//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
+					glDisablei(GL_BLEND, 0);
 				gBufferProj.end();
 
 				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
@@ -2306,6 +2333,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				slowFbo.begin();
 				glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
 				glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+				glDisable(GL_DEPTH_TEST);
 				glEnablei(GL_BLEND, 0);
 				glBlendEquation(GL_FUNC_ADD);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2319,6 +2347,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				blendShader.unuse();
 				glBindTexture(GL_TEXTURE_2D, 0);
 				glDisablei(GL_BLEND, 0);
+				glEnable(GL_DEPTH_TEST);
 				slowFbo.end();
 			}
 			glDisable(GL_SCISSOR_TEST);
@@ -2504,7 +2533,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	profiler.log("draw to window", alice.fps.dt);
 
 	if (showFPS) {
-		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) land %f (%f) kinect %f %f, wxh %dx%d", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, landThread.fps.fps, landThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, gBufferVR.dim.x, gBufferVR.dim.y);
+		console.log("fps %f(%f) at %f; fluid %f(%f) sim %f(%f) field %f(%f) land %f (%f) kinect %f %f, rendered creatures %d (alive ants %d boids %d total %d)", alice.fps.fps, alice.fps.fpsPotential, alice.simTime, fluidThread.fps.fps, fluidThread.fps.fpsPotential, simThread.fps.fps, simThread.fps.fpsPotential, fieldThread.fps.fps, fieldThread.fps.fpsPotential, landThread.fps.fps, landThread.fps.fpsPotential, kinect0.fps.fps, kinect1.fps.fps, rendercreaturecount, numants, numboids,livingcreaturecount);
 		//profiler.dump();
 	}
 }
@@ -3099,12 +3128,12 @@ extern "C" {
 		flowTex.generateMipMap = true;
 		
 
-		enablers[SHOW_LANDMESH] = 1;
+		enablers[SHOW_LANDMESH] = 0;
 		enablers[SHOW_AS_GRID] = 0;
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_TIMELAPSE] = 1;//1;
-		enablers[SHOW_PARTICLES] = 1;//1;
+		enablers[SHOW_PARTICLES] = 0;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 		enablers[SHOW_HUMANMESH] = 1;
@@ -3122,6 +3151,7 @@ extern "C" {
 			projectors[i].fbo.dim = gBufferProj.dim;
 		}
 		slowFbo.dim = gBufferProj.dim;
+		slowFbo.useFloatTexture = true;
 
 		alice.hmd->connect();
 		if (alice.hmd->connected) {

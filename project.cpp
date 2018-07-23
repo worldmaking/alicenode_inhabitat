@@ -2301,7 +2301,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
 			float slicewidth = 40.f/slices;
-			float sliceangle = M_PI * 2./slices; 
+			float sliceangle = M_PI * -40./slices; 
 			// 0..1
 			float sliceoffset = slice / float(slices);
 

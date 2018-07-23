@@ -433,6 +433,10 @@ void State::fluid_update(float dt) {
 	// apply boundary effect to the velocity field
 	// boundary effect is the landscape, forcing the fluid to align to it when near
 	{
+		float minspeed = 100000.f;
+		float avgspeed = 0.f;
+		float maxspeed = 0.f;
+		
 		int i = 0;
 		glm::vec3 * velocities = fluid_velocities.front();
 		for (size_t z = 0; z<field_dim.z; z++) {
@@ -446,7 +450,13 @@ void State::fluid_update(float dt) {
 					// sample flow field:
 					auto flo = al_field2d_readnorm_interp(land_dim2, flow, norm2);
 
+					// limit magnitude?
+					float flospd = glm::length(flospd);
+					minspeed = glm::min(flospd, minspeed);
+					maxspeed = glm::max(flospd, maxspeed);
+					avgspeed += flospd;
 
+					flo = flospd > fluid_flow_min_threshold ? flo : glm::vec3(0.f);
 
 					// use this to sample the landscape:
 					float sdist;
@@ -486,6 +496,7 @@ void State::fluid_update(float dt) {
 				}
 			}
 		}
+		console.log("flow min speed %f max speed %f avg speed %f", minspeed, maxspeed, avgspeed / FIELD_VOXELS);
 	}
 
 
@@ -2206,6 +2217,24 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 	}
 
+	{
+		// update teleport points
+		int i = alice.fps.count % NUM_TELEPORT_POINTS;
+		glm::vec3 pt = state->teleport_points[i];
+		// get slope at pt:
+		glm::vec3 norm = transform(state->world2field, pt);
+		glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+		glm::vec3 normal = glm::vec3(landpt);
+		// move uphill:
+		pt -= normal;
+		// put on land again
+		norm = transform(state->world2field, pt);
+		landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+		pt = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
+
+		state->teleport_points[i] = pt;
+	}
+
 	// navigation:
 	{
 		glm::vec3& navloc = projectors[2].location;
@@ -2334,7 +2363,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			if (alice.fps.count == 0 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
 				vrIsland = (vrIsland + 1) % NUM_ISLANDS;
-				nextVrLocation = state->island_centres[vrIsland];
+				nextVrLocation = state->teleport_points[vrIsland];
 				fadeState = -1;
 
 				timeToVrJump = 30.;

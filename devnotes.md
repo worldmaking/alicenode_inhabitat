@@ -1,42 +1,34 @@
-# updates
+# test
 
-X land projectors don't really use defer shading for anything, just pass the color texture through. could save a bit on the two-pass maybe?
+Teleport to nearest peak to the island_center (by traveling uphill)
 
-soften the timelapse: an additional pass that gradually mixes current & existing buffers.
-ROLL BACK THIS SHIT, DIDN"T WORK.
-
-
-
+why particles move like jelly?
+- look at logs and set fluid_flow_min_threshold
 
 # urgency
 
+particles as eggs?
 
-fs mouse away
-test boot launch
-focus window: why does alice disappear when fullscreen but not focused?
-
-set farclips for vr etc.
-
-why does fungus turn white?
+set defer rendering, farclip, etc. for vr
 
 why does enabling 4 creatures kill the main screen?
 
-why particles move like jelly?
+X fs mouse away
+X test boot launch
 
-particles as eggs?
-stop to have babies
-
-FPS
-- only render projectors at 30fps
-- timelapse could be even slower
-
-Could we increase the land/chem dim but decrease the SDF dim?
-
-antialias fbo?
+X land projectors don't really use defer shading for anything, just pass the color texture through. could save a bit on the two-pass maybe?
+X only render projectors at 30fps
 
 X vr fade should only affect vr world
 X separate lighting for sand vs vr
 Y auto teleport islands
+
+focus window: why does alice disappear when fullscreen but not focused?
+
+stop to have babies
+
+antialias fbo?
+
 
 # Bring in the inhabitat species behaviours!!
 

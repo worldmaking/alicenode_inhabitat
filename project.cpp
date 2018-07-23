@@ -2330,7 +2330,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			int slices = gBufferProj.dim.x;//((int(t) % 3) + 3);
 			int slice = (alice.fps.count % slices);
 
-			if (alice.fps.count == 5 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
+			if (alice.fps.count == 0 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
 				vrIsland = (vrIsland + 1) % NUM_ISLANDS;
 				nextVrLocation = state->island_centres[vrIsland];
 				fadeState = -1;
@@ -2339,7 +2339,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			}
 
 			float centredslice = (slice - ((-1.f+slices)/2.f))*2.f;
-			float slicewidth = 4.f/slices;
+			float slicewidth = 1.f/slices;
 			float sliceangle = M_PI * 2./slices; 
 			// 0..1
 			float sliceoffset = slice / float(slices);
@@ -2382,31 +2382,33 @@ void onFrame(uint32_t width, uint32_t height) {
 					draw_scene(viewport.dim.x, viewport.dim.y, projectors[2]);
 				gBufferProj.end();
 
-				//glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
-				bool useblend = true;
-				draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset, useblend);
+				draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset);
 
-				// blend in:
+				// //glGenerateMipmap(GL_TEXTURE_2D); // not sure if we need this
+				// bool useblend = true;
+				// draw_gbuffer(fbo, gBufferProj, projectors[2], false, viewport_scale, viewport_offset, useblend);
 
-				slowFbo.begin();
-					glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
-					glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+				// // blend in:
+
+				// slowFbo.begin();
+				// 	glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+				// 	glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
 			
-					glDisable(GL_DEPTH_TEST);
-					glEnable(GL_BLEND);
-					glBlendEquation(GL_FUNC_ADD);
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				// 	glDisable(GL_DEPTH_TEST);
+				// 	glEnable(GL_BLEND);
+				// 	glBlendEquation(GL_FUNC_ADD);
+				// 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, fbo.tex);
-					blendShader.use();
-					blendShader.uniform("uSourceTex", 0);
-					quadMesh.draw();
-					blendShader.unuse();
-					glBindTexture(GL_TEXTURE_2D, 0);
-					glDisable(GL_BLEND);
-					glEnable(GL_DEPTH_TEST);
-				slowFbo.end();
+				// 	glActiveTexture(GL_TEXTURE0);
+				// 	glBindTexture(GL_TEXTURE_2D, fbo.tex);
+				// 	blendShader.use();
+				// 	blendShader.uniform("uSourceTex", 0);
+				// 	quadMesh.draw();
+				// 	blendShader.unuse();
+				// 	glBindTexture(GL_TEXTURE_2D, 0);
+				// 	glDisable(GL_BLEND);
+				// 	glEnable(GL_DEPTH_TEST);
+				// slowFbo.end();
 			}
 			glDisable(GL_SCISSOR_TEST);
 		} else {
@@ -2550,7 +2552,7 @@ void onFrame(uint32_t width, uint32_t height) {
 	float third = 1.f/3.f;
 	if (enablers[SHOW_TIMELAPSE]) {
 		projectors[2].fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
-		slowFbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
+		//slowFbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
 	} else {
 		vive.fbo.draw(glm::vec2(2.f*third, 0.f), glm::vec2(1.f, 1.f));
 	}
@@ -2563,7 +2565,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		switch (soloView) {
 			case 1: projectors[0].fbo.draw(); break;
 			case 2: projectors[1].fbo.draw(); break;
-			case 3: slowFbo.draw(); break; //projectors[2].fbo.draw(); break;
+			//case 3: slowFbo.draw(); break; 
+			case 3: projectors[2].fbo.draw(); break;
 			case 4: {
 				if (!SHOW_TIMELAPSE) {
 					flowShader.use();
@@ -2583,8 +2586,8 @@ void onFrame(uint32_t width, uint32_t height) {
 		float sixth = 1.f/6.f;
 		projectors[0].fbo.draw(glm::vec2(0.f,  0.f),  glm::vec2(0.5f,0.5f));
 		projectors[1].fbo.draw(glm::vec2(0.5f, 0.f),  glm::vec2(1.f ,0.5f));
-		//projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
-		slowFbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
+		projectors[2].fbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
+		//slowFbo.draw(glm::vec2(0.5f, 0.5f), glm::vec2(1.f ,1.f));
 		vive.fbo.              draw(glm::vec2(0.f,  0.5f), glm::vec2(0.5f ,1.f));
 	}
 #endif

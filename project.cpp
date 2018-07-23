@@ -364,6 +364,7 @@ glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
 static int flip = 0;
 int kidx = 0;
+int sliceIndex = 0;
 int soloView = 0;
 bool showFPS = 0;
 
@@ -2318,8 +2319,9 @@ void onFrame(uint32_t width, uint32_t height) {
 	glEnable(GL_MULTISAMPLE);  
 
 	// render the projectors:
-	int i = alice.fps.count % 3;
+	
 	{
+		int i = alice.fps.count % 3;
 	//for (int i=0; i<NUM_PROJECTORS; i++) {
 		Projector& proj = projectors[i];
 		SimpleFBO& fbo = proj.fbo;
@@ -2328,7 +2330,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			
 			// timelapse wall projector:
 			int slices = gBufferProj.dim.x;//((int(t) % 3) + 3);
-			int slice = (alice.fps.count % slices);
+			int slice = (sliceIndex++ % slices);
 
 			if (alice.fps.count == 0 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
 				vrIsland = (vrIsland + 1) % NUM_ISLANDS;

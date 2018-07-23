@@ -2306,6 +2306,9 @@ void onFrame(uint32_t width, uint32_t height) {
 				slowFbo.begin();
 				glScissor(0, 0, slowFbo.dim.x, slowFbo.dim.y);
 				glViewport(0, 0, slowFbo.dim.x, slowFbo.dim.y);
+				glEnablei(GL_BLEND, 0);
+				glBlendEquation(GL_FUNC_ADD);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, fbo.tex);
@@ -2314,6 +2317,7 @@ void onFrame(uint32_t width, uint32_t height) {
 				quadMesh.draw();
 				blendShader.unuse();
 				glBindTexture(GL_TEXTURE_2D, 0);
+				glDisablei(GL_BLEND, 0);
 				slowFbo.end();
 			}
 			glDisable(GL_SCISSOR_TEST);
@@ -2328,7 +2332,7 @@ void onFrame(uint32_t width, uint32_t height) {
 			viewMatInverse = glm::inverse(viewMat);
 			viewProjMatInverse = glm::inverse(viewProjMat);
 			
-			if (1) {
+			if (0) {
 				// don't use gbuffer:
 				fbo.begin();
 

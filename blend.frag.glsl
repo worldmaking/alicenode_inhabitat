@@ -9,4 +9,5 @@ void main() {
 	vec3 color = basecolor.rgb;
 
 	FragColor.rgb = color;
+	FragColor.a = 0.5;
 }

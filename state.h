@@ -392,7 +392,7 @@ struct State {
 	float land_rise_rate = 1.f;
 
 	float vrFade = 0.f;
-	float creature_speed = 5.f; // in object-size per second
+	float creature_speed = 3.f; // in object-size per second
 	float creature_flatness_min = 0.75; // slope at which creature won't go
 	float reproduction_health_min = 0.25;
 	// per-second:

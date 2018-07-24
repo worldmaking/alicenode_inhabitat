@@ -877,10 +877,10 @@ void State::sim_update(float dt) {
 			} else if (
 				o.location.y < h 
 				|| o.location.y > world_centre.y
-				// || o.location.x < world_min.x
-				// || o.location.x > world_max.x
-				// || o.location.z < world_min.z
-				// || o.location.z > world_max.z
+				 || o.location.x < world_min.x
+				 || o.location.x > world_max.x
+				 || o.location.z < world_min.z
+				 || o.location.z > world_max.z
 				) {
 				
 				//o.location = random_location_above_land(coastline_height);

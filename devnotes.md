@@ -3,11 +3,12 @@
 Teleport to nearest peak to the island_center (by traveling uphill)
 
 why particles move like jelly?
-- look at logs and set fluid_flow_min_threshold
+- look at logs and set fluid_flow_min_threshold, flow_smoothing
+
+particles as eggs?
 
 # urgency
 
-particles as eggs?
 
 set defer rendering, farclip, etc. for vr
 

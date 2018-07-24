@@ -305,6 +305,7 @@ struct State {
 	// the flow field (hopefully this isn't too high res)
 	// Paris ran at 128 x 64, for example
 	glm::vec2 flow[LAND_TEXELS];
+	glm::vec2 flowsmooth[LAND_TEXELS];
 
 	// signed distance field representing the landscape
 	// the distance to the nearest land surface, as a 3D SDF
@@ -361,10 +362,13 @@ struct State {
 
 	float creature_fluid_push = 2.f;
 
+	// running averaging of the optical flow:
+	float flow_smoothing = 0.5f;
 	// how much the optical flow impacts the fluid:
 	float flow_scale = 0.5f;
 	// minimum speed in optical flow image to influence fluid
 	float fluid_flow_min_threshold = 1.f;
+	
 
 	float emission_decay = 0.9f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
@@ -400,6 +404,8 @@ struct State {
 
 	float particleSize = 0.03;
 	float particle_noise = 0.0001f;
+	float particle_to_egg_distance = 0.05f; // meters
+	float creature_to_particle_chance = 0.001f; // chance per particle per second
 
 	float fungus_recovery_rate = 0.002;
 	float fungus_seeding_chance = 0.00001;

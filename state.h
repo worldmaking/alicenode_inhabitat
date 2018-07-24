@@ -353,19 +353,19 @@ struct State {
 
 	int fluid_passes = 14;
 	int fluid_noise_count = 32;
-	float fluid_decay = 0.9; //0.999999f;
+	float fluid_decay = 0.9999; //0.999999f;
 	double fluid_viscosity = 0.00001;
 	double fluid_boundary_damping = .2;
 	double fluid_noise = 8.;
-	float fluid_advection = 0.05;
+	float fluid_advection = 0.25;
 	float fluid_contour_follow =  0.001f;
 
-	float creature_fluid_push = 2.f;
+	float creature_fluid_push = 1.f;
 
 	// running averaging of the optical flow:
-	float flow_smoothing = 0.5f;
+	float flow_smoothing = 1.f;
 	// how much the optical flow impacts the fluid:
-	float flow_scale = 0.5f;
+	float flow_scale = 0.2f;
 	// minimum speed in optical flow image to influence fluid
 	float fluid_flow_min_threshold = 1.f;
 	
@@ -397,12 +397,12 @@ struct State {
 	float reproduction_health_min = 0.25;
 	// per-second:
 	float creature_song_copy_factor = 1.25f;
-	float creature_song_mutate_rate = 0.05f;
+	float creature_song_mutate_rate = 0.01f;
 
-	float alive_lifespan_decay = 0.02;
+	float alive_lifespan_decay = 0.05;
 	float dead_lifespan_decay = 0.1;
 
-	float particleSize = 0.03;
+	float particleSize = 0.01;
 	float particle_noise = 0.0001f;
 	float particle_to_egg_distance = 0.05f; // meters
 	float creature_to_particle_chance = 0.001f; // chance per particle per second

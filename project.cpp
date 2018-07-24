@@ -353,7 +353,7 @@ uint8_t humanchar1[LAND_TEXELS];
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 0; 
+int camMode = 2; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 float camera_speed_default = 40.f;
@@ -451,7 +451,7 @@ void State::fluid_update(float dt) {
 					auto flo = al_field2d_readnorm_interp(land_dim2, flowsmooth, norm2);
 
 					// limit magnitude?
-					float flospd = glm::length(flospd);
+					float flospd = glm::length(flo);
 					minspeed = glm::min(flospd, minspeed);
 					maxspeed = glm::max(flospd, maxspeed);
 					avgspeed += flospd;
@@ -496,7 +496,7 @@ void State::fluid_update(float dt) {
 				}
 			}
 		}
-		console.log("flow min speed %f max speed %f avg speed %f", minspeed, maxspeed, avgspeed / FIELD_VOXELS);
+		//console.log("flow min speed %f max speed %f avg speed %f", minspeed, maxspeed, avgspeed / FIELD_VOXELS);
 	}
 
 
@@ -781,7 +781,7 @@ void State::sim_update(float dt) {
 			cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
 
 			for (int i=0; i<LAND_TEXELS; i++) {
-				flowsmooth[i] += flow_smoothing * (flow[i] - flowsmooth[i]);
+				flowsmooth[i] += flow_smoothing * (state->flow[i] - flowsmooth[i]);
 			}
 			
 		}
@@ -1294,7 +1294,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
   		fungus_field.front()[fungus_idx] -= eat;
 
-		o.color = glm::vec3(o.params) * 0.5f + 0.5f;
+		o.color = glm::vec3(o.params) * 0.75f + 0.25f;
 
 		//o.color = glm::vec3(0, 1, 0);
 		
@@ -2260,14 +2260,17 @@ void onFrame(uint32_t width, uint32_t height) {
 		glm::vec3 norm = transform(state->world2field, pt);
 		glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
 		glm::vec3 normal = glm::vec3(landpt);
+		normal = safe_normalize(normal);
 		// move uphill:
-		pt -= normal;
+		pt -= normal * 0.1f;
 		// put on land again
 		norm = transform(state->world2field, pt);
 		landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
 		pt = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
 
 		state->teleport_points[i] = pt;
+
+		//console.log("point %d %f %f %f", i, pt.x, pt.y, pt.z);
 	}
 
 	// navigation:
@@ -2340,6 +2343,8 @@ void onFrame(uint32_t width, uint32_t height) {
 				navquat = glm::slerp(navquat, newori, 0.05f);
 			}
 		}
+
+			
 	}
 
 	// animation
@@ -2973,6 +2978,10 @@ void State::reset() {
 	island_centres[3] = glm::vec3(285., 20., 385.);
 	island_centres[4] = glm::vec3(255., 20., 295.);
 
+	for (int i=0; i<NUM_TELEPORT_POINTS; i++ ) {
+		teleport_points[i] = island_centres[i];
+		teleport_points[i].y = world_centre.y;
+	}
 	cameraLoc = island_centres[2];
 	vrLocation = nextVrLocation = cameraLoc;
 

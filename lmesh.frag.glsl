@@ -15,6 +15,7 @@ uniform sampler2D uNoiseTex;
 in vec2 texCoord;
 in vec3 normal, position;
 in float hu;
+in float time;
 
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec3 FragNormal;
@@ -39,24 +40,46 @@ void main() {
 	//float steepness = abs(1. - dot(normal, vec3(0, 1, 0)));
 	float steepness = abs(1. - nnorm.y*1.5);
 
-	vec3 chem = fields1.rgb;
+	vec3 chem = fields.rgb;
 	float fungus = fields1.a;
 
 
-	vec3 color = normalize(vec3(texCoord , 0.5).xzy) * vec3(.8, 0.5, .8);
+	float hf = clamp((position.y - coastline) * 0.06, 0., 1.);
+	vec3 color = normalize(vec3(texCoord , 0.5).zyx);// * vec3(.8, 0.5, .8);
+	vec3 aa = vec3(0.43, 0.43, 0.63);
+	vec3 ab = vec3(0.2, 0.5, 0.5);
+	vec3 ba = vec3(0.2, 0.2, 0.1);
+	vec3 bb = vec3(0.3, 0.2, 0.7);
+
+	vec3 a1 = mix(aa, ab, texCoord.x);
+	vec3 a2 = mix(ba, bb, texCoord.x);
+	color = normalize(mix(a1, a2, texCoord.y));
+
+
+
+
+
+	color = mix(vec3(0.3), color, clamp((position.y - coastline) * .06, 0., 1.));
+
+	float daymix = 0.65 + 0.3*sin(time*0.1 + (position.x + position.z * 0.2) * 0.004);
 
 	// // darken steep slopes:
 	color *= vec3(1. - steepness);
 	color *= clamp(position.y*0.04, 0., 1.);
 	
-	// TODO: color += rock colour
+	// // TODO: color += rock colour
 
 	if (fungus > 0.) {
 		// fungus:
 		float factor = clamp(fungus * 0.8, 0., 1.);// * 0.7;
 		//factor += noise.z * 0.1;
 		//color = vec3(clamp(1.-fungus, 0., 1.));
-		color = mix(vec3(1.), color*fungus, factor);
+		vec3 funguscolor = mix(vec3(1.), color*fungus, factor);
+
+		
+
+		color = mix(color, funguscolor, daymix);
+
 		//mix(color, vec3(1), fungus)*fungus;//mix(vec3(1.), color*fungus, factor);
 		//color = vec3(0,1,0) * fungus;
 		
@@ -77,17 +100,17 @@ void main() {
 	//color += chem;
 	
 	float h = position.y;
-	color *= clamp((position.y - coastline) * 0.06, 0., 1.);
+	color *= hf;
 
-	color += chem;
+	color += chem * (1.2 - 0.5*daymix);
 
-	// humanshadow:
-	//float hu = texture2D(tex4, texcoord0).z;
+	//humanshadow:
+	//float hu = texture2D(uHumanTex, texcoord0).z;
 	//color *= clamp((1.-4.*hu), 0., 1);
 
 	
 	if (position.y < coastline) {
-		discard;
+		//discard;
 		color = vec3(0);
 	}
 	//color *= clamp((position.y - coastline) * 0.05, 0., 1.);

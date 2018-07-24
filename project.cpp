@@ -1763,6 +1763,7 @@ void draw_scene(int width, int height, Projector& projector) {
 		landMeshShader.uniform("uDistanceTex", 4);
 		landMeshShader.uniform("uFungusTex", 5);
 		landMeshShader.uniform("uLandTex", 6);
+		landMeshShader.uniform("uTime", (float)t);
 
 		if (enablers[SHOW_AS_GRID]) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		gridVAO.drawElements(grid_elements);
@@ -3197,7 +3198,7 @@ extern "C" {
 		enablers[SHOW_MINIMAP] = 0;//1;
 		enablers[SHOW_OBJECTS] = 1;
 		enablers[SHOW_TIMELAPSE] = 1;//1;
-		enablers[SHOW_PARTICLES] = 0;//1;
+		enablers[SHOW_PARTICLES] = 1;//1;
 		enablers[SHOW_DEBUGDOTS] = 0;//1;
 		enablers[USE_OBJECT_SHADER] = 0;//1;
 		enablers[SHOW_HUMANMESH] = 1;

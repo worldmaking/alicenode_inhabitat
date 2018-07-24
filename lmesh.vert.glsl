@@ -3,6 +3,7 @@
 uniform mat4 uViewProjectionMatrix, uViewProjectionMatrixInverse, uViewMatrix, uLandMatrix, uLandMatrixInverse, uWorld2Map;
 uniform float uMapScale;
 uniform float uLandLoD;
+uniform float uTime;
 uniform sampler2D uLandTex, uHumanTex;
 uniform sampler2D uFungusTex;
 uniform sampler2D uNoiseTex;
@@ -15,10 +16,12 @@ layout (location = 2) in vec2 aTexCoord;
 out vec2 texCoord;
 out vec3 normal, position;
 out float hu;
+out float time;
 
 void main() {
 	texCoord = aTexCoord;
 	normal = aNormal;
+	time = uTime;
 
 	vec4 noise = texture(uNoiseTex, texCoord);
 	vec2 texCoord1 = texCoord + (noise.xy - 0.5) * 0.003;

@@ -353,7 +353,7 @@ uint8_t humanchar1[LAND_TEXELS];
 
 //// DEBUG STUFF ////
 int debugMode = 0;
-int camMode = 2; 
+int camMode = 0; 
 int objectSel = 0; //Used for changing which object is in focus
 int camModeMax = 4;
 float camera_speed_default = 40.f;
@@ -433,6 +433,10 @@ void State::fluid_update(float dt) {
 	// apply boundary effect to the velocity field
 	// boundary effect is the landscape, forcing the fluid to align to it when near
 	{
+		float minspeed = 100000.f;
+		float avgspeed = 0.f;
+		float maxspeed = 0.f;
+		
 		int i = 0;
 		glm::vec3 * velocities = fluid_velocities.front();
 		for (size_t z = 0; z<field_dim.z; z++) {
@@ -444,9 +448,15 @@ void State::fluid_update(float dt) {
 					glm::vec2 norm2 = glm::vec2(norm.x, norm.z);
 
 					// sample flow field:
-					auto flo = al_field2d_readnorm_interp(land_dim2, flow, norm2);
+					auto flo = al_field2d_readnorm_interp(land_dim2, flowsmooth, norm2);
 
+					// limit magnitude?
+					float flospd = glm::length(flospd);
+					minspeed = glm::min(flospd, minspeed);
+					maxspeed = glm::max(flospd, maxspeed);
+					avgspeed += flospd;
 
+					flo = flospd > fluid_flow_min_threshold ? flo : glm::vec2(0.f);
 
 					// use this to sample the landscape:
 					float sdist;
@@ -486,6 +496,7 @@ void State::fluid_update(float dt) {
 				}
 			}
 		}
+		console.log("flow min speed %f max speed %f avg speed %f", minspeed, maxspeed, avgspeed / FIELD_VOXELS);
 	}
 
 
@@ -768,6 +779,10 @@ void State::sim_update(float dt) {
 			cv::Mat next(LAND_DIM, LAND_DIM, CV_8UC(1), (void *)humanchar1);
 			cv::Mat flow(LAND_DIM, LAND_DIM, CV_32FC(2), (void *)state->flow);
 			cv::calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags);
+
+			for (int i=0; i<LAND_TEXELS; i++) {
+				flowsmooth[i] += flow_smoothing * (flow[i] - flowsmooth[i]);
+			}
 			
 		}
 #endif
@@ -839,18 +854,46 @@ void State::sim_update(float dt) {
 
 			o.velocity = flow * idt;
 
-			if (o.location.y < h || o.location.y > world_centre.y
-				|| o.location.x < world_min.x
-				|| o.location.x > world_max.x
-				|| o.location.z < world_min.z
-				|| o.location.z > world_max.z) {
-				o.location = random_location_above_land(coastline_height);
-			}
+			// chance of becoming egg?
+			float hdist = fabsf(o.location.y - h);
+			if (hdist < particle_to_egg_distance) {
+				// spawn new?
+				//console.log("creature pool count %d", creature_pool.count);
+				if (creature_pool.count) {
+					auto i = creature_pool.pop();
+					//birthcount++;
+					//console.log("spawn %d", i);
+					creature_reset(i);
+					Creature& a = creatures[i];
+					a.location = o.location;
+					//a.island = nearest_island(a.location);
+				}
 
-			if (rnd::uni() < 0.0001/NUM_PARTICLES) {
+			} 
+			
+			if (rnd::uni() < (creature_to_particle_chance * dt)) {
 				int idx = i % NUM_CREATURES;
 				o.location = creatures[idx].location;
+			} else if (
+				o.location.y < h 
+				|| o.location.y > world_centre.y
+				// || o.location.x < world_min.x
+				// || o.location.x > world_max.x
+				// || o.location.z < world_min.z
+				// || o.location.z > world_max.z
+				) {
+				
+				//o.location = random_location_above_land(coastline_height);
+				int idx = i % NUM_CREATURES;
+				o.location = creatures[idx].location;
+			} else {
+				o.location.x = wrap(o.location.x, world_min.x, world_max.x);
+				o.location.z = wrap(o.location.z, world_min.z, world_max.z);
 			}
+
+
+
+			
 		}
 	} 
 
@@ -971,17 +1014,18 @@ void State::creatures_health_update(float dt) {
 	// 	}
 	// }
 
-
-	// spawn new?
-	//console.log("creature pool count %d", creature_pool.count);
-	if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
-		auto i = creature_pool.pop();
-		birthcount++;
-		//console.log("spawn %d", i);
-		creature_reset(i);
-		Creature& a = creatures[i];
-		//a.location = glm::linearRand(world_min, world_max);
-		//a.island = nearest_island(a.location);
+	if (0) {
+		// spawn new?
+		//console.log("creature pool count %d", creature_pool.count);
+		if (rnd::integer(NUM_CREATURES) < creature_pool.count) {
+			auto i = creature_pool.pop();
+			birthcount++;
+			//console.log("spawn %d", i);
+			creature_reset(i);
+			Creature& a = creatures[i];
+			//a.location = glm::linearRand(world_min, world_max);
+			//a.island = nearest_island(a.location);
+		}
 	}
 
 	// visit each creature:
@@ -1002,21 +1046,22 @@ void State::creatures_health_update(float dt) {
 			// simulate as alive
 			hashspace.move(i, glm::vec2(a.location.x, a.location.z));
 
-			// birth chance?
-			if (rnd::uni() < a.health * reproduction_health_min * dt
-				&& rnd::integer(NUM_CREATURES) < creature_pool.count
-				&& (a.type == Creature::TYPE_BOID || a.type == Creature::TYPE_ANT)) {
-				auto j = creature_pool.pop();
-				birthcount++;
-				//console.log("child %d", i);
-				creature_reset(j);
-				Creature& child = creatures[j];
-				child.type = a.type;
-				if (child.type != Creature::TYPE_ANT) child.location = a.location;
-				child.island = nearest_island(child.location);
-				child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
-				child.params = glm::mix(child.params, a.params, 0.9f);
-			}
+			// // birth chance?
+			// if (rnd::uni() < a.health * reproduction_health_min * dt
+			// 	&& rnd::integer(NUM_CREATURES) < creature_pool.count
+			// 	&& (a.type == Creature::TYPE_BOID 
+			// 	|| a.type == Creature::TYPE_ANT)) {
+			// 	auto j = creature_pool.pop();
+			// 	birthcount++;
+			// 	//console.log("child %d", i);
+			// 	creature_reset(j);
+			// 	Creature& child = creatures[j];
+			// 	child.type = a.type;
+			// 	if (child.type != Creature::TYPE_ANT) child.location = a.location;
+			// 	child.island = nearest_island(child.location);
+			// 	child.orientation = glm::slerp(child.orientation, a.orientation, 0.5f);
+			// 	child.params = glm::mix(child.params, a.params, 0.9f);
+			// }
 
 
 			// TODO: make this species-dependent?
@@ -1249,7 +1294,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 		//al_field2d_addnorm_interp(fungus_dim, fungus_field.front(), norm2, -eat);
   		fungus_field.front()[fungus_idx] -= eat;
 
-		o.color = glm::vec3(o.params);
+		o.color = glm::vec3(o.params) * 0.5f + 0.5f;
 
 		//o.color = glm::vec3(0, 1, 0);
 		
@@ -2207,6 +2252,24 @@ void onFrame(uint32_t width, uint32_t height) {
 		}
 	}
 
+	{
+		// update teleport points
+		int i = alice.fps.count % NUM_TELEPORT_POINTS;
+		glm::vec3 pt = state->teleport_points[i];
+		// get slope at pt:
+		glm::vec3 norm = transform(state->world2field, pt);
+		glm::vec4 landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+		glm::vec3 normal = glm::vec3(landpt);
+		// move uphill:
+		pt -= normal;
+		// put on land again
+		norm = transform(state->world2field, pt);
+		landpt = al_field2d_readnorm_interp(glm::vec2(land_dim), state->land, glm::vec2(norm.x, norm.z));
+		pt = transform(state->field2world, glm::vec3(norm.x, landpt.w, norm.z)) ;
+
+		state->teleport_points[i] = pt;
+	}
+
 	// navigation:
 	{
 		glm::vec3& navloc = projectors[2].location;
@@ -2321,9 +2384,12 @@ void onFrame(uint32_t width, uint32_t height) {
 
 	// render the projectors:
 	
+	#ifdef AL_WIN
 	{
 		int i = alice.fps.count % 3;
-	//for (int i=0; i<NUM_PROJECTORS; i++) {
+	#else
+	for (int i=0; i<NUM_PROJECTORS; i++) {
+	#endif
 		Projector& proj = projectors[i];
 		SimpleFBO& fbo = proj.fbo;
 
@@ -2335,7 +2401,7 @@ void onFrame(uint32_t width, uint32_t height) {
 
 			if (alice.fps.count == 0 || slice == (gBufferProj.dim.x - 10)) { //timeToVrJump < 0.f) {
 				vrIsland = (vrIsland + 1) % NUM_ISLANDS;
-				nextVrLocation = state->island_centres[vrIsland];
+				nextVrLocation = state->teleport_points[vrIsland];
 				fadeState = -1;
 
 				timeToVrJump = 30.;

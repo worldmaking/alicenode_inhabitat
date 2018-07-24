@@ -114,12 +114,14 @@ struct Field2DPod {
 };
 #endif
 
+#define NUM_ISLANDS (5)
+
 #define NUM_CREATURES 1024
 #define NUM_CREATURE_PARTS NUM_CREATURES
 
 #define NUM_PARTICLES 1024*256
 
-#define NUM_TELEPORT_POINTS 4
+#define NUM_TELEPORT_POINTS (NUM_ISLANDS)
 
 #define NUM_AUDIO_FRAMES 1024
 
@@ -145,8 +147,6 @@ struct Field2DPod {
 // defined to be at least enough to visualize two kinects:
 #define NUM_DEBUGDOTS (512*424*2)
 //2*5*4
-
-#define NUM_ISLANDS (5)
 
 static const glm::ivec3 field_dim = glm::ivec3(FIELD_DIM, FIELD_DIM, FIELD_DIM);
 static const glm::ivec3 land_dim = glm::ivec3(LAND_DIM, LAND_DIM, LAND_DIM);
@@ -305,6 +305,7 @@ struct State {
 	// the flow field (hopefully this isn't too high res)
 	// Paris ran at 128 x 64, for example
 	glm::vec2 flow[LAND_TEXELS];
+	glm::vec2 flowsmooth[LAND_TEXELS];
 
 	// signed distance field representing the landscape
 	// the distance to the nearest land surface, as a 3D SDF
@@ -361,8 +362,13 @@ struct State {
 
 	float creature_fluid_push = 2.f;
 
+	// running averaging of the optical flow:
+	float flow_smoothing = 0.5f;
 	// how much the optical flow impacts the fluid:
 	float flow_scale = 0.5f;
+	// minimum speed in optical flow image to influence fluid
+	float fluid_flow_min_threshold = 1.f;
+	
 
 	float emission_decay = 0.9f;
 	glm::vec3 emission_diffuse = glm::vec3(0.01); // somwhere between 0.1 and 0.01 seems to be good
@@ -391,13 +397,15 @@ struct State {
 	float reproduction_health_min = 0.25;
 	// per-second:
 	float creature_song_copy_factor = 1.25f;
-	float creature_song_mutate_rate = 0.25f;
+	float creature_song_mutate_rate = 0.05f;
 
 	float alive_lifespan_decay = 0.02;
 	float dead_lifespan_decay = 0.1;
 
 	float particleSize = 0.03;
 	float particle_noise = 0.0001f;
+	float particle_to_egg_distance = 0.05f; // meters
+	float creature_to_particle_chance = 0.001f; // chance per particle per second
 
 	float fungus_recovery_rate = 0.002;
 	float fungus_seeding_chance = 0.00001;

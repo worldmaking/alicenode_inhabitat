@@ -378,9 +378,9 @@ struct State {
 	glm::vec3 chemical_decay = glm::vec3(0.98f);
 	glm::vec3 chemical_diffuse = glm::vec3(0.0001);
 
-	glm::vec3 blood_color = glm::vec3(1., 0.461, 0.272); 
-	glm::vec3 food_color = glm::vec3(1., 0.43, 0.64); 
-	glm::vec3 nest_color = glm::vec3(0.75, 1., 0.75); 
+	glm::vec3 blood_color = glm::vec3(1., 0.361, 0.172) * 3.0f; 
+	glm::vec3 food_color = glm::vec3(0.64, 0.23, 0.34); 
+	glm::vec3 nest_color = glm::vec3(0.25, 1., 0.75); 
 
 	float projector1_location_x = 4.35;
 	float projector1_location_y = 6.95;

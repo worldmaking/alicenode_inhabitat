@@ -26,9 +26,9 @@ float coastline = 11.;
 
 vec3 landcolor(vec2 texCoord) {
 	vec3 aa = vec3(0.05, 0.1, 0.2);
-	vec3 ab = vec3(0.15, 0.15, 0.25);
-	vec3 ba = vec3(0.2, 0.25, 0.25);
-	vec3 bb = vec3(0.3, 0.3, 0.3);
+	vec3 ab = vec3(0.15, 0.2, 0.25);
+	vec3 ba = vec3(0.2, 0.25, 0.35);
+	vec3 bb = vec3(0.3, 0.35, 0.4);
 
 	vec3 a1 = mix(aa, ab, texCoord.x);
 	vec3 a2 = mix(ba, bb, texCoord.x);

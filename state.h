@@ -183,6 +183,7 @@ struct Creature {
 	// properties:
 	glm::vec3 location;
 	float scale = 1.;
+	float fullsize = 1.;
 	glm::quat orientation = glm::quat();
 	glm::vec3 color;
 	float phase = 0.;
@@ -398,6 +399,7 @@ struct State {
 	// per-second:
 	float creature_song_copy_factor = 1.25f;
 	float creature_song_mutate_rate = 0.01f;
+	float creature_grow_rate = 0.5f; 
 
 	float alive_lifespan_decay = 0.05;
 	float dead_lifespan_decay = 0.1;

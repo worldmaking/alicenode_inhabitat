@@ -966,7 +966,8 @@ void State::creature_reset(int i) {
 
 	a.location = random_location_above_land(coastline_height * 1.2);
 	//a.location = island_centres[island];
-	a.scale = rnd::uni(0.5f) + 0.75f;
+	a.fullsize = rnd::uni(0.5f) + 0.75f;
+	a.scale = 0.f;
 	a.orientation = glm::angleAxis(rnd::uni(float(M_PI * 2.)), glm::vec3(0,1,0));
 	a.color = glm::linearRand(glm::vec3(0.25), glm::vec3(1));
 	a.phase = rnd::uni();
@@ -982,12 +983,12 @@ void State::creature_reset(int i) {
 			a.location = island_centres[island];
 			a.ant.food = 0;
 			a.ant.nestness = 1;
-			a.scale *= 0.75f;
+			a.fullsize *= 1.25f;
 			break;
 		case Creature::TYPE_BUG:
 			break;
 		case Creature::TYPE_BOID:
-			a.scale *= 0.75f;
+			a.fullsize *= 0.75f;
 			break;
 		case Creature::TYPE_PREDATOR_HEAD:
 			a.pred_head.victim = -1;
@@ -1067,6 +1068,8 @@ void State::creatures_health_update(float dt) {
 			// TODO: make this species-dependent?
 			a.health -= dt * alive_lifespan_decay;// * (1.+rnd::bi()*0.1);
 
+			a.scale += creature_grow_rate * dt * (a.fullsize - a.scale);
+
 		} else if (a.state == Creature::STATE_DECAYING) {
 			
 			glm::vec3 norm = transform(world2field, a.location);
@@ -1091,6 +1094,7 @@ void State::creatures_health_update(float dt) {
 			// rate of decay:
 			float decay = dt * dead_lifespan_decay;// * (1.+rnd::bi()*0.1);
 			a.health -= decay;
+			//a.scale += creature_grow_rate * dt * (0.f-a.scale);
 
 			// blend to dull grey:
 			float grey = (a.color.x + a.color.y + a.color.z)*0.25f;

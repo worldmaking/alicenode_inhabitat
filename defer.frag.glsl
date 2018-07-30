@@ -177,7 +177,7 @@ void main() {
 	// fog effect:
 	vec3 fogcolor = sky(rd);
 	//float fogmix = clamp(normalized_depth, 0., 1.);
-	float fogmix = smoothstep(uFarClip*0.25, uFarClip, depth* 2.);
+	float fogmix = smoothstep(uFarClip*0.25, uFarClip, depth* 3.);
 
 
 
@@ -247,11 +247,11 @@ void main() {
 	
 
 
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
+	//color.rgb = mix(color.rgb, fogcolor, fogmix);
 
 	//color.rgb = ro;
 
-	/*
+	
 	#define FOG_STEPS 8
 	//float perstep = 1./float(FOG_STEPS);
 
@@ -290,7 +290,7 @@ void main() {
 	}
 
 	color = mix(color + fcolor, fcolor, t1);
-	*/
+	
 
 	//color = objtexcoord;
 

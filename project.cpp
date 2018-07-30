@@ -1257,6 +1257,7 @@ void State::creature_alive_update(Creature& o, float dt) {
 				auto normp2 = transform(world2field, a2);
 				float p1 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp1.x, normp1.z)).z;
 				float p2 = al_field2d_readnorm_interp(fungus_dim, chemical_field.back(), glm::vec2(normp2.x, normp2.z)).z;
+				console.log("sniff nest %f %f", p1, p2);
 				ant_sniff_turn(o, p1, p2);
 			}
 		} else {
@@ -2073,6 +2074,7 @@ void State::animate(float dt) {
 
 			// re-align the creature to the surface normal:
 			glm::vec3 land_normal = glm::vec3(landpt);
+			//glm::vec3 land_normal = sdf_field_normal4(sdf_dim, state->distance, norm, 0.025f);
 			{
 				// re-orient relative to ground:
 				float creature_land_orient_factor = 1.f;//0.25f;

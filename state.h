@@ -418,7 +418,7 @@ struct State {
 	float ant_speed = 0.5;
 	float ant_nestsize = 0.04f;
 	float ant_phero_decay = 0.999f;
-	float ant_sensor_size = 0.5;
+	float ant_sensor_size = 1.;
 	float ant_food_min = 0.02;
 	float ant_sniff_min = 0.001;
 	float ant_follow = 0.05;

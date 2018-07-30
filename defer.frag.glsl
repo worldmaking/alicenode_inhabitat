@@ -177,7 +177,7 @@ void main() {
 	// fog effect:
 	vec3 fogcolor = sky(rd);
 	//float fogmix = clamp(normalized_depth, 0., 1.);
-	float fogmix = smoothstep(uFarClip*0.25, uFarClip, depth* 3.);
+	float fogmix = smoothstep(uFarClip*0.125, uFarClip, depth* 2.5);
 
 
 

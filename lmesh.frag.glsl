@@ -46,7 +46,7 @@ void main() {
 
 	float hf = clamp((position.y - coastline) * 0.06, 0., 1.);
 	vec3 color = normalize(vec3(texCoord , 0.5).zyx);// * vec3(.8, 0.5, .8);
-	vec3 aa = vec3(0.2, 0.2, 0.23);
+	vec3 aa = vec3(0.2, 0.2, 0.24);
 	vec3 ab = vec3(0.1, 0.1, 0.1);
 	vec3 ba = vec3(0.01, 0.01, 0.01);
 	vec3 bb = vec3(0.015, 0.02, 0.025);

@@ -56,20 +56,29 @@ vec3 landcolor(vec2 texCoord) {
 
 vec3 sky(vec3 dir, vec3 pos) {
 	vec3 n0 = dir*0.5+0.5;
+	float day = daymix(time, pos + dir*200.);
+	
 	vec3 n = n0;
-	float a = time * 0.3;
+	float a = day; //time * 0.3;
 	// detail
 	n.r = sin(2.*PI* n.r*n.g + a)*0.5+0.5;
 	n.g = cos(2.*PI* n.r*n.g - a)*0.5+0.5;
 	// simplify
 	n.g = mix(n.g, n.r, 0.5);
+
+	
+	vec3 lc = landcolor(n0.xz);
+
+	n = mix(n, lc, day);
+	
 	// lighten
 	n = mix(n, vec3(0.), 0.5);
 
-	n = landcolor(n0.xz);
-
 	// below y=0 should be black
-	return n * clamp(n0.y - 0.2, 0., 1.);
+	float fogzone = sin((dir.y*0.8 + 0.3) * PI);
+	// but also, looking up should go black?
+	return n * clamp(fogzone, 0., 1.);
+	return vec3(fogzone);
 }
 
 float fScene(vec3 p) {

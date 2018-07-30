@@ -865,7 +865,7 @@ void State::sim_update(float dt) {
 					//console.log("spawn %d", i);
 					creature_reset(i);
 					Creature& a = creatures[i];
-					a.location = o.location;
+					//if (a.type != Creature::TYPE_ANT) a.location = o.location;
 					//a.island = nearest_island(a.location);
 				}
 

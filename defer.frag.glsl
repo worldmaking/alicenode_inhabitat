@@ -66,11 +66,6 @@ vec3 sky(vec3 dir, vec3 pos) {
 	// simplify
 	n.g = mix(n.g, n.r, 0.5);
 
-	
-	vec3 lc = landcolor(n0.xz);
-
-	n = mix(n, lc, day);
-	
 	// lighten
 	n = mix(n, vec3(0.), 0.5);
 
@@ -78,7 +73,6 @@ vec3 sky(vec3 dir, vec3 pos) {
 	float fogzone = sin((dir.y*0.8 + 0.3) * PI);
 	// but also, looking up should go black?
 	return n * clamp(fogzone, 0., 1.);
-	return vec3(fogzone);
 }
 
 float fScene(vec3 p) {

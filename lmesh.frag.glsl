@@ -25,7 +25,7 @@ layout (location = 3) out vec3 FragTexCoord;
 float coastline = 11.;
 
 vec3 landcolor(vec2 texCoord) {
-	vec3 aa = vec3(0.05, 0.1, 0.2);
+	vec3 aa = vec3(0.05, 0.1, 0.2) * 0.5;
 	vec3 ab = vec3(0.15, 0.2, 0.2);
 	vec3 ba = vec3(0.1, 0.1, 0.1);
 	vec3 bb = vec3(0.0, 0.0, 0.0);
@@ -59,10 +59,6 @@ void main() {
 	//vec3 color = normalize(vec3(texCoord , 0.5).zyx);// * vec3(.8, 0.5, .8);
 
 	vec3 color = landcolor(texCoord);
-
-
-
-
 
 	color = mix(vec3(0.3), color, clamp((position.y - coastline) * .06, 0., 1.));
 

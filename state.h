@@ -189,6 +189,16 @@ glm::quat align_forward_to(glm::quat const q, glm::vec3 const direction) {
 	return get_forward_rotation_to(q, direction) * q;
 }
 
+<<<<<<< HEAD
+=======
+
+static int flip = 0;
+int rendercreaturecount = 0;
+int livingcreaturecount = 0;
+int numants = 0;
+int numboids = 0;
+
+>>>>>>> lightwork
 #define NUM_ISLANDS (5)
 
 #define NUM_CREATURES 1024
@@ -791,7 +801,8 @@ struct State {
 			emission_field.swap();
 		}
 	}
-	void sim_update(float dt) {
+	
+	void sim_update(float dt, AudioState * audiostate) {
 
 		// inverse dt gives rate (per second)
 		float idt = 1.f/dt;

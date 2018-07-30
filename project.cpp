@@ -245,10 +245,7 @@ VBO particlesVBO(sizeof(State::particles));
 VAO debugVAO;
 VBO debugVBO(sizeof(State::debugdots));
 
-int rendercreaturecount = 0;
-int livingcreaturecount = 0;
-int numants = 0;
-int numboids = 0;
+
 
 
 #define NUM_PROJECTORS 3
@@ -289,7 +286,6 @@ bool camFast = true;
 glm::vec3 camVel, camTurn;
 glm::vec3 cameraLoc = glm::vec3(0);
 glm::quat cameraOri;
-static int flip = 0;
 int kidx = 0;
 int sliceIndex = 0;
 int soloView = 0;
@@ -339,7 +335,7 @@ void land_update(double dt) {
 }
 
 void sim_update(double dt) { 
-	if (Alice::Instance().isSimulating) state->sim_update(dt); 
+	if (Alice::Instance().isSimulating) state->sim_update(dt, audiostate); 
 }
 
 

@@ -25,10 +25,10 @@ layout (location = 3) out vec3 FragTexCoord;
 float coastline = 11.;
 
 vec3 landcolor(vec2 texCoord) {
-	vec3 aa = vec3(0.2, 0.2, 0.24);
-	vec3 ab = vec3(0.1, 0.1, 0.1);
-	vec3 ba = vec3(0.01, 0.01, 0.01);
-	vec3 bb = vec3(0.015, 0.02, 0.025);
+	vec3 aa = vec3(0.05, 0.1, 0.2);
+	vec3 ab = vec3(0.15, 0.15, 0.25);
+	vec3 ba = vec3(0.2, 0.25, 0.25);
+	vec3 bb = vec3(0.3, 0.3, 0.3);
 
 	vec3 a1 = mix(aa, ab, texCoord.x);
 	vec3 a2 = mix(ba, bb, texCoord.x);

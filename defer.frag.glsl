@@ -43,7 +43,18 @@ float daymix(float time, vec3 position) {
 	return 0.65 + 0.3*sin(time*0.1 + (position.x + position.z * 0.2) * 0.004);
 }
 
-vec3 sky(vec3 dir) {
+vec3 landcolor(vec2 texCoord) {
+	vec3 aa = vec3(0.2, 0.2, 0.24);
+	vec3 ab = vec3(0.1, 0.1, 0.1);
+	vec3 ba = vec3(0.01, 0.01, 0.01);
+	vec3 bb = vec3(0.015, 0.02, 0.025);
+
+	vec3 a1 = mix(aa, ab, texCoord.x);
+	vec3 a2 = mix(ba, bb, texCoord.x);
+	return normalize(mix(a1, a2, texCoord.y));
+}
+
+vec3 sky(vec3 dir, vec3 pos) {
 	vec3 n0 = dir*0.5+0.5;
 	vec3 n = n0;
 	float a = time * 0.3;
@@ -55,10 +66,10 @@ vec3 sky(vec3 dir) {
 	// lighten
 	n = mix(n, vec3(0.), 0.5);
 
-	// below y=0 should be black
-	
+	n = landcolor(n0.xz);
 
-	return n * (n0.y - 0.2);
+	// below y=0 should be black
+	return n * clamp(n0.y - 0.2, 0., 1.);
 }
 
 float fScene(vec3 p) {
@@ -158,7 +169,7 @@ void main() {
 	//float metallic = acute;
 	float metallic = acute;
 	//color.rgb = mix(vec3(0.5), normal*0.5+0.5, 0.2);
-	color.rgb = mix(sky(ref), sky(normal), metallic);
+	color.rgb = mix(sky(ref, position), sky(normal, position), metallic);
 	
 	// edge finding by depth difference:
 	//float edges = 1.-clamp(depth-depthn, 0., 1.)*.5;
@@ -179,7 +190,7 @@ void main() {
 	//color.rgb = color.rgb * 0.1 + density;
 	
 	// fog effect:
-	vec3 fogcolor = sky(rd);
+	vec3 fogcolor = sky(rd, position);
 	//float fogmix = clamp(normalized_depth, 0., 1.);
 	float fogmix = smoothstep(uFarClip*0.125, uFarClip, depth* 2.5);
 

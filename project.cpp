@@ -962,8 +962,8 @@ void State::creature_reset(int i) {
 	a.type = (rnd::integer(2) + 1);
 	//if (rnd::uni() < 0.01) a.type = Creature::TYPE_PREDATOR_HEAD;
 	a.state = Creature::STATE_ALIVE;
-	a.health = rnd::uni();
-
+	a.health = rnd::uni() * 0.5 + 0.5f;
+	
 	a.location = random_location_above_land(coastline_height * 1.2);
 	//a.location = island_centres[island];
 	a.fullsize = rnd::uni(0.5f) + 0.75f;
@@ -1065,9 +1065,8 @@ void State::creatures_health_update(float dt) {
 			// }
 
 
-			// TODO: make this species-dependent?
-			a.health -= dt * alive_lifespan_decay;// * (1.+rnd::bi()*0.1);
-
+			a.health -= dt * ((a.type == Creature::TYPE_ANT) ? ant_alive_lifespan_decay : alive_lifespan_decay);
+			
 			a.scale += creature_grow_rate * dt * (a.fullsize - a.scale);
 
 		} else if (a.state == Creature::STATE_DECAYING) {

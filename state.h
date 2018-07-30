@@ -402,6 +402,7 @@ struct State {
 	float creature_grow_rate = 0.5f; 
 
 	float alive_lifespan_decay = 0.05;
+	float ant_alive_lifespan_decay = 0.005;
 	float dead_lifespan_decay = 0.1;
 
 	float particleSize = 0.01;

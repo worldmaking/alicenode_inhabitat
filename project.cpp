@@ -883,9 +883,9 @@ void State::sim_update(float dt) {
 				 || o.location.z > world_max.z
 				) {
 				
-				//o.location = random_location_above_land(coastline_height);
+				o.location = random_location_above_land(coastline_height);
 				int idx = i % NUM_CREATURES;
-				o.location = creatures[idx].location;
+				//o.location = creatures[idx].location;
 			} else {
 				o.location.x = wrap(o.location.x, world_min.x, world_max.x);
 				o.location.z = wrap(o.location.z, world_min.z, world_max.z);

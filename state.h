@@ -451,6 +451,10 @@ struct State {
 	void update_projector_loc();
 
 	float ant_sniff_turn(Creature& a, float p1, float p2);
+
+	float daymix(float time, glm::vec3 position) {
+		return 0.65f + 0.3f*sin(time*0.1f + (position.x + position.z * 0.2f) * 0.004f);
+	}
 };
 
 #endif

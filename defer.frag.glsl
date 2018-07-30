@@ -39,6 +39,10 @@ out vec4 FragColor;
 
 #define PI 3.14159265359
 
+float daymix(float time, vec3 position) {
+	return 0.65 + 0.3*sin(time*0.1 + (position.x + position.z * 0.2) * 0.004);
+}
+
 vec3 sky(vec3 dir) {
 	vec3 n0 = dir*0.5+0.5;
 	vec3 n = n0;

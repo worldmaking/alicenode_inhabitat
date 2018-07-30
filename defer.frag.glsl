@@ -271,7 +271,7 @@ void main() {
 	
 
 
-	color.rgb = mix(color.rgb, fogcolor, fogmix);
+	color.rgb = mix(color.rgb, vec3(0), fogmix);
 
 	//color.rgb = ro;
 
